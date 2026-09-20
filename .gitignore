@@ -3,3 +3,19 @@ iris-main.log
 .env
 .git
 
+# Agent — local only
+.claude/settings.local.json
+.claude/projects/
+.claude/history/
+.claude/skills/
+.codex/*.local.*
+
+# Credentials — the repo is public
+.iris-agentic-dev.toml
+.env
+*.local.toml
+
+# Build
+ui/node_modules/
+ui/dist/
+ui/.svelte-kit/
