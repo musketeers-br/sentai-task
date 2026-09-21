@@ -1,0 +1,110 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "Catalog.dc.html": {
+      "h": 900,
+      "is_interactive": true,
+      "title": "Task catalog",
+      "w": 1440,
+      "x": 1520,
+      "y": 1400
+    },
+    "FlowLight.dc.html": {
+      "h": 900,
+      "title": "Flow Canvas — light",
+      "w": 1440,
+      "x": 0,
+      "y": 1400
+    },
+    "LiveRun.dc.html": {
+      "h": 900,
+      "title": "Live run",
+      "w": 1440,
+      "x": 1520,
+      "y": 0
+    },
+    "Main.dc.html": {
+      "h": 900,
+      "title": "Flow Canvas — dark",
+      "w": 1440,
+      "x": 0,
+      "y": 0
+    },
+    "RunTimeline.dc.html": {
+      "h": 640,
+      "is_interactive": true,
+      "title": "Run history",
+      "w": 1440,
+      "x": 0,
+      "y": 2800
+    },
+    "System.dc.html": {
+      "h": 880,
+      "title": "Design system",
+      "w": 1100,
+      "x": 0,
+      "y": 4080
+    },
+    "WQM.dc.html": {
+      "h": 1000,
+      "title": "WQM category",
+      "w": 1100,
+      "x": 1520,
+      "y": 2800
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-09-20T12:00:00Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "view": "canvas"
+  },
+  "notes": {
+    "n1": {
+      "kind": "title1",
+      "maxW": 2960,
+      "text": "01 · Build and watch the wave",
+      "w": 240,
+      "x": 0,
+      "y": -260
+    },
+    "n2": {
+      "kind": "title1",
+      "maxW": 2960,
+      "text": "02 · Light theme and catalog",
+      "w": 240,
+      "x": 0,
+      "y": 1140
+    },
+    "n3": {
+      "kind": "title1",
+      "maxW": 2960,
+      "text": "03 · Run history and resource ceilings",
+      "w": 240,
+      "x": 0,
+      "y": 2540
+    },
+    "n4": {
+      "kind": "title1",
+      "maxW": 1100,
+      "text": "04 · Design system",
+      "w": 240,
+      "x": 0,
+      "y": 3820
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "LiveRun.dc.html",
+    "FlowLight.dc.html",
+    "Catalog.dc.html",
+    "RunTimeline.dc.html",
+    "WQM.dc.html",
+    "System.dc.html"
+  ],
+  "pages": [],
+  "title": "SentaiTask"
+}

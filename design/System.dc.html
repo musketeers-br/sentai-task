@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SentaiTask — Design system</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;font-family:"IBM Plex Sans",system-ui,sans-serif;background:#0A0D13;font-variant-numeric:tabular-nums}
+a{color:#7FC4FF}a:hover{color:#B7DEFF}
+</style>
+</helmet>
+
+<div style="width: 1100px; height: 880px; box-sizing: border-box; background: #0A0D13; color: #E6EBF2; padding: 24px; display: flex; flex-direction: column; gap: 16px; overflow: hidden;">
+
+  <div style="display: flex; align-items: flex-end; gap: 14px;">
+    <div style="display: flex; gap: 2px; align-items: flex-end; height: 26px;">
+      <div style="width: 5px; height: 26px; background: #FF3B4A;"></div>
+      <div style="width: 5px; height: 21px; background: #3B8DFF;"></div>
+      <div style="width: 5px; height: 16px; background: #FFC93B;"></div>
+      <div style="width: 5px; height: 21px; background: #35D07F;"></div>
+      <div style="width: 5px; height: 26px; background: #FF6FB5;"></div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 2px;">
+      <div style="font-family: 'Chakra Petch', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: 0.06em; color: #F2F5FA;">SENTAI<span style="color: #7B8798; font-weight: 500;">TASK</span></div>
+      <div style="font-size: 12px; color: #94A3B8;">Design system — the mark is the five-colour bar, not a single accent</div>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px;">
+
+    <div style="box-sizing: border-box; background: #10141D; border: 1px solid #232C3D; border-radius: 6px; padding: 14px; display: flex; flex-direction: column; gap: 10px;">
+      <div style="font-family: 'Chakra Petch', sans-serif; font-size: 11px; font-weight: 600; letter-spacing: 0.12em; color: #6F7E93;">DARK THEME — DEFAULT FOR THE NIGHT WINDOW</div>
+      <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px;">
+        <div style="display: flex; flex-direction: column; gap: 4px;"><div style="height: 34px; background: #0A0D13; border: 1px solid #232C3D;"></div><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: #7B8798;">#0A0D13 ground</span></div>
+        <div style="display: flex; flex-direction: column; gap: 4px;"><div style="height: 34px; background: #141A26; border: 1px solid #232C3D;"></div><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: #7B8798;">#141A26 card</span></div>
+        <div style="display: flex; flex-direction: column; gap: 4px;"><div style="height: 34px; background: #2B3648;"></div><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: #7B8798;">#2B3648 border</span></div>
+        <div style="display: flex; flex-direction: column; gap: 4px;"><div style="height: 34px; background: #E6EBF2;"></div><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: #7B8798;">#E6EBF2 text</span></div>
+      </div>
+      <div style="font-size: 11px; line-height: 1.5; color: #94A3B8;">Ink-blue ground with low overall luminance, cards lighter than the ground, and no pure black surface — pure black glares against text at 3 a.m.</div>
+    </div>
+
+    <div style="box-sizing: border-box; background: #F7F5F1; border: 1px solid #D2CDC2; border-radius: 6px; padding: 14px; display: flex; flex-direction: column; gap: 10px;">
+      <div style="font-family: 'Chakra Petch', sans-serif; font-size: 11px; font-weight: 600; letter-spacing: 0.12em; color: #7A8296;">LIGHT THEME — DESIGNED SEPARATELY</div>
+      <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px;">
+        <div style="display: flex; flex-direction: column; gap: 4px;"><div style="height: 34px; background: #EFEDE7; border: 1px solid #D2CDC2;"></div><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: #5C6473;">#EFEDE7 ground</span></div>
+        <div style="display: flex; flex-direction: column; gap: 4px;"><div style="height: 34px; background: #FFFFFF; border: 1px solid #D2CDC2;"></div><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: #5C6473;">#FFFFFF card</span></div>
+        <div style="display: flex; flex-direction: column; gap: 4px;"><div style="height: 34px; background: #C9C3B6;"></div><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: #5C6473;">#C9C3B6 border</span></div>
+        <div style="display: flex; flex-direction: column; gap: 4px;"><div style="height: 34px; background: #16181D;"></div><span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: #5C6473;">#16181D text</span></div>
+      </div>
+      <div style="font-size: 11px; line-height: 1.5; color: #5C6473;">Warm paper, white card: the hierarchy inverts against the dark theme — there the card rises, here it lightens against paper. A 1 px shadow replaces the selection halo.</div>
+    </div>
+  </div>
+
+  <div style="box-sizing: border-box; background: #10141D; border: 1px solid #232C3D; border-radius: 6px; padding: 14px; display: flex; flex-direction: column; gap: 12px;">
+    <div style="font-family: 'Chakra Petch', sans-serif; font-size: 11px; font-weight: 600; letter-spacing: 0.12em; color: #6F7E93;">JOB STATES — SHAPE FIRST, COLOUR SECOND</div>
+    <div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px;">
+
+      <div style="display: flex; flex-direction: column; gap: 7px; align-items: flex-start;">
+        <svg width="26" height="26" viewBox="0 0 12 12" aria-hidden="true"><rect x="1.2" y="1.2" width="9.6" height="9.6" fill="none" stroke="#A6B2C4" stroke-width="1.4" stroke-dasharray="2.6 2"></rect></svg>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; color: #A6B2C4;">queued</span>
+        <span style="font-size: 10px; line-height: 1.45; color: #7B8798;">dashed hollow square</span>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 7px; align-items: flex-start;">
+        <svg width="26" height="26" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.4 1.2 L10.4 6 L2.4 10.8 Z" fill="#2FD0E8"></path></svg>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; color: #9BE9F5;">running</span>
+        <span style="font-size: 10px; line-height: 1.45; color: #7B8798;">pointing triangle</span>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 7px; align-items: flex-start;">
+        <svg width="26" height="26" viewBox="0 0 12 12" aria-hidden="true"><rect x="1.4" y="1.2" width="3.2" height="9.6" fill="#E8A33D"></rect><rect x="7.4" y="1.2" width="3.2" height="9.6" fill="#E8A33D"></rect></svg>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; color: #F2D9A0;">paused</span>
+        <span style="font-size: 10px; line-height: 1.45; color: #7B8798;">two vertical bars</span>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 7px; align-items: flex-start;">
+        <svg width="26" height="26" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="5.2" fill="#3FBF6F"></circle><path d="M3.4 6.2 L5.2 8 L8.6 4.2" fill="none" stroke="#0A0D13" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; color: #86E3AA;">completed</span>
+        <span style="font-size: 10px; line-height: 1.45; color: #7B8798;">filled circle with a check</span>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 7px; align-items: flex-start;">
+        <svg width="26" height="26" viewBox="0 0 12 12" aria-hidden="true"><path d="M6 0.8 L11.4 10.4 L0.6 10.4 Z" fill="#F2495C"></path><path d="M6 4 L6 7" stroke="#10141D" stroke-width="1.5" stroke-linecap="round"></path><circle cx="6" cy="8.8" r="0.8" fill="#10141D"></circle></svg>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; color: #FFB3B9;">failed</span>
+        <span style="font-size: 10px; line-height: 1.45; color: #7B8798;">filled warning triangle</span>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 7px; align-items: flex-start;">
+        <svg width="26" height="26" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="5" fill="none" stroke="#98A3B4" stroke-width="1.4"></circle><path d="M2.6 9.4 L9.4 2.6" stroke="#98A3B4" stroke-width="1.4"></path></svg>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; color: #98A3B4;">cancelled</span>
+        <span style="font-size: 10px; line-height: 1.45; color: #7B8798;">slashed circle</span>
+      </div>
+    </div>
+    <div style="font-size: 11px; line-height: 1.5; color: #94A3B8;">No state colour is reused as a UI accent. In monochrome or under colour blindness, the six shapes stay distinct.</div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px;">
+
+    <div style="box-sizing: border-box; background: #10141D; border: 1px solid #232C3D; border-radius: 6px; padding: 14px; display: flex; flex-direction: column; gap: 11px;">
+      <div style="font-family: 'Chakra Petch', sans-serif; font-size: 11px; font-weight: 600; letter-spacing: 0.12em; color: #6F7E93;">DESTRUCTIVE STEP MARKING</div>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="width: 150px; box-sizing: border-box; background: #161C29; border: 1px solid #FF3B4A; border-radius: 6px; overflow: hidden;">
+          <div style="height: 6px; background: repeating-linear-gradient(45deg, #FF3B4A 0 6px, #14181F 6px 12px);"></div>
+          <div style="padding: 8px 9px; font-size: 11px; font-weight: 600; color: #F2F5FA;">Purge audit records</div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <span style="display: inline-flex; align-items: center; gap: 5px; align-self: flex-start; font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; color: #FFB3B9; background: #2A1116; border: 1px solid #FF3B4A; border-radius: 3px; padding: 2px 6px;">
+            <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M5 0.8 L9.4 8.8 L0.6 8.8 Z" fill="none" stroke="#FF6B75" stroke-width="1.3" stroke-linejoin="round"></path><path d="M5 3.6 L5 6.2" stroke="#FF6B75" stroke-width="1.3" stroke-linecap="round"></path></svg>
+            DESTRUCTIVE
+          </span>
+          <span style="font-size: 11px; line-height: 1.5; color: #94A3B8;">Three signals stacked: hazard band across the top of the node, a text seal, and typed confirmation before dispatch. Never colour alone.</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="box-sizing: border-box; background: #10141D; border: 1px solid #232C3D; border-radius: 6px; padding: 14px; display: flex; flex-direction: column; gap: 11px;">
+      <div style="font-family: 'Chakra Petch', sans-serif; font-size: 11px; font-weight: 600; letter-spacing: 0.12em; color: #6F7E93;">TYPOGRAPHY</div>
+      <div style="display: flex; flex-direction: column; gap: 7px;">
+        <div style="display: flex; align-items: baseline; gap: 10px;">
+          <span style="font-family: 'Chakra Petch', sans-serif; font-size: 20px; font-weight: 700; letter-spacing: 0.05em; color: #F2F5FA;">CHAKRA PETCH</span>
+          <span style="font-size: 10px; color: #7B8798;">labels and wordmark</span>
+        </div>
+        <div style="display: flex; align-items: baseline; gap: 10px;">
+          <span style="font-size: 17px; font-weight: 600; color: #F2F5FA;">IBM Plex Sans</span>
+          <span style="font-size: 10px; color: #7B8798;">UI and body text</span>
+        </div>
+        <div style="display: flex; align-items: baseline; gap: 10px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; color: #F2F5FA;">12:04.7 · %SYS</span>
+          <span style="font-size: 10px; color: #7B8798;">tabular-nums</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="box-sizing: border-box; background: #10141D; border: 1px solid #232C3D; border-radius: 6px; padding: 14px; display: flex; align-items: center; gap: 28px;">
+    <div style="font-family: 'Chakra Petch', sans-serif; font-size: 11px; font-weight: 600; letter-spacing: 0.12em; color: #6F7E93; width: 130px; flex-shrink: 0;">EDGES AND HANDLES</div>
+    <div style="display: flex; align-items: center; gap: 9px;">
+      <svg width="46" height="12" viewBox="0 0 46 12" aria-hidden="true"><path d="M1,6 L40,6" stroke="#5E6E85" stroke-width="1.5"></path><path d="M40,3 L45,6 L40,9 z" fill="#5E6E85"></path></svg>
+      <span style="font-size: 11px; color: #94A3B8;">sequence: 1.5 px</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 9px;">
+      <svg width="52" height="16" viewBox="0 0 52 16" aria-hidden="true"><path d="M1,3 C14,3 16,8 26,8" stroke="#C6D2E2" stroke-width="2.5" fill="none"></path><path d="M1,13 C14,13 16,8 26,8" stroke="#C6D2E2" stroke-width="2.5" fill="none"></path><rect x="26" y="4" width="8" height="8" transform="rotate(45 30 8)" fill="#10141D" stroke="#C6D2E2" stroke-width="1.6"></rect><path d="M38,8 L50,8" stroke="#C6D2E2" stroke-width="2.5"></path></svg>
+      <span style="font-size: 11px; color: #94A3B8;">join: 2.5 px + diamond</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 9px;">
+      <div style="width: 10px; height: 10px; background: #0A0D13; border: 1.5px solid #8A97AB; border-radius: 2px;"></div>
+      <span style="font-size: 11px; color: #94A3B8;">plain handle</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 9px;">
+      <div style="width: 11px; height: 11px; background: #0A0D13; border: 2px solid #C6D2E2; transform: rotate(45deg);"></div>
+      <span style="font-size: 11px; color: #94A3B8;">join handle</span>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1100,"height":880}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SentaiTask — Task catalog (light theme)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;font-family:"IBM Plex Sans",system-ui,sans-serif;background:#EFEDE7;font-variant-numeric:tabular-nums}
+a{color:#1F5FA8}a:hover{color:#123E70}
+</style>
+</helmet>
+
+<div style="width: 1440px; height: 900px; box-sizing: border-box; background: #EFEDE7; color: #16181D; display: flex; flex-direction: column; overflow: hidden;">
+
+  <!-- TOP BAR -->
+  <div style="height: 52px; flex-shrink: 0; box-sizing: border-box; border-bottom: 1px solid #D2CDC2; background: #FFFFFF; display: flex; align-items: center; gap: 14px; padding: 0 16px;">
+    <div style="display: flex; gap: 2px; align-items: flex-end; height: 20px;">
+      <div style="width: 4px; height: 20px; background: #D91F2E;"></div>
+      <div style="width: 4px; height: 16px; background: #1F6FD6;"></div>
+      <div style="width: 4px; height: 12px; background: #C68A00;"></div>
+      <div style="width: 4px; height: 16px; background: #1F8E52;"></div>
+      <div style="width: 4px; height: 20px; background: #C4468C;"></div>
+    </div>
+    <div style="font-family: 'Chakra Petch', sans-serif; font-weight: 700; font-size: 16px; letter-spacing: 0.06em; color: #16181D;">SENTAI<span style="color: #7A8296; font-weight: 500;">TASK</span></div>
+    <div style="width: 1px; height: 24px; background: #D2CDC2;"></div>
+    <div style="display: flex; gap: 2px;">
+      <span style="font-size: 13px; font-weight: 500; color: #4D5567; padding: 6px 10px;">Flows</span>
+      <span style="font-size: 13px; font-weight: 600; color: #16181D; padding: 6px 10px; box-shadow: inset 0 -2px 0 #D91F2E;">Task catalog</span>
+      <span style="font-size: 13px; font-weight: 500; color: #4D5567; padding: 6px 10px;">History</span>
+      <span style="font-size: 13px; font-weight: 500; color: #4D5567; padding: 6px 10px;">Work Queue Manager</span>
+    </div>
+    <div style="flex-grow: 1;"></div>
+    <div style="display: flex; border: 1px solid #C9C3B6; border-radius: 4px; overflow: hidden;">
+      <button type="button" style="font-family: 'IBM Plex Sans', sans-serif; font-size: 11px; font-weight: 500; color: #5C6473; background: transparent; border: 0; padding: 6px 10px; cursor: pointer;">Dark</button>
+      <button type="button" style="font-family: 'IBM Plex Sans', sans-serif; font-size: 11px; font-weight: 600; color: #FFFFFF; background: #23262E; border: 0; padding: 6px 10px; cursor: pointer;">Light</button>
+    </div>
+    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #5C6473;">irisadm@iris-prod-01</span>
+  </div>
+
+  <!-- FILTER BAR -->
+  <div style="height: 56px; flex-shrink: 0; box-sizing: border-box; border-bottom: 1px solid #D2CDC2; background: #F7F5F1; display: flex; align-items: center; gap: 10px; padding: 0 16px;">
+    <label for="cat-search" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">Search task</label>
+    <input id="cat-search" type="text" value="integrity" style="box-sizing: border-box; width: 260px; font-family: 'IBM Plex Sans', sans-serif; font-size: 12px; color: #16181D; background: #FFFFFF; border: 1px solid #C9C3B6; border-radius: 4px; padding: 8px 10px;">
+    <label for="cat-ns" style="font-size: 12px; color: #4D5567;">Namespace</label>
+    <select id="cat-ns" style="box-sizing: border-box; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #16181D; background: #FFFFFF; border: 1px solid #C9C3B6; border-radius: 4px; padding: 7px 9px;">
+      <option>all</option>
+      <option>%SYS</option>
+      <option>USER</option>
+      <option>SAMPLES</option>
+      <option>DOCBOOK</option>
+    </select>
+    <div style="display: flex; gap: 6px;">
+      <button type="button" style="font-family: 'IBM Plex Sans', sans-serif; font-size: 11px; font-weight: 600; color: #FFFFFF; background: #23262E; border: 1px solid #23262E; border-radius: 3px; padding: 6px 10px; cursor: pointer;">All</button>
+      <button type="button" style="font-family: 'IBM Plex Sans', sans-serif; font-size: 11px; font-weight: 500; color: #4D5567; background: #FFFFFF; border: 1px solid #C9C3B6; border-radius: 3px; padding: 6px 10px; cursor: pointer;">Scheduled</button>
+      <button type="button" style="font-family: 'IBM Plex Sans', sans-serif; font-size: 11px; font-weight: 500; color: #4D5567; background: #FFFFFF; border: 1px solid #C9C3B6; border-radius: 3px; padding: 6px 10px; cursor: pointer;">Suspended</button>
+      <button type="button" style="display: inline-flex; align-items: center; gap: 6px; font-family: 'IBM Plex Sans', sans-serif; font-size: 11px; font-weight: 600; color: #8C1420; background: #FBEAEC; border: 1px solid #E3A8AE; border-radius: 3px; padding: 6px 10px; cursor: pointer;">
+        <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M5 0.8 L9.4 8.8 L0.6 8.8 Z" fill="none" stroke="#C0212F" stroke-width="1.3" stroke-linejoin="round"></path><path d="M5 3.6 L5 6.2" stroke="#C0212F" stroke-width="1.3" stroke-linecap="round"></path></svg>
+        Destructive only
+      </button>
+    </div>
+    <div style="flex-grow: 1;"></div>
+    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #5C6473;">11 of 148 tasks</span>
+    <button type="button" style="font-family: 'IBM Plex Sans', sans-serif; font-size: 12px; font-weight: 600; color: #FFFFFF; background: #23262E; border: 1px solid #23262E; border-radius: 4px; padding: 7px 12px; cursor: pointer;">New task</button>
+  </div>
+
+  <div style="flex-grow: 1; display: flex; min-height: 0;">
+
+    <!-- TABLE -->
+    <div style="flex-grow: 1; min-width: 0; box-sizing: border-box; background: #FFFFFF; display: flex; flex-direction: column; overflow: hidden;">
+
+      <div style="display: grid; grid-template-columns: 30px minmax(0, 2.4fr) 96px 132px 132px 118px 96px; gap: 0; box-sizing: border-box; border-bottom: 1px solid #C9C3B6; background: #F2EFE9; padding: 0 14px; height: 34px; align-items: center;">
+        <span style="font-size: 10px; font-weight: 700; letter-spacing: 0.08em; color: #5C6473;"></span>
+        <span style="font-size: 10px; font-weight: 700; letter-spacing: 0.08em; color: #5C6473;">NAME</span>
+        <span style="font-size: 10px; font-weight: 700; letter-spacing: 0.08em; color: #5C6473;">NAMESPACE</span>
+        <span style="font-size: 10px; font-weight: 700; letter-spacing: 0.08em; color: #5C6473;">NEXT RUN</span>
+        <span style="font-size: 10px; font-weight: 700; letter-spacing: 0.08em; color: #5C6473;">LAST RUN</span>
+        <span style="font-size: 10px; font-weight: 700; letter-spacing: 0.08em; color: #5C6473;">STATE</span>
+        <span style="font-size: 10px; font-weight: 700; letter-spacing: 0.08em; color: #5C6473;">USER</span>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 30px minmax(0, 2.4fr) 96px 132px 132px 118px 96px; box-sizing: border-box; border-bottom: 1px solid #E7E3DA; padding: 0 14px; height: 38px; align-items: center;">
+        <svg width="13" height="13" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="5.2" fill="#1F8E52"></circle><path d="M3.4 6.2 L5.2 8 L8.6 4.2" fill="none" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        <span style="font-size: 13px; color: #16181D;">Integrity check — USER</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #3A4150;">USER</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #3A4150;">Sep 27 03:00</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #5C6473;">Sep 20 03:12</span>
+        <span style="font-size: 12px; color: #1B6E43;">completed</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #5C6473;">irisadm</span>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 30px minmax(0, 2.4fr) 96px 132px 132px 118px 96px; box-sizing: border-box; border-bottom: 1px solid #E7E3DA; background: #FAF9F6; padding: 0 14px; height: 38px; align-items: center;">
+        <svg width="13" height="13" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="5.2" fill="#1F8E52"></circle><path d="M3.4 6.2 L5.2 8 L8.6 4.2" fill="none" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        <span style="font-size: 13px; color: #16181D;">Integrity check — SAMPLES</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #3A4150;">SAMPLES</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #3A4150;">Sep 27 03:00</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #5C6473;">Sep 20 03:09</span>
+        <span style="font-size: 12px; color: #1B6E43;">completed</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #5C6473;">irisadm</span>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 30px minmax(0, 2.4fr) 96px 132px 132px 118px 96px; box-sizing: border-box; border-bottom: 1px solid #E7E3DA; padding: 0 14px; height: 38px; align-items: center;">
+        <svg width="13" height="13" viewBox="0 0 12 12" aria-hidden="true"><path d="M6 0.8 L11.4 10.4 L0.6 10.4 Z" fill="#C0212F"></path></svg>
+        <span style="font-size: 13px; color: #16181D;">Integrity check — DOCBOOK</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #3A4150;">DOCBOOK</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #3A4150;">Sep 27 03:00</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #5C6473;">Sep 20 03:01</span>
+        <span style="font-size: 12px; color: #A5192A;">failed</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #5C6473;">irisadm</span>
+      </div>
+
+      <!-- SELECTED ROW -->
+      <div style="display: grid; grid-template-columns: 30px minmax(0, 2.4fr) 96px 132px 132px 118px 96px; box-sizing: border-box; border-top: 1px solid #C0212F; border-bottom: 1px solid #C0212F; background: #FBEFF0; padding: 0 14px; height: 40px; align-items: center; box-shadow: inset 3px 0 0 #C0212F;">
+        <svg width="13" height="13" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.4 1.2 L10.4 6 L2.4 10.8 Z" fill="#0E7C96"></path></svg>
+        <span style="display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #16181D;">
+          Purge audit records
+          <span style="display: inline-flex; align-items: center; gap: 4px; font-family: 'IBM Plex Mono', monospace; font-size: 9px; font-weight: 700; letter-spacing: 0.08em; color: #8C1420; background: #F7D9DC; border: 1px solid #C0212F; border-radius: 2px; padding: 1px 5px;">
+            <svg width="8" height="8" viewBox="0 0 10 10" aria-hidden="true"><path d="M5 0.8 L9.4 8.8 L0.6 8.8 Z" fill="none" stroke="#8C1420" stroke-width="1.4" stroke-linejoin="round"></path></svg>
+            DESTRUCTIVE
+          </span>
+        </span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #16181D;">%SYS</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #16181D;">Sep 27 03:20</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #3A4150;">Sep 20 03:31</span>
+        <span style="font-size: 12px; font-weight: 600; color: #0B5F73;">running</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #3A4150;">irisadm</span>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 30px minmax(0, 2.4fr) 96px 132px 132px 118px 96px; box-sizing: border-box; border-bottom: 1px solid #E7E3DA; background: #FAF9F6; padding: 0 14px; height: 38px; align-items: center;">
+        <svg width="13" height="13" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="5.2" fill="#1F8E52"></circle><path d="M3.4 6.2 L5.2 8 L8.6 4.2" fill="none" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        <span style="font-size: 13px; color: #16181D;">Switch journal</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #3A4150;">%SYS</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #3A4150;">today 23:00</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #5C6473;">Sep 19 23:00</span>
+        <span style="font-size: 12px; color: #1B6E43;">completed</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #5C6473;">irisadm</span>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 30px minmax(0, 2.4fr) 96px 132px 132px 118px 96px; box-sizing: border-box; border-bottom: 1px solid #E7E3DA; padding: 0 14px; height: 38px; align-items: center;">
+        <svg width="13" height="13" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="5.2" fill="#1F8E52"></circle><path d="M3.4 6.2 L5.2 8 L8.6 4.2" fill="none" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        <span style="font-size: 13px; color: #16181D;">Compact globals — USER</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #3A4150;">USER</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #3A4150;">Oct 04 02:00</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #5C6473;">Sep 06 02:00</span>
+        <span style="font-size: 12px; color: #1B6E43;">completed</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #5C6473;">irissvc</span>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 30px minmax(0, 2.4fr) 96px 132px 132px 118px 96px; box-sizing: border-box; border-bottom: 1px solid #E7E3DA; background: #FAF9F6; padding: 0 14px; height: 38px; align-items: center;">
+        <svg width="13" height="13" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="5" fill="none" stroke="#6B7280" stroke-width="1.5"></circle><path d="M2.6 9.4 L9.4 2.6" stroke="#6B7280" stroke-width="1.5"></path></svg>
+        <span style="font-size: 13px; color: #16181D;">Defragment globals — USER</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #3A4150;">USER</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #3A4150;">Oct 04 02:40</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #5C6473;">Sep 06 02:44</span>
+        <span style="font-size: 12px; color: #4D5567;">cancelled</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #5C6473;">irissvc</span>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 30px minmax(0, 2.4fr) 96px 132px 132px 118px 96px; box-sizing: border-box; border-bottom: 1px solid #E7E3DA; padding: 0 14px; height: 38px; align-items: center;">
+        <svg width="13" height="13" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="5.2" fill="#1F8E52"></circle><path d="M3.4 6.2 L5.2 8 L8.6 4.2" fill="none" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        <span style="display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: #16181D;">
+          Purge task history
+          <span style="display: inline-flex; align-items: center; gap: 4px; font-family: 'IBM Plex Mono', monospace; font-size: 9px; font-weight: 700; letter-spacing: 0.08em; color: #8C1420; background: #F7D9DC; border: 1px solid #C0212F; border-radius: 2px; padding: 1px 5px;">
+            <svg width="8" height="8" viewBox="0 0 10 10" aria-hidden="true"><path d="M5 0.8 L9.4 8.8 L0.6 8.8 Z" fill="none" stroke="#8C1420" stroke-width="1.4" stroke-linejoin="round"></path></svg>
+            DESTRUCTIVE
+          </span>
+        </span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #3A4150;">%SYS</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #3A4150;">Sep 21 01:00</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #5C6473;">Sep 20 01:00</span>
+        <span style="font-size: 12px; color: #1B6E43;">completed</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #5C6473;">irisadm</span>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 30px minmax(0, 2.4fr) 96px 132px 132px 118px 96px; box-sizing: border-box; border-bottom: 1px solid #E7E3DA; background: #FAF9F6; padding: 0 14px; height: 38px; align-items: center;">
+        <svg width="13" height="13" viewBox="0 0 12 12" aria-hidden="true"><rect x="1.4" y="1.2" width="3.2" height="9.6" fill="#9A6A00"></rect><rect x="7.4" y="1.2" width="3.2" height="9.6" fill="#9A6A00"></rect></svg>
+        <span style="font-size: 13px; color: #16181D;">Purge journal files</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #3A4150;">%SYS</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #3A4150;">Sep 21 01:10</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #5C6473;">Sep 20 01:10</span>
+        <span style="font-size: 12px; color: #7A5200;">paused</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #5C6473;">irisadm</span>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 30px minmax(0, 2.4fr) 96px 132px 132px 118px 96px; box-sizing: border-box; border-bottom: 1px solid #E7E3DA; padding: 0 14px; height: 38px; align-items: center;">
+        <svg width="13" height="13" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="5.2" fill="#1F8E52"></circle><path d="M3.4 6.2 L5.2 8 L8.6 4.2" fill="none" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        <span style="font-size: 13px; color: #16181D;">Full backup — all databases</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #3A4150;">%SYS</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #3A4150;">Sep 27 00:30</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #5C6473;">Sep 20 00:30</span>
+        <span style="font-size: 12px; color: #1B6E43;">completed</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #5C6473;">irisbkp</span>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 30px minmax(0, 2.4fr) 96px 132px 132px 118px 96px; box-sizing: border-box; border-bottom: 1px solid #E7E3DA; background: #FAF9F6; padding: 0 14px; height: 38px; align-items: center;">
+        <svg width="13" height="13" viewBox="0 0 12 12" aria-hidden="true"><rect x="1.2" y="1.2" width="9.6" height="9.6" fill="none" stroke="#6B7280" stroke-width="1.5" stroke-dasharray="2.6 2"></rect></svg>
+        <span style="font-size: 13px; color: #16181D;">Diagnostic report</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #3A4150;">%SYS</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #3A4150;">Sep 21 06:00</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #5C6473;">Sep 20 06:00</span>
+        <span style="font-size: 12px; color: #4D5567;">queued</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #5C6473;">irisadm</span>
+      </div>
+
+      <div style="flex-grow: 1;"></div>
+
+      <div style="height: 34px; flex-shrink: 0; box-sizing: border-box; border-top: 1px solid #D2CDC2; background: #F7F5F1; display: flex; align-items: center; gap: 14px; padding: 0 14px;">
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #5C6473;">sorted by next run</span>
+        <div style="flex-grow: 1;"></div>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #5C6473;">updated 4 s ago</span>
+      </div>
+    </div>
+
+    <!-- ROW DETAIL -->
+    <div style="width: 380px; flex-shrink: 0; box-sizing: border-box; border-left: 1px solid #C9C3B6; background: #F7F5F1; display: flex; flex-direction: column;">
+      <div style="box-sizing: border-box; padding: 14px; border-bottom: 1px solid #DDD8CE; display: flex; flex-direction: column; gap: 7px;">
+        <div style="font-family: 'Chakra Petch', sans-serif; font-size: 11px; font-weight: 600; letter-spacing: 0.12em; color: #7A8296;">TASK DETAIL</div>
+        <div style="font-size: 16px; font-weight: 600; color: #16181D;">Purge audit records</div>
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #5C6473;">%SYS.Task.PurgeAuditDatabase · ID 1042</div>
+        <div style="display: flex; gap: 6px; margin-top: 2px;">
+          <span style="display: inline-flex; align-items: center; gap: 5px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.06em; color: #0B5F73; background: #DDF1F6; border: 1px solid #7FC3D3; border-radius: 3px; padding: 2px 6px;">
+            <svg width="10" height="10" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.4 1.2 L10.4 6 L2.4 10.8 Z" fill="#0E7C96"></path></svg>
+            RUNNING
+          </span>
+          <span style="display: inline-flex; align-items: center; gap: 5px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.06em; color: #8C1420; background: #F7D9DC; border: 1px solid #C0212F; border-radius: 3px; padding: 2px 6px;">
+            <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M5 0.8 L9.4 8.8 L0.6 8.8 Z" fill="none" stroke="#8C1420" stroke-width="1.3" stroke-linejoin="round"></path><path d="M5 3.6 L5 6.2" stroke="#8C1420" stroke-width="1.3" stroke-linecap="round"></path></svg>
+            DESTRUCTIVE
+          </span>
+        </div>
+      </div>
+
+      <div style="flex-grow: 1; box-sizing: border-box; padding: 14px; display: flex; flex-direction: column; gap: 12px; overflow: hidden;">
+
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">
+          <div style="display: flex; flex-direction: column; gap: 3px;">
+            <span style="font-size: 10px; font-weight: 600; letter-spacing: 0.08em; color: #7A8296;">NAMESPACE</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #16181D;">%SYS</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 3px;">
+            <span style="font-size: 10px; font-weight: 600; letter-spacing: 0.08em; color: #7A8296;">RUN AS USER</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #16181D;">irisadm</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 3px;">
+            <span style="font-size: 10px; font-weight: 600; letter-spacing: 0.08em; color: #7A8296;">NEXT RUN</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #16181D;">2026-09-27 03:20</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 3px;">
+            <span style="font-size: 10px; font-weight: 600; letter-spacing: 0.08em; color: #7A8296;">LAST RUN</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #16181D;">2026-09-20 03:31</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 3px;">
+            <span style="font-size: 10px; font-weight: 600; letter-spacing: 0.08em; color: #7A8296;">WQM CATEGORY</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #16181D;">SENTAI.NIGHT</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 3px;">
+            <span style="font-size: 10px; font-weight: 600; letter-spacing: 0.08em; color: #7A8296;">PRIVILEGE</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #16181D;">%Admin_Task:USE</span>
+          </div>
+        </div>
+
+        <div style="height: 1px; background: #DDD8CE;"></div>
+
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <span style="font-size: 10px; font-weight: 600; letter-spacing: 0.08em; color: #7A8296;">CURRENT RUN GUID</span>
+          <div style="box-sizing: border-box; background: #FFFFFF; border: 1px solid #DDD8CE; border-radius: 4px; padding: 9px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #16181D; word-break: break-all;">3F9C21A0-4E77-BB58-9D04-1A7E55CC0B21</div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <span style="font-size: 10px; font-weight: 600; letter-spacing: 0.08em; color: #7A8296;">LAST 5 RUNS</span>
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.4 1.2 L10.4 6 L2.4 10.8 Z" fill="#0E7C96"></path></svg>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #3A4150; flex-grow: 1;">Sep 20 03:31</span>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #0B5F73;">06:41</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="5.2" fill="#1F8E52"></circle><path d="M3.4 6.2 L5.2 8 L8.6 4.2" fill="none" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #3A4150; flex-grow: 1;">Sep 13 03:20</span>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #5C6473;">09:12</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="5.2" fill="#1F8E52"></circle><path d="M3.4 6.2 L5.2 8 L8.6 4.2" fill="none" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #3A4150; flex-grow: 1;">Sep 06 03:20</span>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #5C6473;">08:58</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="5" fill="none" stroke="#6B7280" stroke-width="1.5"></circle><path d="M2.6 9.4 L9.4 2.6" stroke="#6B7280" stroke-width="1.5"></path></svg>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #3A4150; flex-grow: 1;">Aug 30 03:20</span>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #5C6473;">00:12</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="5.2" fill="#1F8E52"></circle><path d="M3.4 6.2 L5.2 8 L8.6 4.2" fill="none" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #3A4150; flex-grow: 1;">Aug 23 03:20</span>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #5C6473;">09:33</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="flex-grow: 1;"></div>
+
+        <div style="display: flex; gap: 8px;">
+          <a href="RunTimeline.dc.html" style="flex-grow: 1; text-align: center; text-decoration: none; font-family: 'IBM Plex Sans', sans-serif; font-size: 12px; font-weight: 600; color: #FFFFFF; background: #23262E; border: 1px solid #23262E; border-radius: 4px; padding: 9px 12px;">View run history</a>
+          <button type="button" style="font-family: 'IBM Plex Sans', sans-serif; font-size: 12px; font-weight: 500; color: #3A4150; background: #FFFFFF; border: 1px solid #C9C3B6; border-radius: 4px; padding: 9px 12px; cursor: pointer;">Suspend</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,538 @@
+openapi: 3.1.0
+info:
+  title: SentaiTask API
+  version: 1.0.0
+  description: >
+    REST surface between the SentaiTask front end and the IRIS instance. Served by an
+    ObjectScript %CSP.REST dispatcher under the SENTAI package. Every endpoint here
+    exists because a screen contract needs it; there are no speculative endpoints.
+servers:
+  - url: /csp/sentai/api/v1
+
+tags:
+  - name: flows
+  - name: runs
+  - name: catalog
+  - name: wqm
+
+paths:
+
+  /flows:
+    get:
+      tags: [flows]
+      summary: List flows
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/FlowSummary" }
+    post:
+      tags: [flows]
+      summary: Create a flow
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FlowDefinition" }
+      responses:
+        "201": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/Flow" } } } }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /flows/{flowId}:
+    parameters:
+      - $ref: "#/components/parameters/FlowId"
+    get:
+      tags: [flows]
+      summary: Read a flow, including canvas geometry
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Flow" } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [flows]
+      summary: Save a flow; bumps revision
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FlowDefinition" }
+      responses:
+        "200": { description: Saved, content: { application/json: { schema: { $ref: "#/components/schemas/Flow" } } } }
+        "409": { description: Saved by someone else since you loaded it }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /flows/{flowId}/validate:
+    parameters: [ { $ref: "#/components/parameters/FlowId" } ]
+    post:
+      tags: [flows]
+      summary: Validate the graph and evaluate preconditions against the live instance
+      description: >
+        Drives the canvas warnings (FR-008, FR-009). Errors block scheduling; warnings do
+        not (FR-010). This result is advisory — preconditions are re-evaluated at dispatch,
+        and that evaluation is authoritative (research R-006).
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ValidationReport" }
+
+  /flows/{flowId}/schedule:
+    parameters: [ { $ref: "#/components/parameters/FlowId" } ]
+    post:
+      tags: [flows]
+      summary: Compile the flow into native Task Manager definitions
+      description: Constitution V — creates %SYS.Task entries; never starts a private scheduler.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [scheduleSpec]
+              properties:
+                scheduleSpec: { type: string, example: "WEEKLY SAT 03:00" }
+                category: { type: string, example: "SENTAI.NIGHT" }
+      responses:
+        "201":
+          description: Scheduled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  taskIds: { type: array, items: { type: integer } }
+                  nextRun: { type: string, format: date-time }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /flows/{flowId}/dispatch:
+    parameters: [ { $ref: "#/components/parameters/FlowId" } ]
+    post:
+      tags: [runs]
+      summary: Dispatch the flow now
+      description: >
+        Returns the run GUID synchronously. Every step already has a StepRun row with a
+        GUID and TimeQueued before this responds (Constitution III, research R-004).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                confirmations:
+                  description: One entry per destructive step; the typed database or namespace name (Constitution I).
+                  type: array
+                  items:
+                    type: object
+                    required: [stepId, typedName]
+                    properties:
+                      stepId: { type: string }
+                      typedName: { type: string }
+      responses:
+        "202":
+          description: Dispatched
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Run" }
+        "428":
+          description: A destructive step is missing its typed confirmation
+
+  /runs:
+    get:
+      tags: [runs]
+      summary: List runs
+      parameters:
+        - { name: flowId, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, default: 50 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Run" } }
+
+  /runs/{runGuid}:
+    parameters: [ { $ref: "#/components/parameters/RunGuid" } ]
+    get:
+      tags: [runs]
+      summary: Read a run with all its step runs
+      description: Backs both UI-002 (live) and UI-004 (history); the same projection.
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/RunDetail" } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /runs/{runGuid}/events:
+    parameters: [ { $ref: "#/components/parameters/RunGuid" } ]
+    get:
+      tags: [runs]
+      summary: Live state stream (SSE)
+      description: >
+        text/event-stream of StepRun state changes and log lines (research R-005).
+        Clients that cannot hold the stream poll GET /runs/{runGuid} every 3 s instead.
+        NFR-001 — a change must reach the client within 2 s.
+      responses:
+        "200":
+          description: Stream
+          content:
+            text/event-stream:
+              schema: { type: string }
+
+  /runs/{runGuid}/cancel:
+    parameters: [ { $ref: "#/components/parameters/RunGuid" } ]
+    post:
+      tags: [runs]
+      summary: Cancel the whole wave
+      responses:
+        "202": { description: Cancellation requested }
+
+  /runs/{runGuid}/pause:
+    parameters: [ { $ref: "#/components/parameters/RunGuid" } ]
+    post:
+      tags: [runs]
+      summary: Pause the wave
+      responses:
+        "202": { description: Pause requested }
+
+  /runs/{runGuid}/steps/{stepGuid}/cancel:
+    parameters:
+      - { $ref: "#/components/parameters/RunGuid" }
+      - { $ref: "#/components/parameters/StepGuid" }
+    post:
+      tags: [runs]
+      summary: Cancel one step; the rest of the wave is unaffected (scenario 7)
+      responses:
+        "202": { description: Cancellation requested }
+
+  /runs/{runGuid}/steps/{stepGuid}/pause:
+    parameters:
+      - { $ref: "#/components/parameters/RunGuid" }
+      - { $ref: "#/components/parameters/StepGuid" }
+    post:
+      tags: [runs]
+      summary: Pause one step
+      description: Only offered on step types that can honour it (research R-010).
+      responses:
+        "202": { description: Pause requested }
+        "409": { description: This step type cannot be paused }
+
+  /runs/{runGuid}/steps/{stepGuid}/rerun:
+    parameters:
+      - { $ref: "#/components/parameters/RunGuid" }
+      - { $ref: "#/components/parameters/StepGuid" }
+    post:
+      tags: [runs]
+      summary: Re-run a failed step within the same run
+      responses:
+        "202": { description: Re-dispatched, content: { application/json: { schema: { $ref: "#/components/schemas/StepRun" } } } }
+
+  /catalog/tasks:
+    get:
+      tags: [catalog]
+      summary: Every scheduled task on the instance, not only ours (FR-028)
+      parameters:
+        - { name: q, in: query, schema: { type: string } }
+        - { name: namespace, in: query, schema: { type: string } }
+        - { name: filter, in: query, schema: { type: string, enum: [all, scheduled, suspended] } }
+        - { name: destructiveOnly, in: query, schema: { type: boolean } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total: { type: integer }
+                  matched: { type: integer }
+                  items: { type: array, items: { $ref: "#/components/schemas/CatalogTask" } }
+
+  /catalog/tasks/{taskId}:
+    parameters: [ { name: taskId, in: path, required: true, schema: { type: integer } } ]
+    get:
+      tags: [catalog]
+      summary: Task detail with current run GUID and the last five runs (FR-030)
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/CatalogTaskDetail" } } } }
+
+  /catalog/tasks/{taskId}/suspend:
+    parameters: [ { name: taskId, in: path, required: true, schema: { type: integer } } ]
+    post:
+      tags: [catalog]
+      summary: Suspend or resume a scheduled task (FR-031)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: { suspended: { type: boolean } }
+      responses:
+        "200": { description: OK }
+
+  /wqm/categories:
+    get:
+      tags: [wqm]
+      summary: List Work Queue Manager categories
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/WqmCategory" } }
+
+  /wqm/categories/{name}:
+    parameters: [ { name: name, in: path, required: true, schema: { type: string } } ]
+    get:
+      tags: [wqm]
+      summary: Read a category plus its impact count
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/WqmCategory"
+                  - type: object
+                    properties:
+                      affectedTaskCount:
+                        type: integer
+                        description: Scheduled tasks outside the current flow using this category (FR-017)
+                      host:
+                        type: object
+                        properties:
+                          name: { type: string }
+                          cores: { type: integer }
+    put:
+      tags: [wqm]
+      summary: Save a category
+      description: >
+        422 when the nesting invariant is violated —
+        defaultWorkers <= maxActiveWorkers <= maxWorkers <= maxTotalWorkers.
+        Never affects a run already in flight.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WqmCategory" }
+      responses:
+        "200": { description: Saved }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+components:
+
+  parameters:
+    FlowId:   { name: flowId,   in: path, required: true, schema: { type: string } }
+    RunGuid:  { name: runGuid,  in: path, required: true, schema: { type: string, format: uuid } }
+    StepGuid: { name: stepGuid, in: path, required: true, schema: { type: string, format: uuid } }
+
+  responses:
+    NotFound:
+      description: Not found
+      content: { application/json: { schema: { $ref: "#/components/schemas/Problem" } } }
+    ValidationError:
+      description: Validation failed
+      content: { application/json: { schema: { $ref: "#/components/schemas/ValidationReport" } } }
+
+  schemas:
+
+    StepState:
+      type: string
+      enum: [queued, running, paused, completed, failed, cancelled]
+      description: Closed set. Adding a member requires a constitutional amendment (Constitution II).
+
+    StepType:
+      type: string
+      enum: [integrity-check, compact-globals, defragment-globals, switch-journal, purge-audit-records, purge-task-history, custom]
+
+    JoinPolicy:
+      type: string
+      enum: [ALL_MUST_SUCCEED, PROCEED_ON_PARTIAL, MIN_SUCCEEDED]
+
+    FlowSummary:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        revision: { type: integer }
+        savedAt: { type: string, format: date-time }
+        savedBy: { type: string }
+        nextRun: { type: string, format: date-time, nullable: true }
+
+    Flow:
+      allOf:
+        - $ref: "#/components/schemas/FlowSummary"
+        - $ref: "#/components/schemas/FlowDefinition"
+
+    FlowDefinition:
+      $comment: Mirrors flow-definition.schema.json; that file is authoritative.
+      type: object
+      required: [name, steps, edges]
+      properties:
+        name: { type: string }
+        defaultCategory: { type: string }
+        steps: { type: array, items: { $ref: "#/components/schemas/Step" } }
+        edges:
+          type: array
+          items:
+            type: object
+            required: [source, target]
+            properties:
+              source: { type: string }
+              target: { type: string }
+        joins:
+          type: array
+          items:
+            type: object
+            required: [target, policy]
+            properties:
+              target: { type: string }
+              policy: { $ref: "#/components/schemas/JoinPolicy" }
+              minSucceeded: { type: integer }
+        canvasGeometry:
+          type: object
+          description: Presentation only. Never consulted by the dispatcher.
+
+    Step:
+      type: object
+      required: [id, type, taskName, namespace]
+      properties:
+        id: { type: string, example: "04" }
+        type: { $ref: "#/components/schemas/StepType" }
+        taskName: { type: string }
+        namespace: { type: string, example: "%SYS" }
+        databaseDirectory: { type: string, example: "/opt/iris/mgr/user/" }
+        runAsUser: { type: string, example: "irisadm" }
+        parameters: { type: object, additionalProperties: true }
+        timeoutMinutes: { type: integer }
+        wqmCategory: { type: string }
+        isDestructive:
+          type: boolean
+          readOnly: true
+          description: Derived from the step type. Not settable by the client (Constitution I).
+        customClass:
+          type: string
+          description: Subclass of %SYS.Task.Definition; required when type is custom.
+
+    Run:
+      type: object
+      properties:
+        guid: { type: string, format: uuid }
+        flowId: { type: string }
+        flowRevision: { type: integer }
+        state: { type: string, enum: [running, completed, failed, cancelled] }
+        startedAt: { type: string, format: date-time }
+        finishedAt: { type: string, format: date-time, nullable: true }
+        dispatchedBy: { type: string }
+
+    RunDetail:
+      allOf:
+        - $ref: "#/components/schemas/Run"
+        - type: object
+          properties:
+            totalDurationMs: { type: integer, readOnly: true }
+            sumOfStepsMs:
+              type: integer
+              readOnly: true
+              description: Reported separately from totalDuration; never collapsed into a ratio (Constitution VIII).
+            steps: { type: array, items: { $ref: "#/components/schemas/StepRun" } }
+            log: { type: array, items: { $ref: "#/components/schemas/LogEntry" } }
+
+    StepRun:
+      type: object
+      properties:
+        guid: { type: string, format: uuid }
+        stepId: { type: string }
+        state: { $ref: "#/components/schemas/StepState" }
+        timeQueued: { type: string, format: date-time }
+        timeStarted: { type: string, format: date-time, nullable: true }
+        timeFinished: { type: string, format: date-time, nullable: true }
+        failureReason:
+          type: string
+          nullable: true
+          description: Verbatim from IRIS. Never rewritten, summarised or truncated (FR-022).
+        progressCurrent: { type: integer, nullable: true }
+        progressTotal: { type: integer, nullable: true }
+        confirmedBy: { type: string, nullable: true }
+        confirmedAt: { type: string, format: date-time, nullable: true }
+
+    LogEntry:
+      type: object
+      properties:
+        at: { type: string, format: date-time }
+        stepId: { type: string, nullable: true }
+        severity: { type: string, enum: [info, warning, error] }
+        message: { type: string }
+
+    ValidationReport:
+      type: object
+      properties:
+        errors:
+          type: array
+          description: Block scheduling.
+          items: { $ref: "#/components/schemas/Finding" }
+        warnings:
+          type: array
+          description: Do not block scheduling (FR-010).
+          items: { $ref: "#/components/schemas/Finding" }
+
+    Finding:
+      type: object
+      properties:
+        stepId: { type: string, nullable: true }
+        code: { type: string, example: "PRECONDITION_READ_ONLY" }
+        message:
+          type: string
+          example: "Database mounted read-only. Integrity check requires write access to the directory."
+
+    CatalogTask:
+      type: object
+      properties:
+        taskId: { type: integer }
+        name: { type: string }
+        className: { type: string, example: "%SYS.Task.PurgeAuditDatabase" }
+        namespace: { type: string }
+        nextRun: { type: string, format: date-time, nullable: true }
+        lastRun: { type: string, format: date-time, nullable: true }
+        state: { $ref: "#/components/schemas/StepState" }
+        runAsUser: { type: string }
+        isDestructive: { type: boolean }
+        suspended: { type: boolean }
+
+    CatalogTaskDetail:
+      allOf:
+        - $ref: "#/components/schemas/CatalogTask"
+        - type: object
+          properties:
+            wqmCategory: { type: string }
+            privilege: { type: string, example: "%Admin_Task:USE" }
+            currentRunGuid: { type: string, format: uuid, nullable: true }
+            lastRuns:
+              type: array
+              maxItems: 5
+              items:
+                type: object
+                properties:
+                  at: { type: string, format: date-time }
+                  state: { $ref: "#/components/schemas/StepState" }
+                  durationMs: { type: integer }
+
+    WqmCategory:
+      type: object
+      required: [name, defaultWorkers, maxActiveWorkers, maxWorkers, maxTotalWorkers, alwaysQueue]
+      properties:
+        name: { type: string, example: "SENTAI.NIGHT" }
+        defaultWorkers: { type: integer, minimum: 1 }
+        maxActiveWorkers: { type: integer, minimum: 1 }
+        maxWorkers: { type: integer, minimum: 1 }
+        maxTotalWorkers: { type: integer, minimum: 1 }
+        alwaysQueue: { type: boolean }
+
+    Problem:
+      type: object
+      properties:
+        status: { type: integer }
+        title: { type: string }
+        detail: { type: string }

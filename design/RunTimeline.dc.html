@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SentaiTask — Run history</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;font-family:"IBM Plex Sans",system-ui,sans-serif;background:#0A0D13;font-variant-numeric:tabular-nums}
+a{color:#7FC4FF}a:hover{color:#B7DEFF}
+</style>
+</helmet>
+
+<div style="width: 1440px; height: 640px; box-sizing: border-box; background: #0A0D13; color: #E6EBF2; display: flex; flex-direction: column; overflow: hidden;">
+
+  <!-- HEADER -->
+  <div style="box-sizing: border-box; border-bottom: 1px solid #232C3D; background: #10141D; padding: 14px 20px; display: flex; align-items: flex-end; gap: 28px;">
+    <div style="display: flex; flex-direction: column; gap: 5px;">
+      <div style="font-family: 'Chakra Petch', sans-serif; font-size: 11px; font-weight: 600; letter-spacing: 0.12em; color: #6F7E93;">RUN HISTORY</div>
+      <div style="font-size: 17px; font-weight: 600; color: #F2F5FA;">Heavy maintenance — Saturday 03:00</div>
+      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #6F7E93;">3F9C21A0-4E77-BB58-9D04-1A7E55CC0B21 · 2026-09-20</div>
+    </div>
+    <div style="flex-grow: 1;"></div>
+    <div style="display: flex; gap: 26px;">
+      <div style="display: flex; flex-direction: column; gap: 3px;">
+        <span style="font-size: 10px; letter-spacing: 0.08em; color: #6F7E93;">START</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; color: #E6EBF2;">03:00:02</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 3px;">
+        <span style="font-size: 10px; letter-spacing: 0.08em; color: #6F7E93;">END</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; color: #E6EBF2;">03:25:08</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 3px;">
+        <span style="font-size: 10px; letter-spacing: 0.08em; color: #6F7E93;">TOTAL DURATION</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; color: #E6EBF2;">25:06</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 3px;">
+        <span style="font-size: 10px; letter-spacing: 0.08em; color: #6F7E93;">SUM OF STEPS</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; color: #94A3B8;">34:28</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- TIMELINE -->
+  <div style="flex-grow: 1; box-sizing: border-box; padding: 16px 20px 0 20px; display: flex; flex-direction: column; min-height: 0;">
+
+    <div style="display: flex; gap: 0;">
+      <div style="width: 286px; flex-shrink: 0;"></div>
+      <div style="position: relative; width: 1100px; height: 22px;">
+        <span style="position: absolute; left: 0px; top: 0; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #6F7E93;">03:00</span>
+        <span style="position: absolute; left: 157px; top: 0; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #6F7E93;">03:04</span>
+        <span style="position: absolute; left: 314px; top: 0; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #6F7E93;">03:08</span>
+        <span style="position: absolute; left: 471px; top: 0; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #6F7E93;">03:12</span>
+        <span style="position: absolute; left: 628px; top: 0; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #6F7E93;">03:16</span>
+        <span style="position: absolute; left: 786px; top: 0; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #6F7E93;">03:20</span>
+        <span style="position: absolute; left: 943px; top: 0; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #6F7E93;">03:24</span>
+      </div>
+    </div>
+
+    <div style="position: relative; display: flex; gap: 0; flex-grow: 1; min-height: 0;">
+
+      <!-- labels -->
+      <div style="width: 286px; flex-shrink: 0; box-sizing: border-box; padding-right: 14px; display: flex; flex-direction: column; gap: 14px;">
+        <div style="height: 46px; display: flex; align-items: center; gap: 9px;">
+          <svg width="13" height="13" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="5.2" fill="#3FBF6F"></circle><path d="M3.4 6.2 L5.2 8 L8.6 4.2" fill="none" stroke="#0A0D13" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+          <div style="display: flex; flex-direction: column; gap: 1px; min-width: 0;">
+            <span style="font-size: 13px; font-weight: 600; color: #E6EBF2;">#01 Integrity check — USER</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #6F7E93;">USER · /opt/iris/mgr/user/</span>
+          </div>
+        </div>
+        <div style="height: 46px; display: flex; align-items: center; gap: 9px;">
+          <svg width="13" height="13" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="5.2" fill="#3FBF6F"></circle><path d="M3.4 6.2 L5.2 8 L8.6 4.2" fill="none" stroke="#0A0D13" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+          <div style="display: flex; flex-direction: column; gap: 1px; min-width: 0;">
+            <span style="font-size: 13px; font-weight: 600; color: #E6EBF2;">#02 Integrity check — SAMPLES</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #6F7E93;">SAMPLES · /opt/iris/mgr/samples/</span>
+          </div>
+        </div>
+        <div style="height: 46px; display: flex; align-items: center; gap: 9px;">
+          <svg width="13" height="13" viewBox="0 0 12 12" aria-hidden="true"><path d="M6 0.8 L11.4 10.4 L0.6 10.4 Z" fill="#F2495C"></path></svg>
+          <div style="display: flex; flex-direction: column; gap: 1px; min-width: 0;">
+            <span style="font-size: 13px; font-weight: 600; color: #E6EBF2;">#03 Integrity check — DOCBOOK</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #6F7E93;">DOCBOOK · /opt/iris/mgr/docbook/</span>
+          </div>
+        </div>
+        <div style="height: 46px; display: flex; align-items: center; gap: 9px;">
+          <svg width="13" height="13" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="5.2" fill="#3FBF6F"></circle><path d="M3.4 6.2 L5.2 8 L8.6 4.2" fill="none" stroke="#0A0D13" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+          <div style="display: flex; flex-direction: column; gap: 1px; min-width: 0;">
+            <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #E6EBF2;">
+              #04 Purge audit records
+              <span style="display: inline-block; width: 26px; height: 8px; border: 1px solid #FF3B4A; background: repeating-linear-gradient(45deg, #FF3B4A 0 3px, #14181F 3px 6px);"></span>
+            </span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #6F7E93;">%SYS · join of #01 #02 #03</span>
+          </div>
+        </div>
+        <div style="height: 46px; display: flex; align-items: center; gap: 9px;">
+          <svg width="13" height="13" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="5.2" fill="#3FBF6F"></circle><path d="M3.4 6.2 L5.2 8 L8.6 4.2" fill="none" stroke="#0A0D13" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+          <div style="display: flex; flex-direction: column; gap: 1px; min-width: 0;">
+            <span style="font-size: 13px; font-weight: 600; color: #E6EBF2;">#05 Switch journal</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #6F7E93;">%SYS · all nodes</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- chart area -->
+      <div style="position: relative; width: 1100px; flex-shrink: 0; box-sizing: border-box; border-left: 1px solid #2B3648; background-image: linear-gradient(90deg, #1A2231 1px, transparent 1px); background-size: 157px 100%;">
+
+        <!-- parallelism band -->
+        <div style="position: absolute; left: 3px; top: 0; width: 474px; height: 100%; background: rgba(47,208,232,0.05); border-right: 1px dashed #2B3648;"></div>
+
+        <!-- #01 -->
+        <div style="position: absolute; left: 3px; top: 8px; height: 30px; width: 474px; display: flex; align-items: center; background: #1B4E33; border: 1px solid #3FBF6F; border-radius: 3px; box-sizing: border-box; padding: 0 9px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; color: #C7F0D8;">12:04.7</span>
+          <div style="flex-grow: 1;"></div>
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #8FCCA8;">03:00:05 → 03:12:09</span>
+        </div>
+
+        <!-- #02 -->
+        <div style="position: absolute; left: 3px; top: 68px; height: 30px; width: 348px; display: flex; align-items: center; background: #1B4E33; border: 1px solid #3FBF6F; border-radius: 3px; box-sizing: border-box; padding: 0 9px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; color: #C7F0D8;">08:51.2</span>
+          <div style="flex-grow: 1;"></div>
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #8FCCA8;">03:00:05 → 03:08:56</span>
+        </div>
+
+        <!-- #03 -->
+        <div style="position: absolute; left: 3px; top: 128px; height: 30px; width: 30px; background: #5A2027; border: 1px solid #F2495C; border-radius: 3px;"></div>
+        <span style="position: absolute; left: 41px; top: 136px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #FFB3B9;">00:41.3 · failed 03:00:46 — ERROR #5002 &lt;PROTECT&gt;</span>
+
+        <!-- #04: queued + running -->
+        <div style="position: absolute; left: 3px; top: 188px; height: 30px; width: 477px; box-sizing: border-box; background: repeating-linear-gradient(45deg, #232C3D 0 5px, #161C28 5px 10px); border: 1px dashed #3A465C; border-radius: 3px; display: flex; align-items: center; padding: 0 9px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #8A97AB;">queued 12:09 — waiting on the join</span>
+        </div>
+        <div style="position: absolute; left: 481px; top: 188px; height: 30px; width: 493px; box-sizing: border-box; background: #1B4E33; border: 1px solid #3FBF6F; border-left: 4px solid #FF3B4A; border-radius: 3px; display: flex; align-items: center; padding: 0 9px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; color: #C7F0D8;">12:33.4</span>
+          <div style="flex-grow: 1;"></div>
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #8FCCA8;">03:12:14 → 03:24:47</span>
+        </div>
+
+        <!-- #05 -->
+        <div style="position: absolute; left: 481px; top: 248px; height: 30px; width: 495px; box-sizing: border-box; background: repeating-linear-gradient(45deg, #232C3D 0 5px, #161C28 5px 10px); border: 1px dashed #3A465C; border-radius: 3px; display: flex; align-items: center; padding: 0 9px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #8A97AB;">queued 12:36</span>
+        </div>
+        <div style="position: absolute; left: 977px; top: 248px; height: 30px; width: 16px; background: #1B4E33; border: 1px solid #3FBF6F; border-radius: 3px;"></div>
+        <span style="position: absolute; left: 1001px; top: 256px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #8FCCA8;">00:18.2</span>
+
+        <!-- join marker -->
+        <div style="position: absolute; left: 477px; top: 0; width: 2px; height: 296px; background: #C6D2E2;"></div>
+        <div style="position: absolute; left: 470px; top: 300px; display: flex; align-items: center; gap: 7px;">
+          <div style="width: 10px; height: 10px; border: 2px solid #C6D2E2; transform: rotate(45deg);"></div>
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #C6D2E2;">join 03:12:14 — parallel wave closed</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LEGEND -->
+  <div style="height: 44px; flex-shrink: 0; box-sizing: border-box; border-top: 1px solid #232C3D; background: #10141D; display: flex; align-items: center; gap: 22px; padding: 0 20px;">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <div style="width: 26px; height: 12px; box-sizing: border-box; background: repeating-linear-gradient(45deg, #232C3D 0 5px, #161C28 5px 10px); border: 1px dashed #3A465C;"></div>
+      <span style="font-size: 11px; color: #94A3B8;">TimeQueued → TimeStarted</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <div style="width: 26px; height: 12px; background: #1B4E33; border: 1px solid #3FBF6F;"></div>
+      <span style="font-size: 11px; color: #94A3B8;">TimeStarted → TimeFinished</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <div style="width: 26px; height: 12px; background: rgba(47,208,232,0.12); border: 1px dashed #2B3648;"></div>
+      <span style="font-size: 11px; color: #94A3B8;">parallelism window (3 concurrent steps)</span>
+    </div>
+    <div style="flex-grow: 1;"></div>
+    <a href="LiveRun.dc.html" style="font-size: 12px; font-weight: 600;">Open this run on the canvas</a>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":640}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>
