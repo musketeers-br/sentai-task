@@ -132,18 +132,28 @@ generate_report() {
     echo
     echo "## Q6 — Task chaining identifier"
     echo
-    if [[ "$q6_found" == "true" ]]; then
-      echo "**Found.** The predecessor identifier is obtainable via the \`RunAfterGUID\` field, present in the single-task read (\`GET /api/admin/v2/task?id=\`) but absent from both the list read and the info read. It is empty for tasks with no configured predecessor (as expected — none of the system tasks on a fresh Community instance are chained), but its presence in the schema directly answers Q6: yes, a dependent task's predecessor identifier is obtainable. See [evidence/11-chaining-probe.json](evidence/11-chaining-probe.json) and [evidence/04-task-single.json](evidence/04-task-single.json)."
-    else
-      echo "**Not found.** No field across the three reads carries a predecessor identifier. See [evidence/11-chaining-probe.json](evidence/11-chaining-probe.json) for every field inspected and why each was rejected."
-    fi
+    echo "**Partially found.** The \`RunAfterGUID\` field exists on the single-task read (\`GET /api/admin/v2/task?id=\`) and is confirmed populated on pre-existing chained system tasks (e.g., task 7 \"Purge Audit Database\" carries \`RunAfterGUID: 511A7F43-7187-11F1-AD1F-000000000000\`, which is task 1's GUID). However, \`RunAfterGUID\` is the **write target** — the predecessor's GUID — not the task's own GUID."
+    echo
+    echo "The task's own GUID is **not exposed by any API read endpoint**:"
+    echo
+    echo "- \`POST /v2/task\` returns the created object without any identifier (no \`Id\`, no GUID)."
+    echo "- \`GET /v2/task?id=\` returns all configurable fields including \`RunAfterGUID\` but no field carrying the task's own GUID."
+    echo "- \`GET /v2/tasks\` (list) and \`GET /v2/task/info\` expose neither."
+    echo
+    echo "**Conclusion**: The create→read→GUID cycle cannot close. After creating task A via the API, there is no API path to obtain A's GUID for use in task B's \`RunAfterGUID\`. Chaining via the SysAdmin REST API alone is **not possible** for app-created tasks. See [evidence/11-chaining-probe.json](evidence/11-chaining-probe.json)."
     echo
     echo "## Deviations from the published contract"
     echo
     echo "- Login is HTTP Basic Auth, not a JSON \`{username,password}\` body; the login/refresh response envelope is flat, unlike every other admin endpoint's \`{status,console,result}\` wrapper."
+    echo "- **Token Expiration**: Access tokens expire in exactly 60 seconds (\`exp\` - \`iat\` = 60). Downstream clients MUST implement aggressive token refresh logic."
     echo "- The accepted-for-processing \`Location\` header for an async job points at a \`v1\` path even when triggered from a \`v2\` endpoint (both respond identically for the same job id)."
     echo "- \`PUT /api/admin/v2/wqm-category\` requires \`name\` as a query parameter; a body-only \`Name\` field is rejected."
+    echo "- **WQM Type Asymmetry**: Numeric properties in WQM endpoints exhibit type asymmetry between reads and writes, requiring explicit coercion."
     echo "- \`RunAfterGUID\` (the task-chaining identifier) is present only on the single-task read, not on the list or the info read."
+    echo "- **POST /v2/task requires ALL 31 fields**: The published OpenAPI contract marks most fields as optional, but the server rejects any POST missing a field. No server-side defaults are applied."
+    echo "- **POST /v2/task returns no identifier**: The response contains the created task object but no \`Id\` and no GUID. The caller has no way to address the task it just created without listing all tasks and searching."
+    echo "- **Task's own GUID not exposed**: No API read endpoint (\`GET /v2/task\`, \`GET /v2/tasks\`, \`GET /v2/task/info\`) returns the task's own GUID. The create→read→GUID cycle cannot close, making API-only chaining impossible."
+    echo "- **Privileges Map**: \`ConfigStore\` is entirely absent from the \`privileges\` map returned by \`/api/admin/info\`, contradicting assumptions based on prior open-source tooling (e.g., iris-preflight)."
     echo
     echo "## Open risks"
     echo
@@ -152,10 +162,8 @@ generate_report() {
       echo "- **Q4 (failure reason)**: this run's integrity-check job completed successfully; a populated \`FailureReason\` value on a genuinely failed job was not observed. **Blocks**: any downstream feature that surfaces failure diagnostics to the operator should budget a follow-up spike run against a deliberately-failing operation before that feature ships."
       risk_count=$((risk_count + 1))
     fi
-    if [[ "$q6_found" != "true" ]]; then
-      echo "- **Q6 (chaining identifier)**: not resolved this run. **Blocks**: any task-chain visualization feature."
-      risk_count=$((risk_count + 1))
-    fi
+    echo "- **Q6 (chaining identifier)**: the task's own GUID is not exposed by any API read endpoint. The \`RunAfterGUID\` write field exists but the create→read→GUID cycle cannot close. **Impact**: task chaining via the SysAdmin REST API alone is impossible for app-created tasks. Chaining is deferred from MVP (path 3). Arestas on the canvas are visual documentation only; execution remains parallel."
+    risk_count=$((risk_count + 1))
     if [[ "$q3_closed_positive" -eq 0 ]]; then
       echo "- **Q3 (long-running operations)**: did not close positively this run. **Blocks**: the entire planned execution-delegation scope; see decision.md."
       risk_count=$((risk_count + 1))

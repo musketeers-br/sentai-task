@@ -1,0 +1,32 @@
+{
+  "call_id": "11-chaining-probe",
+  "captured_at": "2026-09-20T23:45:18Z",
+  "platform": {
+    "version": "IRIS for UNIX (Ubuntu Server LTS for ARM64 Containers) 2026.2 (Build 221U) Fri Jun 26 2026 09:59:12 EDT"
+  },
+  "request": {
+    "method": "ANALYSIS",
+    "url_path": "(no network call — jq analysis over 03/04/05)",
+    "query": {},
+    "headers": {},
+    "body": null
+  },
+  "response": {
+    "status": 0,
+    "headers": {},
+    "body": {
+      "found": true,
+      "field": "RunAfterGUID",
+      "json_path": {
+        "03-tasks-list": "not present",
+        "04-task-single": "result.RunAfterGUID",
+        "05-task-info": "not present"
+      },
+      "example_value": "",
+      "note": "Field is present in the single-task read (call 4) and is empty for this task because no predecessor is configured. Its presence alone answers spec Q6: the predecessor identifier IS obtainable via this field when a task is chained."
+    }
+  },
+  "notes": [
+    "this call is a jq analysis over already-captured evidence, not a network request; response.status is a placeholder"
+  ]
+}

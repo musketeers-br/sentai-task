@@ -108,10 +108,10 @@ spike, not as a spike-closing negative.
 
 ## 8. Job transitions
 
-Three captures, in order, all pointing to the same job identifier from
-call 6 (or a freshly-started one if 6's job has settled — the script
-starts a second integrity-check in that case, and the compatibility
-statement records the substitution):
+Three captures, in order, pointing to a dedicated job started specifically
+for these transitions. To avoid a race condition with Call 6's natural
+completion, the script ALWAYS starts a fresh `POST /api/admin/v2/database-dir/compact`
+job and records this substitution in the compatibility statement.
 
 - **8a — pause**: `POST /api/admin/v2/async-result/pause`. Captures
   `evidence/08a-async-result-pause.json` and one status read after.
@@ -159,18 +159,27 @@ unsupported.
 
 ## 11. Chaining-identifier analysis
 
-- **Not a network call.** A `jq` pass over `03-tasks-list.json`,
-  `04-task-single.json`, and `05-task-info.json`.
-- **Purpose**: Determine whether any captured field carries a task's
-  globally unique identifier — the value a dependent task would
-  reference when configured to run after another task completes.
-- **Captures**: `evidence/11-chaining-probe.json`. If found, the file
-  records the field name, its JSON path in each of the three source
-  files, and one example value (redacted if credential-shaped). If not
-  found, the file records `"found": false`, the list of every leaf field
-  inspected, and the reason each was rejected (not unique, not identifier-
-  shaped, matches a category enum, etc.).
-- **Answers**: Q6.
+- **Not a network call.** A `jq` analysis over `03-tasks-list.json`,
+  `04-task-single.json`, and `05-task-info.json`, augmented by manual
+  verification results (POST /v2/task with all 31 fields, GET /v2/task
+  for created tasks, task 7 RunAfterGUID confirmation).
+- **Purpose**: Determine whether the API exposes enough information to
+  close the create→read→GUID cycle required for task chaining: after
+  creating task A, can the app obtain A's GUID to write into task B's
+  `RunAfterGUID`?
+- **Captures**: `evidence/11-chaining-probe.json`. The file records:
+  - `found: false` — the task's own GUID is not exposed by any read.
+  - `predecessor_write_field`: `RunAfterGUID` exists on single-task read
+    and is confirmed populated on pre-existing chained tasks (task 7).
+  - `own_guid_exposure`: none of POST, GET single, GET list, or GET info
+    expose the task's own GUID.
+  - `post_v2_task_deviation`: POST requires all 31 fields (no defaults).
+  - `manual_verification`: task 7 carries `RunAfterGUID=511A7F43-...`
+    (task 1's GUID), confirming the field is functional for system tasks.
+  - `conclusion`: chaining via the SysAdmin REST API alone is not
+    possible for app-created tasks. Deferred from MVP.
+- **Answers**: Q6 (partially — the write mechanism exists but the
+  create→read→GUID cycle cannot close).
 
 ---
 

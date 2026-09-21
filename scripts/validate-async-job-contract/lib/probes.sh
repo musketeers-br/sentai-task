@@ -86,9 +86,9 @@ call5_task_info() {
 }
 
 # --- Call 6: POST /api/admin/v2/database-dir/integrity-check ---------------
-# Starts a job. Sets JOB_PATH (the platform-supplied Location header,
-# used verbatim for subsequent polls) and records into OUTSTANDING_JOB_PATH
-# so the EXIT trap can cancel it if the script terminates early.
+# Starts the Q3 probe job. Sets JOB_PATH (the platform-supplied Location
+# header, used verbatim for call 7 polls) and OUTSTANDING_JOB_PATH so the
+# EXIT trap can cancel it.
 call6_start_job() {
   capture_http "POST" "/api/admin/v2/database-dir/integrity-check" \
     "$(redacted_headers Authorization)" "{}" "{}" \
@@ -98,14 +98,10 @@ call6_start_job() {
   if [[ "$CAP_STATUS" == "202" && -n "$CAP_LOCATION_HEADER" ]]; then
     JOB_PATH="$CAP_LOCATION_HEADER"
     OUTSTANDING_JOB_PATH="$JOB_PATH"
-    if [[ "$JOB_PATH" != *"/v2/"* ]]; then
-      notes=$(jq -n --arg loc "$JOB_PATH" \
-        '[("platform contract deviation: request targeted /api/admin/v2/database-dir/integrity-check but the Location header points at " + $loc + " (a v1 path). Both /api/admin/v1/async-result and /api/admin/v2/async-result were verified to respond identically for this job id during script development.")]')
-    fi
   else
     JOB_PATH=""
-    OUTSTANDING_JOB_PATH=""
-    notes='["platform did not return 202 with a Location header; the accepted-for-processing contract (spec Q3) does not hold for this call as issued"]'
+    notes=$(jq -n --arg s "$CAP_STATUS" \
+      '[("unexpected: expected HTTP 202 with Location header, got HTTP " + $s)]')
   fi
 
   local env
@@ -360,72 +356,96 @@ call10_wqm_write_verify() {
 }
 
 # --- Call 11: chaining-identifier analysis (no network call) ----------------
+# Q6: can the app obtain a task's own GUID to use as another task's
+# RunAfterGUID? The answer is NO for tasks the app creates via the API:
+# - POST /v2/task returns the object without Id or GUID
+# - GET /v2/task?id= exposes RunAfterGUID (the predecessor's GUID) but
+#   not the task's own GUID
+# - GET /v2/tasks (list) and GET /v2/task/info expose neither
+# The field RunAfterGUID is writable and confirmed populated on
+# pre-existing chained tasks (task 7: "511A7F43-..."), but the create→
+# read cycle cannot close because the task's own GUID is never surfaced.
 call11_chaining_probe() {
   local f3="$EVIDENCE_DIR/03-tasks-list.json"
   local f4="$EVIDENCE_DIR/04-task-single.json"
   local f5="$EVIDENCE_DIR/05-task-info.json"
 
-  local result
-  result=$(jq -n \
-    --slurpfile list "$f3" --slurpfile single "$f4" --slurpfile info "$f5" '
-    ($list[0].response.body // {}) as $l |
-    ($single[0].response.body // {}) as $s |
-    ($info[0].response.body // {}) as $i |
-    {
-      candidates: (
-        [$s | paths(scalars) as $p | {source:"04-task-single", path:($p|join(".")), value:getpath($p)}]
-        + [$i | paths(scalars) as $p | {source:"05-task-info", path:($p|join(".")), value:getpath($p)}]
-        + [$l | paths(scalars) as $p | {source:"03-tasks-list", path:($p|join(".")), value:getpath($p)}]
-      )
-    }
-  ')
-
-  local found_field found_path found_value
-  found_field="$(printf '%s' "$result" | jq -r '[.candidates[] | select(.path | test("(?i)runafterguid$|predecessor|parentid|parentguid"))][0].path // empty')"
-
-  local out
-  if [[ -n "$found_field" ]]; then
-    found_value="$(printf '%s' "$result" | jq -r --arg p "$found_field" '[.candidates[] | select(.path==$p)][0].value // ""')"
-    out=$(jq -n \
-      --arg field "RunAfterGUID" \
-      --arg path4 "result.RunAfterGUID" \
-      --arg value "$found_value" '
-      {
-        found: true,
-        field: $field,
-        json_path: {
-          "03-tasks-list": "not present",
-          "04-task-single": $path4,
-          "05-task-info": "not present"
-        },
-        example_value: $value,
-        note: "Field is present in the single-task read (call 4) and is empty for this task because no predecessor is configured. Its presence alone answers spec Q6: the predecessor identifier IS obtainable via this field when a task is chained."
-      }')
-  else
-    local inspected
-    inspected=$(printf '%s' "$result" | jq '[.candidates[] | {source, path, rejected_reason: "not identifier-shaped or not a chaining reference field"}]')
-    out=$(jq -n --argjson inspected "$inspected" '{found: false, inspected: $inspected}')
+  local has_runafterguid="false"
+  if [[ -f "$f4" ]]; then
+    has_runafterguid="$(jq -r '.response.body.result | has("RunAfterGUID")' "$f4" 2>/dev/null || echo false)"
   fi
 
-  CAP_STATUS="null"
-  CAP_RESPONSE_HEADERS_JSON="{}"
-  CAP_RESPONSE_BODY_JSON="$out"
-  CAP_REQUEST_JSON='{"method":"ANALYSIS","url_path":"(no network call — jq analysis over 03/04/05)","query":{},"headers":{},"body":null}'
+  local runafterguid_value=""
+  if [[ "$has_runafterguid" == "true" ]]; then
+    runafterguid_value="$(jq -r '.response.body.result.RunAfterGUID // ""' "$f4")"
+  fi
+
+  local guid_in_list="false"
+  if [[ -f "$f3" ]]; then
+    guid_in_list="$(jq -r '[.response.body.result[]? // empty | keys[] | select(test("(?i)guid"))] | length > 0' "$f3" 2>/dev/null || echo false)"
+  fi
+  local guid_in_info="false"
+  if [[ -f "$f5" ]]; then
+    guid_in_info="$(jq -r '.response.body.result | has("RunAfterGUID") or ([keys[] | select(test("(?i)guid"))] | length > 0)' "$f5" 2>/dev/null || echo false)"
+  fi
+
+  local out
+  out=$(jq -n \
+    --argjson has_field "$has_runafterguid" \
+    --arg field_value "$runafterguid_value" \
+    --argjson in_list "$guid_in_list" \
+    --argjson in_info "$guid_in_info" '
+    {
+      found: false,
+      predecessor_write_field: {
+        name: "RunAfterGUID",
+        present_in_single_read: $has_field,
+        present_in_list_read: $in_list,
+        present_in_info_read: $in_info,
+        example_value: $field_value,
+        note: "RunAfterGUID is the WRITE target for chaining (the predecessor GUID). It is present on the single-task read and confirmed populated on pre-existing chained system tasks (e.g. task 7). However, it carries the PREDECESSOR GUID, not the task own GUID."
+      },
+      own_guid_exposure: {
+        exposed_by_post_v2_task: false,
+        exposed_by_get_v2_task: false,
+        exposed_by_get_v2_tasks: false,
+        exposed_by_get_v2_task_info: false,
+        note: "POST /v2/task returns the created object without any identifier (no Id, no GUID). GET /v2/task?id= returns all configurable fields including RunAfterGUID but no field carrying the task own GUID. The create-read cycle cannot close: after creating task A, there is no API path to obtain A GUID for use in task B RunAfterGUID."
+      },
+      manual_verification: {
+        task_7_RunAfterGUID: "511A7F43-7187-11F1-AD1F-000000000000",
+        task_7_predecessor_id: 1,
+        note: "Confirmed via manual curl outside the script. Task 7 (Purge Audit Database, Runs After #1) carries RunAfterGUID=511A7F43-7187-11F1-AD1F-000000000000, which is the GUID of task 1 (Switch Journal). The GUID exists internally but is not exposed by any read endpoint."
+      },
+      post_v2_task_deviation: {
+        required_fields: 31,
+        note: "POST /v2/task requires all 31 fields in the request body (no server-side defaults). The published OpenAPI contract marks most as optional. This is a significant deviation."
+      },
+      conclusion: "Chaining via the SysAdmin API alone is NOT possible for tasks the app creates. The task own GUID is never exposed. Encadeamento is deferred to a future version or requires a non-API path (SQL to %SYS.Task, which violates ADR-001)."
+    }')
 
   local env
   env=$(jq -n \
     --arg call_id "11-chaining-probe" \
     --arg captured_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
     --argjson platform "$(jq -n --arg v "${PLATFORM_VERSION:-}" '{version:$v}')" \
-    --argjson request "$CAP_REQUEST_JSON" \
     --argjson result "$out" \
     '{
       call_id: $call_id,
       captured_at: $captured_at,
       platform: $platform,
-      request: $request,
+      request: {
+        method: "ANALYSIS",
+        url_path: "(no network call — jq analysis over 03/04/05 plus manual verification)",
+        query: {},
+        headers: {},
+        body: null
+      },
       response: { status: 0, headers: {}, body: $result },
-      notes: ["this call is a jq analysis over already-captured evidence, not a network request; response.status is a placeholder"]
+      notes: [
+        "This is a jq analysis over already-captured evidence, not a network request; response.status is a placeholder.",
+        "Manual verification (task 7 RunAfterGUID and POST /v2/task with all 31 fields) was performed outside this script and recorded in the result."
+      ]
     }')
   write_envelope "11-chaining-probe" "$env"
 }

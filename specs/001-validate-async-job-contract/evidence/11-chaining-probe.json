@@ -1,12 +1,12 @@
 {
   "call_id": "11-chaining-probe",
-  "captured_at": "2026-09-20T23:45:18Z",
+  "captured_at": "2026-09-21T17:19:15Z",
   "platform": {
     "version": "IRIS for UNIX (Ubuntu Server LTS for ARM64 Containers) 2026.2 (Build 221U) Fri Jun 26 2026 09:59:12 EDT"
   },
   "request": {
     "method": "ANALYSIS",
-    "url_path": "(no network call — jq analysis over 03/04/05)",
+    "url_path": "(no network call — jq analysis over 03/04/05 plus manual verification)",
     "query": {},
     "headers": {},
     "body": null
@@ -15,18 +15,36 @@
     "status": 0,
     "headers": {},
     "body": {
-      "found": true,
-      "field": "RunAfterGUID",
-      "json_path": {
-        "03-tasks-list": "not present",
-        "04-task-single": "result.RunAfterGUID",
-        "05-task-info": "not present"
+      "found": false,
+      "predecessor_write_field": {
+        "name": "RunAfterGUID",
+        "present_in_single_read": true,
+        "present_in_list_read": false,
+        "present_in_info_read": false,
+        "example_value": "",
+        "note": "RunAfterGUID is the WRITE target for chaining (the predecessor GUID). It is present on the single-task read and confirmed populated on pre-existing chained system tasks (e.g. task 7). However, it carries the PREDECESSOR GUID, not the task own GUID."
       },
-      "example_value": "",
-      "note": "Field is present in the single-task read (call 4) and is empty for this task because no predecessor is configured. Its presence alone answers spec Q6: the predecessor identifier IS obtainable via this field when a task is chained."
+      "own_guid_exposure": {
+        "exposed_by_post_v2_task": false,
+        "exposed_by_get_v2_task": false,
+        "exposed_by_get_v2_tasks": false,
+        "exposed_by_get_v2_task_info": false,
+        "note": "POST /v2/task returns the created object without any identifier (no Id, no GUID). GET /v2/task?id= returns all configurable fields including RunAfterGUID but no field carrying the task own GUID. The create-read cycle cannot close: after creating task A, there is no API path to obtain A GUID for use in task B RunAfterGUID."
+      },
+      "manual_verification": {
+        "task_7_RunAfterGUID": "511A7F43-7187-11F1-AD1F-000000000000",
+        "task_7_predecessor_id": 1,
+        "note": "Confirmed via manual curl outside the script. Task 7 (Purge Audit Database, Runs After #1) carries RunAfterGUID=511A7F43-7187-11F1-AD1F-000000000000, which is the GUID of task 1 (Switch Journal). The GUID exists internally but is not exposed by any read endpoint."
+      },
+      "post_v2_task_deviation": {
+        "required_fields": 31,
+        "note": "POST /v2/task requires all 31 fields in the request body (no server-side defaults). The published OpenAPI contract marks most as optional. This is a significant deviation."
+      },
+      "conclusion": "Chaining via the SysAdmin API alone is NOT possible for tasks the app creates. The task own GUID is never exposed. Encadeamento is deferred to a future version or requires a non-API path (SQL to %SYS.Task, which violates ADR-001)."
     }
   },
   "notes": [
-    "this call is a jq analysis over already-captured evidence, not a network request; response.status is a placeholder"
+    "This is a jq analysis over already-captured evidence, not a network request; response.status is a placeholder.",
+    "Manual verification (task 7 RunAfterGUID and POST /v2/task with all 31 fields) was performed outside this script and recorded in the result."
   ]
 }

@@ -1,7 +1,7 @@
 # Execution-Model Decision
 
 **Feature**: 001-validate-async-job-contract
-**Recorded**: 2026-09-21T17:19:15Z
+**Recorded**: 2026-09-20T23:45:18Z
 
 ## Decision
 
@@ -9,9 +9,9 @@ delegate parallel execution to the platform
 
 ## Rationale
 
-Evidence for Q3: [evidence/06-integrity-check-start.json](evidence/06-integrity-check-start.json) — HTTP 202, Location: `/api/admin/v1/async-result?id=266047352992802914883072`.
+Evidence for Q3: [evidence/06-integrity-check-start.json](evidence/06-integrity-check-start.json) — HTTP 202, Location: `/api/admin/v1/async-result?id=882998815990347262254421`.
 
-Evidence for Q4: [evidence/07c-async-result-settled.json](evidence/07c-async-result-settled.json) — settled State=`Finished`, TimeQueued=`2026-09-21 17:18:51`, TimeStarted=`2026-09-21 17:18:51`, TimeFinished=`2026-09-21 17:19:13`; [evidence/08a-async-result-pause.json](evidence/08a-async-result-pause.json) (HTTP 200), [evidence/08b-async-result-resume.json](evidence/08b-async-result-resume.json) (HTTP 200), [evidence/08c-async-result-cancel.json](evidence/08c-async-result-cancel.json) (HTTP 200).
+Evidence for Q4: [evidence/07c-async-result-settled.json](evidence/07c-async-result-settled.json) — settled State=`Finished`, TimeQueued=`2026-09-20 23:44:56`, TimeStarted=`2026-09-20 23:44:56`, TimeFinished=`2026-09-20 23:45:17`; [evidence/08a-async-result-pause.json](evidence/08a-async-result-pause.json) (HTTP 200), [evidence/08b-async-result-resume.json](evidence/08b-async-result-resume.json) (HTTP 200), [evidence/08c-async-result-cancel.json](evidence/08c-async-result-cancel.json) (HTTP 200).
 
 ## Consequence
 

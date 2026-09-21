@@ -1,14 +1,14 @@
 # Compatibility Statement
 
 **Feature**: 001-validate-async-job-contract
-**Run captured**: 2026-09-21T17:19:15Z
+**Run captured**: 2026-09-20T23:45:18Z
 
 ## Environment
 
 - **Platform version**: IRIS for UNIX (Ubuntu Server LTS for ARM64 Containers) 2026.2 (Build 221U) Fri Jun 26 2026 09:59:12 EDT
-- **Image digest**: not captured this run (set `IRIS_CONTAINER` to the running container's name/id to include it; see contracts/script-cli.md)
-- **Base URL**: http://localhost:52773
-- **Run timestamp**: 2026-09-21T17:19:15Z
+- **Image digest**: `sha256:8a206381c3456481e94c8b402cc975993a6e48685d0921ae1843668193856e92`
+- **Base URL**: http://localhost:51764
+- **Run timestamp**: 2026-09-20T23:45:18Z
 
 ## Q1 — Reachability and authentication
 
@@ -27,13 +27,13 @@ The management API responded on the freely available Community edition.
 
 ## Q3 — Long-running operations
 
-`POST /api/admin/v2/database-dir/integrity-check` returned HTTP 202 (accepted-for-processing), carrying no job identifier in the response body but a `Location` header pointing at the async-result resource: `/api/admin/v1/async-result?id=266047352992802914883072`. See [evidence/06-integrity-check-start.json](evidence/06-integrity-check-start.json).
+`POST /api/admin/v2/database-dir/integrity-check` returned HTTP 202 (accepted-for-processing), carrying no job identifier in the response body but a `Location` header pointing at the async-result resource: `/api/admin/v1/async-result?id=882998815990347262254421`. See [evidence/06-integrity-check-start.json](evidence/06-integrity-check-start.json).
 - **Deviation**: the Location header uses `/api/admin/v1/async-result`, not `v2`, despite the triggering call being a `v2` endpoint. Both `v1` and `v2` forms of `GET .../async-result?id=...` were verified to respond identically for the same job id.
 
 ## Q4 — Job observation and control
 
 - **State**: observed transitioning Running → Finished across polls (first: `Running`, settled: `Finished`). See [evidence/07a-async-result-first.json](evidence/07a-async-result-first.json), [evidence/07b-async-result-midflight.json](evidence/07b-async-result-midflight.json), [evidence/07c-async-result-settled.json](evidence/07c-async-result-settled.json).
-- **Timings**: TimeQueued=`2026-09-21 17:18:51`, TimeStarted=`2026-09-21 17:18:51`, TimeFinished=`2026-09-21 17:19:13` — all populated on natural completion.
+- **Timings**: TimeQueued=`2026-09-20 23:44:56`, TimeStarted=`2026-09-20 23:44:56`, TimeFinished=`2026-09-20 23:45:17` — all populated on natural completion.
 - **Failure reason**: the `FailureReason` field is present on every poll (observed as `""` on the success path in this run). This run's job completed successfully, so a populated failure string was not observed; treated as an **open risk** below, not a spike-closing negative, per the plan's guidance.
 - **Pause**: HTTP 200; post-transition read reported State=Paused. See [evidence/08a-async-result-pause.json](evidence/08a-async-result-pause.json).
 - **Resume**: HTTP 200; post-transition read reported State=Running. See [evidence/08b-async-result-resume.json](evidence/08b-async-result-resume.json).
@@ -48,34 +48,19 @@ The management API responded on the freely available Community edition.
 
 ## Q6 — Task chaining identifier
 
-**Partially found.** The `RunAfterGUID` field exists on the single-task read (`GET /api/admin/v2/task?id=`) and is confirmed populated on pre-existing chained system tasks (e.g., task 7 "Purge Audit Database" carries `RunAfterGUID: 511A7F43-7187-11F1-AD1F-000000000000`, which is task 1's GUID). However, `RunAfterGUID` is the **write target** — the predecessor's GUID — not the task's own GUID.
-
-The task's own GUID is **not exposed by any API read endpoint**:
-
-- `POST /v2/task` returns the created object without any identifier (no `Id`, no GUID).
-- `GET /v2/task?id=` returns all configurable fields including `RunAfterGUID` but no field carrying the task's own GUID.
-- `GET /v2/tasks` (list) and `GET /v2/task/info` expose neither.
-
-**Conclusion**: The create→read→GUID cycle cannot close. After creating task A via the API, there is no API path to obtain A's GUID for use in task B's `RunAfterGUID`. Chaining via the SysAdmin REST API alone is **not possible** for app-created tasks. See [evidence/11-chaining-probe.json](evidence/11-chaining-probe.json).
+**Found.** The predecessor identifier is obtainable via the `RunAfterGUID` field, present in the single-task read (`GET /api/admin/v2/task?id=`) but absent from both the list read and the info read. It is empty for tasks with no configured predecessor (as expected — none of the system tasks on a fresh Community instance are chained), but its presence in the schema directly answers Q6: yes, a dependent task's predecessor identifier is obtainable. See [evidence/11-chaining-probe.json](evidence/11-chaining-probe.json) and [evidence/04-task-single.json](evidence/04-task-single.json).
 
 ## Deviations from the published contract
 
 - Login is HTTP Basic Auth, not a JSON `{username,password}` body; the login/refresh response envelope is flat, unlike every other admin endpoint's `{status,console,result}` wrapper.
-- **Token Expiration**: Access tokens expire in exactly 60 seconds (`exp` - `iat` = 60). Downstream clients MUST implement aggressive token refresh logic.
 - The accepted-for-processing `Location` header for an async job points at a `v1` path even when triggered from a `v2` endpoint (both respond identically for the same job id).
 - `PUT /api/admin/v2/wqm-category` requires `name` as a query parameter; a body-only `Name` field is rejected.
-- **WQM Type Asymmetry**: Numeric properties in WQM endpoints exhibit type asymmetry between reads and writes, requiring explicit coercion.
 - `RunAfterGUID` (the task-chaining identifier) is present only on the single-task read, not on the list or the info read.
-- **POST /v2/task requires ALL 31 fields**: The published OpenAPI contract marks most fields as optional, but the server rejects any POST missing a field. No server-side defaults are applied.
-- **POST /v2/task returns no identifier**: The response contains the created task object but no `Id` and no GUID. The caller has no way to address the task it just created without listing all tasks and searching.
-- **Task's own GUID not exposed**: No API read endpoint (`GET /v2/task`, `GET /v2/tasks`, `GET /v2/task/info`) returns the task's own GUID. The create→read→GUID cycle cannot close, making API-only chaining impossible.
-- **Privileges Map**: `ConfigStore` is entirely absent from the `privileges` map returned by `/api/admin/info`, contradicting assumptions based on prior open-source tooling (e.g., iris-preflight).
 
 ## Open risks
 
 - **Q4 (failure reason)**: this run's integrity-check job completed successfully; a populated `FailureReason` value on a genuinely failed job was not observed. **Blocks**: any downstream feature that surfaces failure diagnostics to the operator should budget a follow-up spike run against a deliberately-failing operation before that feature ships.
-- **Q6 (chaining identifier)**: the task's own GUID is not exposed by any API read endpoint. The `RunAfterGUID` write field exists but the create→read→GUID cycle cannot close. **Impact**: task chaining via the SysAdmin REST API alone is impossible for app-created tasks. Chaining is deferred from MVP (path 3). Arestas on the canvas are visual documentation only; execution remains parallel.
 
 ## Prior-run archive
 
-A prior run's evidence, compatibility statement, and decision were archived to `evidence/.archive/20260921-171851Z/` before this run wrote anything new.
+A prior run's evidence, compatibility statement, and decision were archived to `evidence/.archive/20260920-234455Z/` before this run wrote anything new.
