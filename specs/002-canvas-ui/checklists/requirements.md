@@ -31,6 +31,15 @@
 
 ## Notes
 
-- The spec references API endpoints and response fields by necessity (the feature's purpose is to visualize and interact with the platform API), but these are domain references (the problem space), not implementation choices.
-- Prototype screenshots are referenced but not yet committed. They must be placed at `contracts/prototype/canvas-overview.png` and `contracts/prototype/node-task-detail.png` before `/speckit-plan`.
-- The spec inherits all API shape knowledge from spec 001 evidence files, which serve as the interface contract.
+- This spec's "no implementation details" item is judged against the same standard as its
+  binding contracts (`contracts/data-model.md`, `contracts/openapi.yaml`): those documents
+  name IRIS classes, ObjectScript packages and REST paths as the *problem domain*, not as
+  Plan-level technology choices — the class names, routes and field names are IRIS's own
+  vocabulary and are not paraphrasable (Constitution IV). Success Criteria remain
+  technology-agnostic; only the Requirements and Dependencies sections cite the domain
+  vocabulary the contracts already fix.
+- Screen images (`contracts/screens/Main.png`, `LiveRun.png`, `WQM.png`, `System.png`,
+  `FlowLight.png`) and their `ui/UI-00*.md` companions are already committed; unlike the prior
+  revision of this spec, no prototype assets are pending before `/speckit-plan`.
+- UI-003 (Task Catalog) and UI-004 (Run History/Timeline) are explicitly deferred to spec 003;
+  this checklist does not validate against them.
