@@ -1,0 +1,199 @@
+{
+  "call_id": "03-tasks-list",
+  "captured_at": "2026-09-20T23:44:56Z",
+  "platform": {
+    "version": "IRIS for UNIX (Ubuntu Server LTS for ARM64 Containers) 2026.2 (Build 221U) Fri Jun 26 2026 09:59:12 EDT",
+    "image_digest": "sha256:8a206381c3456481e94c8b402cc975993a6e48685d0921ae1843668193856e92"
+  },
+  "request": {
+    "method": "GET",
+    "url_path": "/api/admin/v2/tasks",
+    "query": {},
+    "headers": {
+      "Authorization": "<REDACTED>"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Date": "Sun, 20 Sep 2026 23:44:56 GMT",
+      "Server": "Apache",
+      "CACHE-CONTROL": "no-cache",
+      "EXPIRES": "Thu, 29 Oct 1998 17:04:19 GMT",
+      "PRAGMA": "no-cache",
+      "CONTENT-LENGTH": "3566",
+      "Content-Type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "status": {
+        "errors": [],
+        "summary": ""
+      },
+      "console": [],
+      "result": [
+        {
+          "Name": "Switch Journal",
+          "Type": "System",
+          "Namespace": "%SYS",
+          "Description": "Switches the journal file at midnight every day",
+          "Id": 1,
+          "Suspended": false,
+          "LastFinished": "",
+          "NextScheduled": "2026-09-21 00:00:00"
+        },
+        {
+          "Name": "Purge Journal",
+          "Type": "System",
+          "Namespace": "%SYS",
+          "Description": "Purges old journal files every night at 12:30 am",
+          "Id": 2,
+          "Suspended": false,
+          "LastFinished": "",
+          "NextScheduled": "2026-09-21 00:30:00"
+        },
+        {
+          "Name": "Purge Tasks",
+          "Type": "System",
+          "Namespace": "%SYS",
+          "Description": "Purges the task history global every night at 1:00 am",
+          "Id": 3,
+          "Suspended": false,
+          "LastFinished": "",
+          "NextScheduled": "2026-09-21 01:00:00"
+        },
+        {
+          "Name": "Integrity Check",
+          "Type": "System",
+          "Namespace": "%SYS",
+          "Description": "Integrity check for databases at 2:00 am every Monday",
+          "Id": 4,
+          "Suspended": false,
+          "LastFinished": "",
+          "NextScheduled": "2026-09-21 02:00:00"
+        },
+        {
+          "Name": "Security Scan",
+          "Type": "System",
+          "Namespace": "%SYS",
+          "Description": "Scans the security database at midnight every day",
+          "Id": 5,
+          "Suspended": false,
+          "LastFinished": "",
+          "NextScheduled": "2026-09-21 00:00:00"
+        },
+        {
+          "Name": "Diagnostic Report",
+          "Type": "System",
+          "Namespace": "%SYS",
+          "Description": "Send system diagnostic reports to WRC On Demand, and/or on a schedule",
+          "Id": 6,
+          "Suspended": false,
+          "LastFinished": "",
+          "NextScheduled": ""
+        },
+        {
+          "Name": "Purge Audit Database",
+          "Type": "System",
+          "Namespace": "%SYS",
+          "Description": "Purges old Audit information after Switch Journal is run",
+          "Id": 7,
+          "Suspended": false,
+          "LastFinished": "",
+          "NextScheduled": "Runs After #1:00"
+        },
+        {
+          "Name": "Inventory Scan",
+          "Type": "System",
+          "Namespace": "%SYS",
+          "Description": "Run a scan of the system inventory on install or upgrade and on demand thereafter",
+          "Id": 8,
+          "Suspended": false,
+          "LastFinished": "",
+          "NextScheduled": ""
+        },
+        {
+          "Name": "Purge errors and log files",
+          "Type": "System",
+          "Namespace": "%SYS",
+          "Description": "Purges errors and log files at 1:00 am",
+          "Id": 9,
+          "Suspended": false,
+          "LastFinished": "",
+          "NextScheduled": "2026-09-21 01:00:00"
+        },
+        {
+          "Name": "Check Logging activity",
+          "Type": "System",
+          "Namespace": "%SYS",
+          "Description": "Check active application logging at 1:00 am",
+          "Id": 10,
+          "Suspended": false,
+          "LastFinished": "",
+          "NextScheduled": "2026-09-21 01:00:00"
+        },
+        {
+          "Name": "Purge Backup Log",
+          "Type": "System",
+          "Namespace": "%SYS",
+          "Description": "Purges messages from IRIS backup log that are more than 30 days old every night at 1:30 am",
+          "Id": 11,
+          "Suspended": false,
+          "LastFinished": "",
+          "NextScheduled": "2026-09-21 01:30:00"
+        },
+        {
+          "Name": "Purge ZEN Reports temp files",
+          "Type": "System",
+          "Namespace": "%SYS",
+          "Description": "Purges ZEN Reports temp files every night at 1:30 am",
+          "Id": 12,
+          "Suspended": false,
+          "LastFinished": "",
+          "NextScheduled": "2026-09-21 01:30:00"
+        },
+        {
+          "Name": "Feature Tracker",
+          "Type": "System",
+          "Namespace": "%SYS",
+          "Description": "Collects data on feature use and sends to ISC weekly",
+          "Id": 13,
+          "Suspended": false,
+          "LastFinished": "",
+          "NextScheduled": "2026-09-27 00:00:00"
+        },
+        {
+          "Name": "Cleanup Source Journal",
+          "Type": "System",
+          "Namespace": "%SYS",
+          "Description": "Cleans old source journal nodes every night at 1:00 am",
+          "Id": 18,
+          "Suspended": false,
+          "LastFinished": "",
+          "NextScheduled": "2026-09-21 01:00:00"
+        },
+        {
+          "Name": "Purge Interoperability Usage Metrics",
+          "Type": "System",
+          "Namespace": "%SYS",
+          "Description": "Consoldiates and purges interoperability usage metrics",
+          "Id": 20,
+          "Suspended": false,
+          "LastFinished": "",
+          "NextScheduled": "2026-09-27 00:30:00"
+        },
+        {
+          "Name": "Automatic Table Statistic Collection",
+          "Type": "System",
+          "Namespace": "%SYS",
+          "Description": "Automatic Table Statistic Collection within all the namespaces",
+          "Id": 21,
+          "Suspended": false,
+          "LastFinished": "",
+          "NextScheduled": "2026-09-21 02:00:00"
+        }
+      ]
+    }
+  },
+  "notes": []
+}
