@@ -24,11 +24,12 @@ Index NameIndex On name [ Unique ];
 
 /// Every step, edge and join belonging to this flow — used by SaveGraph()/read, never by
 /// canvasGeometry.
-Relationship steps As sentai.model.Step [ Cardinality = children, Inverse = flow ];
 
-Relationship edges As sentai.model.Edge [ Cardinality = children, Inverse = flow ];
+Relationship steps As sentai.model.Step [ Cardinality = many, Inverse = flow ];
 
-Relationship joins As sentai.model.Join [ Cardinality = children, Inverse = flow ];
+Relationship edges As sentai.model.Edge [ Cardinality = many, Inverse = flow ];
+
+Relationship joins As sentai.model.Join [ Cardinality = many, Inverse = flow ];
 
 /// Transactional save of the whole graph (steps + edges + joins) plus the revision bump
 /// (research.md R-011). `payload` is the FlowDefinition %DynamicObject already parsed by
@@ -90,50 +91,14 @@ ClassMethod SaveGraph(payload As %DynamicObject, existingId As %String = "", exp
     }
     Catch ex {
         TROLLBACK 1
-        Set sc = $$$ISERR($G(sc)) $S($$$ISERR($G(sc)):sc, 1:ex.AsStatus())
+        Set:($$$ISERR($Get(sc))) sc = ex.AsStatus()
     }
     Quit sc
 }
 
 Query NameConflict(upperName As %String, excludeId As %String) As %SQLQuery
 {
-    SELECT %ID FROM sentai.model.Flow WHERE $ZCONVERT(name, "U") = :upperName AND %ID <> :excludeId
-}
-
-Storage Default
-{
-<Data name="FlowDefaultData">
-<Value name="1">
-<Value>%%CLASSNAME</Value>
-</Value>
-<Value name="2">
-<Value>name</Value>
-</Value>
-<Value name="3">
-<Value>revision</Value>
-</Value>
-<Value name="4">
-<Value>savedAt</Value>
-</Value>
-<Value name="5">
-<Value>savedBy</Value>
-</Value>
-<Value name="6">
-<Value>defaultCategory</Value>
-</Value>
-<Value name="7">
-<Value>scheduleSpec</Value>
-</Value>
-<Value name="8">
-<Value>canvasGeometry</Value>
-</Value>
-</Data>
-<DataLocation>^sentai.model.FlowD</DataLocation>
-<DefaultData>FlowDefaultData</DefaultData>
-<IdLocation>^sentai.model.FlowD</IdLocation>
-<IndexLocation>^sentai.model.FlowI</IndexLocation>
-<StreamLocation>^sentai.model.FlowS</StreamLocation>
-<Type>%Storage.Persistent</Type>
+    SELECT ID FROM sentai_model.Flow WHERE UPPER(name) = :upperName AND ID <> :excludeId
 }
 
 }

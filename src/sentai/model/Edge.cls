@@ -3,18 +3,19 @@
 Class sentai.model.Edge Extends (%Persistent, %JSON.Adaptor)
 {
 
-Property flow As sentai.model.Flow [ Required ];
-
 Property source As %String(MAXLEN = 8) [ Required ];
 
 Property target As %String(MAXLEN = 8) [ Required ];
+Relationship flow As sentai.model.Flow [ Cardinality = one, Inverse = edges ];
+
+Index FlowIndex On flow;
+
 
 /// Supports wave-eligibility computation and cycle detection without scanning every edge
 /// of the flow on each check (data-model.md).
 Index FlowTargetIndex On (flow, target);
 
 Index FlowSourceIndex On (flow, source);
-
 /// Replaces every edge of `flow` with the submitted array, inside the caller's transaction.
 /// Rejects (without persisting anything) if the resulting graph would be cyclic.
 ClassMethod ReplaceAll(flowId As %String, edgesArray As %DynamicArray) As %Status
@@ -26,7 +27,7 @@ ClassMethod ReplaceAll(flowId As %String, edgesArray As %DynamicArray) As %Statu
             Quit
         }
 
-        &sql(DELETE FROM sentai.model.Edge WHERE flow = :flowId)
+        &sql(DELETE FROM sentai_model.Edge WHERE flow = :flowId)
         If (edgesArray = "") Quit
 
         Set iter = edgesArray.%GetIterator()
@@ -65,10 +66,10 @@ ClassMethod IsReachable(flowId As %String, from As %String, to As %String, ByRef
     If (from = to) Quit 1
 
     Set rs = ##class(%SQL.Statement).%New()
-    Do rs.%Prepare("SELECT target FROM sentai.model.Edge WHERE flow = ? AND source = ?")
+    Do rs.%Prepare("SELECT target FROM sentai_model.Edge WHERE flow = ? AND source = ?")
     Set result = rs.%Execute(flowId, from)
     While result.%Next() {
-        If ..IsReachable(flowId, result.%Get("target"), to, .visited) Quit 1
+        Return:(..IsReachable(flowId, result.%Get("target"), to, .visited)) 1
     }
     Quit 0
 }
@@ -130,28 +131,5 @@ ClassMethod WouldGraphBeCyclic(flowId As %String, edgesArray As %DynamicArray) A
     Quit (processed '= nodeCount)
 }
 
-Storage Default
-{
-<Data name="EdgeDefaultData">
-<Value name="1">
-<Value>%%CLASSNAME</Value>
-</Value>
-<Value name="2">
-<Value>flow</Value>
-</Value>
-<Value name="3">
-<Value>source</Value>
-</Value>
-<Value name="4">
-<Value>target</Value>
-</Value>
-</Data>
-<DataLocation>^sentai.model.EdgeD</DataLocation>
-<DefaultData>EdgeDefaultData</DefaultData>
-<IdLocation>^sentai.model.EdgeD</IdLocation>
-<IndexLocation>^sentai.model.EdgeI</IndexLocation>
-<StreamLocation>^sentai.model.EdgeS</StreamLocation>
-<Type>%Storage.Persistent</Type>
-}
 
 }

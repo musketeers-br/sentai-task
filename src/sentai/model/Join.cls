@@ -4,13 +4,16 @@
 Class sentai.model.Join Extends (%Persistent, %JSON.Adaptor)
 {
 
-Property flow As sentai.model.Flow [ Required ];
 
 Property target As %String(MAXLEN = 8) [ Required ];
 
 Property policy As %String(MAXLEN = 32) [ InitialExpression = "ALL_MUST_SUCCEED" ];
 
 Property minSucceeded As %Integer;
+Relationship flow As sentai.model.Flow [ Cardinality = one, Inverse = joins ];
+
+Index FlowIndex On flow;
+
 
 /// At most one join entry per target step (data-model.md).
 Index FlowTargetIndex On (flow, target) [ Unique ];
@@ -22,7 +25,7 @@ ClassMethod ReplaceAll(flowId As %String, joinsArray As %DynamicArray) As %Statu
 {
     Set sc = $$$OK
     Try {
-        &sql(DELETE FROM sentai.model.Join WHERE flow = :flowId)
+        &sql(DELETE FROM sentai_model.Join WHERE flow = :flowId)
 
         If (joinsArray '= "") {
             Set iter = joinsArray.%GetIterator()
@@ -40,13 +43,13 @@ ClassMethod ReplaceAll(flowId As %String, joinsArray As %DynamicArray) As %Statu
 
         // Ensure every fan-in target (>=2 incoming edges) has a join entry, per FR-008.
         Set rs = ##class(%SQL.Statement).%New()
-        Do rs.%Prepare("SELECT target, COUNT(*) AS c FROM sentai.model.Edge WHERE flow = ? GROUP BY target HAVING COUNT(*) >= 2")
+        Do rs.%Prepare("SELECT target, COUNT(*) AS c FROM sentai_model.Edge WHERE flow = ? GROUP BY target HAVING COUNT(*) >= 2")
         Set result = rs.%Execute(flowId)
         While result.%Next() {
             Set targetId = result.%Get("target")
             If '..%ExistsId(flowId_"||"_targetId) {
                 Set existing = ##class(%SQL.Statement).%New()
-                Do existing.%Prepare("SELECT %ID FROM sentai.model.Join WHERE flow = ? AND target = ?")
+                Do existing.%Prepare("SELECT %ID FROM sentai_model.Join WHERE flow = ? AND target = ?")
                 Set existingRs = existing.%Execute(flowId, targetId)
                 If 'existingRs.%Next() {
                     Set join = ..%New()

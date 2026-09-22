@@ -4,7 +4,6 @@
 Class sentai.model.Step Extends (%Persistent, %JSON.Adaptor)
 {
 
-Property flow As sentai.model.Flow [ Required ];
 
 /// Stable within the flow; rendered as "#01", "#02", ... — not globally unique.
 Property id As %String(MAXLEN = 8) [ Required ];
@@ -28,6 +27,10 @@ Property wqmCategory As %String(MAXLEN = 64);
 
 /// Required when type = "custom" (FR-011); a subclass of %SYS.Task.Definition.
 Property customClass As %String(MAXLEN = 256);
+Relationship flow As sentai.model.Flow [ Cardinality = one, Inverse = steps ];
+
+Index FlowIndex On flow;
+
 
 Index FlowStepIndex On (flow, id) [ Unique ];
 
@@ -45,7 +48,7 @@ ClassMethod ReplaceAll(flowId As %String, stepsArray As %DynamicArray) As %Statu
 {
     Set sc = $$$OK
     Try {
-        &sql(DELETE FROM sentai.model.Step WHERE flow = :flowId)
+        &sql(DELETE FROM sentai_model.Step WHERE flow = :flowId)
         If (stepsArray = "") Quit
 
         Set iter = stepsArray.%GetIterator()

@@ -69,7 +69,7 @@ ClassMethod NormalizeWorkerCount(raw) As %Integer
 ClassMethod AffectedTaskCount(name As %String, excludeFlowId As %String) As %Integer
 {
     Set rs = ##class(%SQL.Statement).%New()
-    Do rs.%Prepare("SELECT COUNT(DISTINCT flow) AS c FROM sentai.model.Step WHERE wqmCategory = ? AND flow <> ?")
+    Do rs.%Prepare("SELECT COUNT(DISTINCT flow) AS c FROM sentai_model.Step WHERE wqmCategory = ? AND flow <> ?")
     Set result = rs.%Execute(name, $S(excludeFlowId '= "":excludeFlowId, 1:"-1"))
     Do result.%Next()
     Quit result.%Get("c")

@@ -13,7 +13,7 @@ Class sentai.dispatch.WaveDispatcher Extends %RegisteredObject
 /// considered technically done (plan.md TD-02).
 ClassMethod AdminEndpointFor(type As %String) As %String
 {
-    Quit $CASE(type,
+    Return $CASE(type,
         "integrity-check":      "/api/admin/v2/database-dir/integrity-check",
         "compact-globals":      "/api/admin/v2/database-dir/compact-globals",
         "defragment-globals":   "/api/admin/v2/database-dir/defragment",
@@ -32,14 +32,14 @@ ClassMethod AdminEndpointFor(type As %String) As %String
 ClassMethod IndexRun(runGuid As %String, flowId As %String, flowRevision As %Integer, startedAt As %String, dispatchedBy As %String) As %Status
 {
     Set ^sentaiRun(runGuid) = $LB(flowId, flowRevision, startedAt, dispatchedBy)
-    Quit $$$OK
+    Return $$$OK
 }
 
 ClassMethod IndexStepRun(runGuid As %String, stepId As %String, stepRunGuid As %String) As %Status
 {
     Set ^sentaiRun(runGuid, stepId) = stepRunGuid
     Set ^sentaiRun("idx", stepRunGuid) = $LB(runGuid, stepId)
-    Quit $$$OK
+    Return $$$OK
 }
 
 /// Resolves an execution identifier observed in the platform's own operational records
@@ -50,7 +50,7 @@ ClassMethod ResolveRunStep(stepRunGuid As %String, ByRef runGuid As %String, ByR
     If (entry = "") Quit 0
     Set runGuid = $LG(entry, 1)
     Set stepId = $LG(entry, 2)
-    Quit 1
+    Return 1
 }
 
 /// Dispatches `flowId`: blocks on structural validation errors (FR-018), blocks on
@@ -69,7 +69,7 @@ ClassMethod Dispatch(flowId As %String, confirmationsArray As %DynamicArray, dis
     Set validationReport = ##class(sentai.validation.FlowValidator).Validate(flowId)
     If '##class(sentai.validation.FlowValidator).HasNoErrors(validationReport) {
         Set errorCode = "VALIDATION_FAILED"
-        Quit ""
+        Return ""
     }
 
     // FR-017: every destructive step needs a matching typed confirmation before ANY step starts.
@@ -83,7 +83,7 @@ ClassMethod Dispatch(flowId As %String, confirmationsArray As %DynamicArray, dis
     }
 
     Set stepRs = ##class(%SQL.Statement).%New()
-    Do stepRs.%Prepare("SELECT id, type, namespace, databaseDirectory FROM sentai.model.Step WHERE flow = ?")
+    Do stepRs.%Prepare("SELECT id, type, namespace, databaseDirectory FROM sentai_model.Step WHERE flow = ?")
     Set stepResult = stepRs.%Execute(flowId)
     While stepResult.%Next() {
         Set stepId = stepResult.%Get("id")
@@ -118,7 +118,7 @@ ClassMethod Dispatch(flowId As %String, confirmationsArray As %DynamicArray, dis
         Do ..IndexRun(run.guid, flowId, flow.revision, run.startedAt, dispatchedBy)
 
         Set stepRs2 = ##class(%SQL.Statement).%New()
-        Do stepRs2.%Prepare("SELECT id FROM sentai.model.Step WHERE flow = ?")
+        Do stepRs2.%Prepare("SELECT id FROM sentai_model.Step WHERE flow = ?")
         Set stepResult2 = stepRs2.%Execute(flowId)
         While stepResult2.%Next() {
             Set stepId = stepResult2.%Get("id")
@@ -145,7 +145,7 @@ ClassMethod Dispatch(flowId As %String, confirmationsArray As %DynamicArray, dis
         TROLLBACK 1
         Set errorCode = "INTERNAL_ERROR"
         Set errorDetail = ex.DisplayString()
-        Quit ""
+        Return ""
     }
     Quit result
 }
@@ -156,7 +156,7 @@ ClassMethod Dispatch(flowId As %String, confirmationsArray As %DynamicArray, dis
 ClassMethod StartBackgroundLoop(runGuid As %String, bearerToken As %String) As %Status
 {
     JOB ..RunLoop(runGuid, bearerToken)
-    Quit $$$OK
+    Return $$$OK
 }
 
 /// The background dispatch loop: computes eligible steps, enqueues them, polls their
@@ -188,7 +188,7 @@ ClassMethod RunLoop(runGuid As %String, bearerToken As %String) As %Status
     }
 
     Do ..FinalizeRun(run)
-    Quit $$$OK
+    Return $$$OK
 }
 
 /// A step becomes eligible once every source of its incoming edges is terminal and
@@ -202,7 +202,7 @@ ClassMethod ComputeEligibleSteps(runGuid As %String, ByRef anyFailed As %Boolean
     Set flowId = run.flow.%Id()
 
     Set stepRs = ##class(%SQL.Statement).%New()
-    Do stepRs.%Prepare("SELECT id FROM sentai.model.Step WHERE flow = ?")
+    Do stepRs.%Prepare("SELECT id FROM sentai_model.Step WHERE flow = ?")
     Set stepResult = stepRs.%Execute(flowId)
     Set n = 0
     While stepResult.%Next() {
@@ -215,7 +215,7 @@ ClassMethod ComputeEligibleSteps(runGuid As %String, ByRef anyFailed As %Boolean
 
         // Gather source states over incoming edges.
         Set edgeRs = ##class(%SQL.Statement).%New()
-        Do edgeRs.%Prepare("SELECT source FROM sentai.model.Edge WHERE flow = ? AND target = ?")
+        Do edgeRs.%Prepare("SELECT source FROM sentai_model.Edge WHERE flow = ? AND target = ?")
         Set edgeResult = edgeRs.%Execute(flowId, stepId)
         Set allSourcesTerminal = 1, anySourceFailed = 0, sourceCount = 0
         While edgeResult.%Next() {
@@ -239,7 +239,7 @@ ClassMethod ComputeEligibleSteps(runGuid As %String, ByRef anyFailed As %Boolean
         Set n = n + 1
         Set eligible(n) = stepId
     }
-    Quit n
+    Return n
 }
 
 /// Enqueues one eligible step as a unit of work in %SYS.WorkQueueMgr under its WQM
@@ -262,7 +262,7 @@ ClassMethod StartStep(run As sentai.model.Run, stepId As %String) As %Status
     Do queueMgr.Queue("##class(sentai.dispatch.WaveDispatcher).ExecuteStepAsync", stepRun.guid)
     Do queueMgr.WaitForComplete()
 
-    Quit $$$OK
+    Return $$$OK
 }
 
 /// Runs on a %SYS.WorkQueueMgr worker: calls the mapped administrative endpoint to start
@@ -293,7 +293,7 @@ ClassMethod ExecuteStepAsync(stepRunGuid As %String) As %Status
     } Else {
         Do stepRun.TransitionTo("failed", "Administrative endpoint "_endpoint_" returned HTTP "_httpStatus)
     }
-    Quit $$$OK
+    Return $$$OK
 }
 
 /// Polls every `running` StepRun of the run whose adminJobId is set, applying the
@@ -301,7 +301,7 @@ ClassMethod ExecuteStepAsync(stepRunGuid As %String) As %Status
 ClassMethod PollInFlightSteps(run As sentai.model.Run, bearerToken As %String) As %Status
 {
     Set rs = ##class(%SQL.Statement).%New()
-    Do rs.%Prepare("SELECT %ID FROM sentai.model.StepRun WHERE run = ? AND state = 'running'")
+    Do rs.%Prepare("SELECT %ID FROM sentai_model.StepRun WHERE run = ? AND state = 'running'")
     Set result = rs.%Execute(run.%Id())
     While result.%Next() {
         Set stepRun = ##class(sentai.model.StepRun).%OpenId(result.%Get("%ID"), 4)
@@ -319,29 +319,29 @@ ClassMethod PollInFlightSteps(run As sentai.model.Run, bearerToken As %String) A
             Do stepRun.TransitionTo("failed", reason)
         }
     }
-    Quit $$$OK
+    Return $$$OK
 }
 
 ClassMethod IsRunTerminal(runId As %String) As %Boolean
 {
     Set rs = ##class(%SQL.Statement).%New()
-    Do rs.%Prepare("SELECT COUNT(*) AS c FROM sentai.model.StepRun WHERE run = ? AND state NOT IN ('completed','failed','cancelled')")
+    Do rs.%Prepare("SELECT COUNT(*) AS c FROM sentai_model.StepRun WHERE run = ? AND state NOT IN ('completed','failed','cancelled')")
     Set result = rs.%Execute(runId)
     Do result.%Next()
-    Quit (result.%Get("c") = 0)
+    Return (result.%Get("c") = 0)
 }
 
 ClassMethod FinalizeRun(run As sentai.model.Run) As %Status
 {
     Set rs = ##class(%SQL.Statement).%New()
-    Do rs.%Prepare("SELECT COUNT(*) AS c FROM sentai.model.StepRun WHERE run = ? AND state = 'failed'")
+    Do rs.%Prepare("SELECT COUNT(*) AS c FROM sentai_model.StepRun WHERE run = ? AND state = 'failed'")
     Set result = rs.%Execute(run.%Id())
     Do result.%Next()
     Set run.state = $S(result.%Get("c") > 0:"failed", 1:"completed")
     Set run.finishedAt = $ZDATETIME($HOROLOG, 3)
     Do run.%Save()
     Do run.BumpEventVersion()
-    Quit $$$OK
+    Return $$$OK
 }
 
 /// --- Control operations (FR-027, FR-028, FR-029, FR-030) ---
@@ -361,7 +361,7 @@ ClassMethod CancelRun(runGuid As %String) As %Status
     Set ^sentaiRun(runGuid, "%paused") = 1
     Set runId = ##class(sentai.model.Run).GuidIndexOpen(runGuid, 0, .sc)
     Set rs = ##class(%SQL.Statement).%New()
-    Do rs.%Prepare("SELECT %ID FROM sentai.model.StepRun WHERE run = ? AND state IN ('queued','running')")
+    Do rs.%Prepare("SELECT %ID FROM sentai_model.StepRun WHERE run = ? AND state IN ('queued','running')")
     Set result = rs.%Execute(runId)
     While result.%Next() {
         Set stepRun = ##class(sentai.model.StepRun).%OpenId(result.%Get("%ID"), 4)

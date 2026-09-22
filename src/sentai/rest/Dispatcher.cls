@@ -18,28 +18,28 @@ Parameter UseSession = 0;
 XData UrlMap [ XMLNamespace = "http://www.intersystems.com/urlmap" ]
 {
 <Routes>
-  <Route Url="/flows" Method="GET" Call="ListFlows"/>
-  <Route Url="/flows" Method="POST" Call="CreateFlow"/>
-  <Route Url="/flows/:flowId" Method="GET" Call="ReadFlow"/>
-  <Route Url="/flows/:flowId" Method="PUT" Call="SaveFlow"/>
-  <Route Url="/flows/:flowId/validate" Method="POST" Call="ValidateFlow"/>
-  <Route Url="/flows/:flowId/schedule" Method="POST" Call="ScheduleFlow"/>
-  <Route Url="/flows/:flowId/dispatch" Method="POST" Call="DispatchFlow"/>
-  <Route Url="/runs" Method="GET" Call="ListRuns"/>
-  <Route Url="/runs/:runGuid" Method="GET" Call="ReadRun"/>
-  <Route Url="/runs/:runGuid/events" Method="GET" Call="StreamEvents"/>
-  <Route Url="/runs/:runGuid/cancel" Method="POST" Call="CancelRun"/>
-  <Route Url="/runs/:runGuid/pause" Method="POST" Call="PauseRun"/>
-  <Route Url="/runs/:runGuid/steps/:stepGuid/cancel" Method="POST" Call="CancelStep"/>
-  <Route Url="/runs/:runGuid/steps/:stepGuid/pause" Method="POST" Call="PauseStep"/>
-  <Route Url="/runs/:runGuid/steps/:stepGuid/rerun" Method="POST" Call="RerunStep"/>
-  <Route Url="/catalog/step-types" Method="GET" Call="ListStepTypes"/>
-  <Route Url="/catalog/tasks" Method="GET" Call="ListCatalogTasks"/>
-  <Route Url="/catalog/tasks/:taskId" Method="GET" Call="ReadCatalogTask"/>
-  <Route Url="/catalog/tasks/:taskId/suspend" Method="POST" Call="SuspendCatalogTask"/>
-  <Route Url="/wqm/categories" Method="GET" Call="ListWqmCategories"/>
-  <Route Url="/wqm/categories/:name" Method="GET" Call="ReadWqmCategory"/>
-  <Route Url="/wqm/categories/:name" Method="PUT" Call="WriteWqmCategory"/>
+    <Route Url="/flows" Method="GET" Call="ListFlows"/>
+    <Route Url="/flows" Method="POST" Call="CreateFlow"/>
+    <Route Url="/flows/:flowId" Method="GET" Call="ReadFlow"/>
+    <Route Url="/flows/:flowId" Method="PUT" Call="SaveFlow"/>
+    <Route Url="/flows/:flowId/validate" Method="POST" Call="ValidateFlow"/>
+    <Route Url="/flows/:flowId/schedule" Method="POST" Call="ScheduleFlow"/>
+    <Route Url="/flows/:flowId/dispatch" Method="POST" Call="DispatchFlow"/>
+    <Route Url="/runs" Method="GET" Call="ListRuns"/>
+    <Route Url="/runs/:runGuid" Method="GET" Call="ReadRun"/>
+    <Route Url="/runs/:runGuid/events" Method="GET" Call="StreamEvents"/>
+    <Route Url="/runs/:runGuid/cancel" Method="POST" Call="CancelRun"/>
+    <Route Url="/runs/:runGuid/pause" Method="POST" Call="PauseRun"/>
+    <Route Url="/runs/:runGuid/steps/:stepGuid/cancel" Method="POST" Call="CancelStep"/>
+    <Route Url="/runs/:runGuid/steps/:stepGuid/pause" Method="POST" Call="PauseStep"/>
+    <Route Url="/runs/:runGuid/steps/:stepGuid/rerun" Method="POST" Call="RerunStep"/>
+    <Route Url="/catalog/step-types" Method="GET" Call="ListStepTypes"/>
+    <Route Url="/catalog/tasks" Method="GET" Call="ListCatalogTasks"/>
+    <Route Url="/catalog/tasks/:taskId" Method="GET" Call="ReadCatalogTask"/>
+    <Route Url="/catalog/tasks/:taskId/suspend" Method="POST" Call="SuspendCatalogTask"/>
+    <Route Url="/wqm/categories" Method="GET" Call="ListWqmCategories"/>
+    <Route Url="/wqm/categories/:name" Method="GET" Call="ReadWqmCategory"/>
+    <Route Url="/wqm/categories/:name" Method="PUT" Call="WriteWqmCategory"/>
 </Routes>
 }
 
@@ -127,7 +127,7 @@ ClassMethod ListFlows() As %Status
 {
     Set out = []
     Set rs = ##class(%SQL.Statement).%New()
-    Do rs.%Prepare("SELECT %ID, name, revision, savedAt, savedBy, scheduleSpec FROM sentai.model.Flow ORDER BY name")
+    Do rs.%Prepare("SELECT %ID, name, revision, savedAt, savedBy, scheduleSpec FROM sentai_model.Flow ORDER BY name")
     Set result = rs.%Execute()
     While result.%Next() {
         Set item = {}
@@ -210,10 +210,10 @@ ClassMethod ValidateStructural(payload As %DynamicObject) As %DynamicObject
 ClassMethod TranslateSaveError(sc As %Status) As %Status
 {
     Set text = $SYSTEM.Status.GetErrorText(sc)
-    If (text [ "SentaiNameConflict") Quit ..WriteProblem(409, "Conflict", "A flow with this name already exists")
-    If (text [ "SentaiStaleRevision") Quit ..WriteProblem(409, "Conflict", "Flow was saved by someone else since it was loaded")
-    If (text [ "SentaiCycle") Quit ..WriteJSON(422, ##class(sentai.validation.FlowValidator).Report([{"stepId": "", "code": "CYCLE_DETECTED", "message": text}], []))
-    Quit ..WriteProblem(500, "Internal Error", text)
+    Return:(text [ "SentaiNameConflict") ..WriteProblem(409, "Conflict", "A flow with this name already exists")
+    Return:(text [ "SentaiStaleRevision") ..WriteProblem(409, "Conflict", "Flow was saved by someone else since it was loaded")
+    Return:(text [ "SentaiCycle") ..WriteJSON(422, ##class(sentai.validation.FlowValidator).Report([{"stepId": "", "code": "CYCLE_DETECTED", "message": (text)}], []))
+    Return ..WriteProblem(500, "Internal Error", text)
 }
 
 ClassMethod ShapeFlow(flow As sentai.model.Flow, includeGraph As %Boolean) As %DynamicObject
@@ -229,7 +229,7 @@ ClassMethod ShapeFlow(flow As sentai.model.Flow, includeGraph As %Boolean) As %D
 
     Set steps = []
     Set rs = ##class(%SQL.Statement).%New()
-    Do rs.%Prepare("SELECT id, type, taskName, namespace, databaseDirectory, runAsUser, timeoutMinutes, wqmCategory, customClass FROM sentai.model.Step WHERE flow = ?")
+    Do rs.%Prepare("SELECT id, type, taskName, namespace, databaseDirectory, runAsUser, timeoutMinutes, wqmCategory, customClass FROM sentai_model.Step WHERE flow = ?")
     Set result = rs.%Execute(flow.%Id())
     While result.%Next() {
         Set s = {}
@@ -249,7 +249,7 @@ ClassMethod ShapeFlow(flow As sentai.model.Flow, includeGraph As %Boolean) As %D
 
     Set edges = []
     Set rs2 = ##class(%SQL.Statement).%New()
-    Do rs2.%Prepare("SELECT source, target FROM sentai.model.Edge WHERE flow = ?")
+    Do rs2.%Prepare("SELECT source, target FROM sentai_model.Edge WHERE flow = ?")
     Set result2 = rs2.%Execute(flow.%Id())
     While result2.%Next() {
         Do edges.%Push({"source": (result2.%Get("source")), "target": (result2.%Get("target"))})
@@ -258,7 +258,7 @@ ClassMethod ShapeFlow(flow As sentai.model.Flow, includeGraph As %Boolean) As %D
 
     Set joins = []
     Set rs3 = ##class(%SQL.Statement).%New()
-    Do rs3.%Prepare("SELECT target, policy, minSucceeded FROM sentai.model.Join WHERE flow = ?")
+    Do rs3.%Prepare("SELECT target, policy, minSucceeded FROM sentai_model.Join WHERE flow = ?")
     Set result3 = rs3.%Execute(flow.%Id())
     While result3.%Next() {
         Do joins.%Push({"target": (result3.%Get("target")), "policy": (result3.%Get("policy")), "minSucceeded": (result3.%Get("minSucceeded"))})
@@ -306,10 +306,10 @@ ClassMethod ListRuns() As %Status
     Set out = []
     Set rs = ##class(%SQL.Statement).%New()
     If (flowId '= "") {
-        Do rs.%Prepare("SELECT %ID FROM sentai.model.Run WHERE flow = ? ORDER BY startedAt DESC")
+        Do rs.%Prepare("SELECT %ID FROM sentai_model.Run WHERE flow = ? ORDER BY startedAt DESC")
         Set result = rs.%Execute(flowId)
     } Else {
-        Do rs.%Prepare("SELECT %ID FROM sentai.model.Run ORDER BY startedAt DESC")
+        Do rs.%Prepare("SELECT %ID FROM sentai_model.Run ORDER BY startedAt DESC")
         Set result = rs.%Execute()
     }
     While result.%Next() {
@@ -343,7 +343,7 @@ ClassMethod ShapeRun(run As sentai.model.Run, detail As %Boolean) As %DynamicObj
 
     Set steps = [], sumMs = 0
     Set rs = ##class(%SQL.Statement).%New()
-    Do rs.%Prepare("SELECT %ID FROM sentai.model.StepRun WHERE run = ?")
+    Do rs.%Prepare("SELECT %ID FROM sentai_model.StepRun WHERE run = ?")
     Set result = rs.%Execute(run.%Id())
     While result.%Next() {
         Set sr = ##class(sentai.model.StepRun).%OpenId(result.%Get("%ID"), 0)
@@ -358,7 +358,7 @@ ClassMethod ShapeRun(run As sentai.model.Run, detail As %Boolean) As %DynamicObj
 
     Set log = []
     Set rs2 = ##class(%SQL.Statement).%New()
-    Do rs2.%Prepare("SELECT at, stepId, severity, message FROM sentai.model.LogEntry WHERE run = ? ORDER BY at DESC")
+    Do rs2.%Prepare("SELECT at, stepId, severity, message FROM sentai_model.LogEntry WHERE run = ? ORDER BY at DESC")
     Set result2 = rs2.%Execute(run.%Id())
     While result2.%Next() {
         Do log.%Push({"at": (result2.%Get("at")), "stepId": (result2.%Get("stepId")), "severity": (result2.%Get("severity")), "message": (result2.%Get("message"))})
@@ -434,7 +434,7 @@ ClassMethod StreamEvents(runGuid As %String) As %Status
 ClassMethod EmitRunStateEvents(run As sentai.model.Run, ByRef lastVersion As %Integer) As %Status
 {
     Set rs = ##class(%SQL.Statement).%New()
-    Do rs.%Prepare("SELECT guid, stepId, state, progressCurrent, progressTotal FROM sentai.model.StepRun WHERE run = ?")
+    Do rs.%Prepare("SELECT guid, stepId, state, progressCurrent, progressTotal FROM sentai_model.StepRun WHERE run = ?")
     Set result = rs.%Execute(run.%Id())
     While result.%Next() {
         Set event = {}
@@ -520,7 +520,9 @@ ClassMethod ReadCatalogTask(taskId As %Integer) As %Status
     Set catalog = ##class(sentai.catalog.TaskService).List(..CurrentToken())
     Set iter = catalog.items.%GetIterator()
     While iter.%GetNext(.k, .entry) {
-        If (entry.taskId = taskId) Quit ..WriteJSON(200, entry)
+        If (entry.taskId = taskId) {
+            Return ..WriteJSON(200, entry)
+        }
     }
     Quit ..WriteProblem(404, "Not Found", "Task '"_taskId_"' does not exist")
 }
@@ -567,7 +569,7 @@ ClassMethod ScheduleFlow(flowId As %String) As %Status
 
     Set taskIds = []
     Set rs = ##class(%SQL.Statement).%New()
-    Do rs.%Prepare("SELECT id FROM sentai.model.Step WHERE flow = ?")
+    Do rs.%Prepare("SELECT id FROM sentai_model.Step WHERE flow = ?")
     Set result = rs.%Execute(flowId)
     While result.%Next() {
         Set stepId = result.%Get("id")
@@ -616,7 +618,7 @@ ClassMethod CreateNativeTask(flowId As %String, stepId As %String, scheduleSpec 
 ClassMethod StepHasIncomingEdge(flowId As %String, stepId As %String) As %Boolean
 {
     Set rs = ##class(%SQL.Statement).%New()
-    Do rs.%Prepare("SELECT COUNT(*) AS c FROM sentai.model.Edge WHERE flow = ? AND target = ?")
+    Do rs.%Prepare("SELECT COUNT(*) AS c FROM sentai_model.Edge WHERE flow = ? AND target = ?")
     Set result = rs.%Execute(flowId, stepId)
     Do result.%Next()
     Quit (result.%Get("c") > 0)

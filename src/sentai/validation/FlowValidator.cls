@@ -22,7 +22,7 @@ ClassMethod Validate(flowId As %String) As %DynamicObject
 
     // 1. Acyclicity (reuses the same algorithm as the mutation-time check).
     Set rs = ##class(%SQL.Statement).%New()
-    Do rs.%Prepare("SELECT source, target FROM sentai.model.Edge WHERE flow = ?")
+    Do rs.%Prepare("SELECT source, target FROM sentai_model.Edge WHERE flow = ?")
     Set result = rs.%Execute(flowId)
     Set edgesArray = []
     While result.%Next() {
@@ -34,7 +34,7 @@ ClassMethod Validate(flowId As %String) As %DynamicObject
 
     // Iterate steps for per-type rules.
     Set stepRs = ##class(%SQL.Statement).%New()
-    Do stepRs.%Prepare("SELECT id, type, customClass, databaseDirectory, namespace, wqmCategory, parameters FROM sentai.model.Step WHERE flow = ?")
+    Do stepRs.%Prepare("SELECT id, type, customClass, databaseDirectory, namespace, wqmCategory, parameters FROM sentai_model.Step WHERE flow = ?")
     Set stepResult = stepRs.%Execute(flowId)
     While stepResult.%Next() {
         Set stepId = stepResult.%Get("id")
@@ -42,12 +42,12 @@ ClassMethod Validate(flowId As %String) As %DynamicObject
 
         // 2. custom-with-no-class is always an error, never a warning (FR-011).
         If (type = "custom") && (stepResult.%Get("customClass") = "") {
-            Do errors.%Push({"stepId": stepId, "code": "CUSTOM_CLASS_REQUIRED", "message": "A custom step requires a declared customClass before it can validate"})
+            Do errors.%Push({"stepId": (stepId), "code": "CUSTOM_CLASS_REQUIRED", "message": "A custom step requires a declared customClass before it can validate"})
         }
 
         // 3. Per-step-type parameter schema (closed catalog).
         If '##class(sentai.registry.StepType).IsKnownType(type) {
-            Do errors.%Push({"stepId": stepId, "code": "UNKNOWN_STEP_TYPE", "message": "Step type '"_type_"' is not in the closed catalog"})
+            Do errors.%Push({"stepId": (stepId), "code": "UNKNOWN_STEP_TYPE", "message": ("Step type '"_type_"' is not in the closed catalog")})
         } ElseIf (type = "purge-audit-records") {
             Set paramsText = stepResult.%Get("parameters")
             Set hasDaysToKeep = 0
@@ -58,14 +58,14 @@ ClassMethod Validate(flowId As %String) As %DynamicObject
                 }
             } Catch { Set hasDaysToKeep = 0 }
             If 'hasDaysToKeep {
-                Do errors.%Push({"stepId": stepId, "code": "PARAMETER_SCHEMA", "message": "purge-audit-records requires parameters.daysToKeep"})
+                Do errors.%Push({"stepId": (stepId), "code": "PARAMETER_SCHEMA", "message": "purge-audit-records requires parameters.daysToKeep"})
             }
         }
 
         // 4. Namespace existence on the active instance.
         Set ns = stepResult.%Get("namespace")
         If (ns '= "") && '##class(%SYS.Namespace).Exists(ns) {
-            Do errors.%Push({"stepId": stepId, "code": "NAMESPACE_NOT_FOUND", "message": "Namespace '"_ns_"' does not exist on this instance"})
+            Do errors.%Push({"stepId": (stepId), "code": "NAMESPACE_NOT_FOUND", "message": ("Namespace '"_ns_"' does not exist on this instance")})
         }
 
         // 5. WQM category nesting invariant (shared with CategoryService).
@@ -75,7 +75,7 @@ ClassMethod Validate(flowId As %String) As %DynamicObject
             If (catId '= "") {
                 Set cat = ##class(sentai.model.Category).%OpenId(catId, 0, .catSc)
                 If $IsObject(cat) && '##class(sentai.model.Category).SatisfiesInvariant(cat.defaultWorkers, cat.maxActiveWorkers, cat.maxWorkers, cat.maxTotalWorkers) {
-                    Do errors.%Push({"stepId": stepId, "code": "WQM_INVARIANT_VIOLATED", "message": "WQM category '"_category_"' violates defaultWorkers<=maxActiveWorkers<=maxWorkers<=maxTotalWorkers"})
+                    Do errors.%Push({"stepId": (stepId), "code": "WQM_INVARIANT_VIOLATED", "message": ("WQM category '"_category_"' violates defaultWorkers<=maxActiveWorkers<=maxWorkers<=maxTotalWorkers")})
                 }
             }
         }
@@ -83,11 +83,11 @@ ClassMethod Validate(flowId As %String) As %DynamicObject
         // 6. Fixed database-directory mount precondition — warning only, never an error (FR-014).
         Set dbDir = stepResult.%Get("databaseDirectory")
         If (dbDir '= "") && ..IsMountedReadOnly(dbDir) {
-            Do warnings.%Push({"stepId": stepId, "code": "PRECONDITION_READ_ONLY", "message": "Database mounted read-only. This step type requires write access to the directory."})
+            Do warnings.%Push({"stepId": (stepId), "code": "PRECONDITION_READ_ONLY", "message": "Database mounted read-only. This step type requires write access to the directory."})
         }
     }
 
-    Quit ..Report(errors, warnings)
+    Return ..Report(errors, warnings)
 }
 
 /// The single fixed precondition check (not a general engine, FR-014): is the database
