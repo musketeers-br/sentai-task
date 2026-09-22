@@ -10,6 +10,9 @@
       <Resource Name="dc.sample.PKG"/>
       <UnitTest Name="/tests" Package="dc.sample.unittests" Phase="test"/>
 
+      <Resource Name="sentai.PKG"/>
+      <UnitTest Name="/tests" Package="sentai.unittest" Phase="test"/>
+
     </Module>
   </Document>
 </Export>
