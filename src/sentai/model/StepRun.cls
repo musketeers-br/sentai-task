@@ -90,6 +90,55 @@ Method TransitionTo(newState As %String, failureReason As %String = "") As %Stat
 
 Storage Default
 {
+<Data name="StepRunDefaultData">
+<Value name="1">
+<Value>%%CLASSNAME</Value>
+</Value>
+<Value name="2">
+<Value>guid</Value>
+</Value>
+<Value name="3">
+<Value>run</Value>
+</Value>
+<Value name="4">
+<Value>stepId</Value>
+</Value>
+<Value name="5">
+<Value>state</Value>
+</Value>
+<Value name="6">
+<Value>timeQueued</Value>
+</Value>
+<Value name="7">
+<Value>timeStarted</Value>
+</Value>
+<Value name="8">
+<Value>timeFinished</Value>
+</Value>
+<Value name="9">
+<Value>failureReason</Value>
+</Value>
+<Value name="10">
+<Value>progressCurrent</Value>
+</Value>
+<Value name="11">
+<Value>progressTotal</Value>
+</Value>
+<Value name="12">
+<Value>confirmedBy</Value>
+</Value>
+<Value name="13">
+<Value>confirmedAt</Value>
+</Value>
+<Value name="14">
+<Value>adminJobId</Value>
+</Value>
+</Data>
+<DataLocation>^sentai.model.StepRunD</DataLocation>
+<DefaultData>StepRunDefaultData</DefaultData>
+<IdLocation>^sentai.model.StepRunD</IdLocation>
+<IndexLocation>^sentai.model.StepRunI</IndexLocation>
+<StreamLocation>^sentai.model.StepRunS</StreamLocation>
 <Type>%Storage.Persistent</Type>
 }
 

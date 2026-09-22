@@ -132,6 +132,25 @@ ClassMethod WouldGraphBeCyclic(flowId As %String, edgesArray As %DynamicArray) A
 
 Storage Default
 {
+<Data name="EdgeDefaultData">
+<Value name="1">
+<Value>%%CLASSNAME</Value>
+</Value>
+<Value name="2">
+<Value>flow</Value>
+</Value>
+<Value name="3">
+<Value>source</Value>
+</Value>
+<Value name="4">
+<Value>target</Value>
+</Value>
+</Data>
+<DataLocation>^sentai.model.EdgeD</DataLocation>
+<DefaultData>EdgeDefaultData</DefaultData>
+<IdLocation>^sentai.model.EdgeD</IdLocation>
+<IndexLocation>^sentai.model.EdgeI</IndexLocation>
+<StreamLocation>^sentai.model.EdgeS</StreamLocation>
 <Type>%Storage.Persistent</Type>
 }
 

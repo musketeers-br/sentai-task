@@ -67,6 +67,28 @@ ClassMethod ReplaceAll(flowId As %String, joinsArray As %DynamicArray) As %Statu
 
 Storage Default
 {
+<Data name="JoinDefaultData">
+<Value name="1">
+<Value>%%CLASSNAME</Value>
+</Value>
+<Value name="2">
+<Value>flow</Value>
+</Value>
+<Value name="3">
+<Value>target</Value>
+</Value>
+<Value name="4">
+<Value>policy</Value>
+</Value>
+<Value name="5">
+<Value>minSucceeded</Value>
+</Value>
+</Data>
+<DataLocation>^sentai.model.JoinD</DataLocation>
+<DefaultData>JoinDefaultData</DefaultData>
+<IdLocation>^sentai.model.JoinD</IdLocation>
+<IndexLocation>^sentai.model.JoinI</IndexLocation>
+<StreamLocation>^sentai.model.JoinS</StreamLocation>
 <Type>%Storage.Persistent</Type>
 }
 

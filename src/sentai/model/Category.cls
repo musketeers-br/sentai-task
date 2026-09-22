@@ -55,6 +55,34 @@ ClassMethod Mirror(name As %String, defaultWorkers As %Integer, maxActiveWorkers
 
 Storage Default
 {
+<Data name="CategoryDefaultData">
+<Value name="1">
+<Value>%%CLASSNAME</Value>
+</Value>
+<Value name="2">
+<Value>name</Value>
+</Value>
+<Value name="3">
+<Value>defaultWorkers</Value>
+</Value>
+<Value name="4">
+<Value>maxActiveWorkers</Value>
+</Value>
+<Value name="5">
+<Value>maxWorkers</Value>
+</Value>
+<Value name="6">
+<Value>maxTotalWorkers</Value>
+</Value>
+<Value name="7">
+<Value>alwaysQueue</Value>
+</Value>
+</Data>
+<DataLocation>^sentai.model.CategoryD</DataLocation>
+<DefaultData>CategoryDefaultData</DefaultData>
+<IdLocation>^sentai.model.CategoryD</IdLocation>
+<IndexLocation>^sentai.model.CategoryI</IndexLocation>
+<StreamLocation>^sentai.model.CategoryS</StreamLocation>
 <Type>%Storage.Persistent</Type>
 }
 

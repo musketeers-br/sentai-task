@@ -54,6 +54,40 @@ ClassMethod MillisecondsBetween(t1 As %TimeStamp, t2 As %TimeStamp) As %Integer
 
 Storage Default
 {
+<Data name="RunDefaultData">
+<Value name="1">
+<Value>%%CLASSNAME</Value>
+</Value>
+<Value name="2">
+<Value>guid</Value>
+</Value>
+<Value name="3">
+<Value>flow</Value>
+</Value>
+<Value name="4">
+<Value>flowRevision</Value>
+</Value>
+<Value name="5">
+<Value>startedAt</Value>
+</Value>
+<Value name="6">
+<Value>finishedAt</Value>
+</Value>
+<Value name="7">
+<Value>dispatchedBy</Value>
+</Value>
+<Value name="8">
+<Value>state</Value>
+</Value>
+<Value name="9">
+<Value>eventVersion</Value>
+</Value>
+</Data>
+<DataLocation>^sentai.model.RunD</DataLocation>
+<DefaultData>RunDefaultData</DefaultData>
+<IdLocation>^sentai.model.RunD</IdLocation>
+<IndexLocation>^sentai.model.RunI</IndexLocation>
+<StreamLocation>^sentai.model.RunS</StreamLocation>
 <Type>%Storage.Persistent</Type>
 }
 

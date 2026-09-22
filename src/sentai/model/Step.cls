@@ -75,6 +75,51 @@ ClassMethod ReplaceAll(flowId As %String, stepsArray As %DynamicArray) As %Statu
 
 Storage Default
 {
+<Data name="StepDefaultData">
+<Value name="1">
+<Value>%%CLASSNAME</Value>
+</Value>
+<Value name="2">
+<Value>flow</Value>
+</Value>
+<Value name="3">
+<Value>id</Value>
+</Value>
+<Value name="4">
+<Value>type</Value>
+</Value>
+<Value name="5">
+<Value>taskName</Value>
+</Value>
+<Value name="6">
+<Value>namespace</Value>
+</Value>
+<Value name="7">
+<Value>databaseDirectory</Value>
+</Value>
+<Value name="8">
+<Value>runAsUser</Value>
+</Value>
+<Value name="9">
+<Value>timeoutMinutes</Value>
+</Value>
+<Value name="10">
+<Value>wqmCategory</Value>
+</Value>
+<Value name="11">
+<Value>customClass</Value>
+</Value>
+</Data>
+<Data name="parameters">
+<Attribute>parameters</Attribute>
+<Structure>node</Structure>
+<Subscript>"parameters"</Subscript>
+</Data>
+<DataLocation>^sentai.model.StepD</DataLocation>
+<DefaultData>StepDefaultData</DefaultData>
+<IdLocation>^sentai.model.StepD</IdLocation>
+<IndexLocation>^sentai.model.StepI</IndexLocation>
+<StreamLocation>^sentai.model.StepS</StreamLocation>
 <Type>%Storage.Persistent</Type>
 }
 

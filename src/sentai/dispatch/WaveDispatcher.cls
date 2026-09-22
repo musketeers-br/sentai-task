@@ -57,7 +57,7 @@ ClassMethod ResolveRunStep(stepRunGuid As %String, ByRef runGuid As %String, ByR
 /// missing/mismatched destructive confirmations (FR-017), then creates Run + one StepRun
 /// per step + the ^sentaiRun index, all inside one transaction (FR-016, NFR-002, NFR-004,
 /// research.md R-011). Returns the Run as a %DynamicObject on success.
-///
+/// 
 /// On failure returns "" and sets `errorCode`/`errorDetail`:
 ///   "VALIDATION_FAILED"       — see `validationReport` for the ValidationReport
 ///   "CONFIRMATION_REQUIRED"   — errorDetail names the pending stepId (FR-017, HTTP 428)
@@ -345,7 +345,6 @@ ClassMethod FinalizeRun(run As sentai.model.Run) As %Status
 }
 
 /// --- Control operations (FR-027, FR-028, FR-029, FR-030) ---
-
 /// Whole-run pause: suspends dispatch of not-yet-started steps. Steps already running
 /// are left to finish (v1 does not support pausing a running step outside the purge
 /// family from the run-level action — individual PauseStep does, for pausable types).

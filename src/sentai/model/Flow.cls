@@ -3,7 +3,7 @@
 Class sentai.model.Flow Extends (%Persistent, %JSON.Adaptor)
 {
 
-Property name As %String(MAXLEN = 128, COLLATION = "SQLUPPER") [ Required ];
+Property name As %String(COLLATION = "SQLUPPER", MAXLEN = 128) [ Required ];
 
 Property revision As %Integer [ InitialExpression = 1 ];
 
@@ -102,6 +102,37 @@ Query NameConflict(upperName As %String, excludeId As %String) As %SQLQuery
 
 Storage Default
 {
+<Data name="FlowDefaultData">
+<Value name="1">
+<Value>%%CLASSNAME</Value>
+</Value>
+<Value name="2">
+<Value>name</Value>
+</Value>
+<Value name="3">
+<Value>revision</Value>
+</Value>
+<Value name="4">
+<Value>savedAt</Value>
+</Value>
+<Value name="5">
+<Value>savedBy</Value>
+</Value>
+<Value name="6">
+<Value>defaultCategory</Value>
+</Value>
+<Value name="7">
+<Value>scheduleSpec</Value>
+</Value>
+<Value name="8">
+<Value>canvasGeometry</Value>
+</Value>
+</Data>
+<DataLocation>^sentai.model.FlowD</DataLocation>
+<DefaultData>FlowDefaultData</DefaultData>
+<IdLocation>^sentai.model.FlowD</IdLocation>
+<IndexLocation>^sentai.model.FlowI</IndexLocation>
+<StreamLocation>^sentai.model.FlowS</StreamLocation>
 <Type>%Storage.Persistent</Type>
 }
 

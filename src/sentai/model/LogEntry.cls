@@ -47,6 +47,31 @@ ClassMethod Append(runId As %String, stepId As %String, severity As %String, mes
 
 Storage Default
 {
+<Data name="LogEntryDefaultData">
+<Value name="1">
+<Value>%%CLASSNAME</Value>
+</Value>
+<Value name="2">
+<Value>run</Value>
+</Value>
+<Value name="3">
+<Value>at</Value>
+</Value>
+<Value name="4">
+<Value>stepId</Value>
+</Value>
+<Value name="5">
+<Value>severity</Value>
+</Value>
+<Value name="6">
+<Value>message</Value>
+</Value>
+</Data>
+<DataLocation>^sentai.model.LogEntryD</DataLocation>
+<DefaultData>LogEntryDefaultData</DefaultData>
+<IdLocation>^sentai.model.LogEntryD</IdLocation>
+<IndexLocation>^sentai.model.LogEntryI</IndexLocation>
+<StreamLocation>^sentai.model.LogEntryS</StreamLocation>
 <Type>%Storage.Persistent</Type>
 }
 

@@ -44,7 +44,6 @@ XData UrlMap [ XMLNamespace = "http://www.intersystems.com/urlmap" ]
 }
 
 /// --- Authentication (FR-040, FR-041, NFR-006, research.md R-002) ---
-
 /// Validates the same 60-second Bearer access token the administrative API uses, on
 /// every request, with no caching or reuse of the authorization decision across requests
 /// (Constitution III). Native validation is attempted first; if no native mechanism is
@@ -102,7 +101,6 @@ ClassMethod CurrentUser() As %String
 }
 
 /// --- Response helpers (contracts/rest-mapping.md §Errors) ---
-
 ClassMethod WriteJSON(status As %Integer, obj) As %Status
 {
     Set %response.Status = status
@@ -125,7 +123,6 @@ ClassMethod WriteProblem(status As %Integer, title As %String, detail As %String
 }
 
 /// --- /flows (FR-001–FR-007, User Story 1) ---
-
 ClassMethod ListFlows() As %Status
 {
     Set out = []
@@ -279,14 +276,12 @@ ClassMethod ShapeFlow(flow As sentai.model.Flow, includeGraph As %Boolean) As %D
 }
 
 /// --- /flows/{id}/validate (FR-012–FR-015, User Story 2) ---
-
 ClassMethod ValidateFlow(flowId As %String) As %Status
 {
     Quit ..WriteJSON(200, ##class(sentai.validation.FlowValidator).Validate(flowId))
 }
 
 /// --- /flows/{id}/dispatch (FR-016–FR-018, User Story 3) ---
-
 ClassMethod DispatchFlow(flowId As %String) As %Status
 {
     Set payload = ..ReadJSONBody()
@@ -305,7 +300,6 @@ ClassMethod DispatchFlow(flowId As %String) As %Status
 }
 
 /// --- /runs (FR-024, User Story 3/4) ---
-
 ClassMethod ListRuns() As %Status
 {
     Set flowId = %request.Data("flowId", 1)
@@ -392,7 +386,6 @@ ClassMethod ShapeStepRun(sr As sentai.model.StepRun) As %DynamicObject
 }
 
 /// --- /runs/{guid}/events (FR-025, FR-026, User Story 4, contracts/sse-protocol.md) ---
-
 ClassMethod StreamEvents(runGuid As %String) As %Status
 {
     Set runId = ##class(sentai.model.Run).GuidIndexOpen(runGuid, 0, .sc)
@@ -466,7 +459,6 @@ ClassMethod EmitRunStateEvents(run As sentai.model.Run, ByRef lastVersion As %In
 }
 
 /// --- Run/step control (FR-027–FR-030, User Story 4) ---
-
 ClassMethod CancelRun(runGuid As %String) As %Status
 {
     Do ##class(sentai.dispatch.WaveDispatcher).CancelRun(runGuid)
@@ -508,14 +500,12 @@ ClassMethod RerunStep(runGuid As %String, stepGuid As %String) As %Status
 }
 
 /// --- Step-type catalog (FR-037, User Story 6) ---
-
 ClassMethod ListStepTypes() As %Status
 {
     Quit ..WriteJSON(200, ##class(sentai.registry.StepType).GetCatalog())
 }
 
 /// --- /catalog/tasks (FR-038, FR-039, User Story 6, P3 reducible) ---
-
 ClassMethod ListCatalogTasks() As %Status
 {
     Set q = %request.Data("q", 1)
@@ -545,7 +535,6 @@ ClassMethod SuspendCatalogTask(taskId As %Integer) As %Status
 }
 
 /// --- /wqm/categories (FR-033–FR-036, User Story 5) ---
-
 ClassMethod ListWqmCategories() As %Status
 {
     Quit ..WriteJSON(200, ##class(sentai.wqm.CategoryService).List(..CurrentToken()))
@@ -568,7 +557,6 @@ ClassMethod WriteWqmCategory(name As %String) As %Status
 }
 
 /// --- /flows/{id}/schedule (FR-031, FR-032, User Story 5) ---
-
 ClassMethod ScheduleFlow(flowId As %String) As %Status
 {
     Set payload = ..ReadJSONBody()
@@ -640,7 +628,6 @@ ClassMethod NextRunFor(scheduleSpec As %String) As %String
 }
 
 /// --- Body parsing ---
-
 ClassMethod ReadJSONBody() As %DynamicObject
 {
     Set body = ""
