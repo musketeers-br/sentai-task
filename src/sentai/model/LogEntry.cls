@@ -24,23 +24,21 @@ ClassMethod Append(runId As %String, stepId As %String, severity As %String, mes
     TSTART
     Try {
         Set entry = ..%New()
-        Set entry.run = runId
+        Do entry.runSetObjectId(runId)
         Set entry.at = $ZDATETIME($HOROLOG, 3)
         Set entry.stepId = stepId
         Set entry.severity = severity
         Set entry.message = message
         Set sc = entry.%Save()
-        If $$$ISERR(sc) Throw
+        $$$ThrowOnError(sc)
 
-        Set run = ##class(sentai.model.Run).%OpenId(runId, 4, .sc)
-        If $$$ISERR(sc) Throw
-        Do run.BumpEventVersion()
+        $$$ThrowOnError(##class(sentai.model.Run).BumpEventVersionFor(runId))
 
         TCOMMIT
     }
     Catch ex {
         TROLLBACK 1
-        Set sc = $S($$$ISERR($G(sc)):sc, 1:ex.AsStatus())
+        Set sc = ex.AsStatus()
     }
     Quit sc
 }

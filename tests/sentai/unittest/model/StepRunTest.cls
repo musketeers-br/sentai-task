@@ -5,11 +5,10 @@ Method NewQueuedStepRun() As sentai.model.StepRun
 {
     Set id = ..CreateCanonicalFlow("StepRunFixture")
     Set errorCode = "", errorDetail = "", report = ""
-    Set run = ##class(sentai.dispatch.WaveDispatcher).Dispatch(id, [], "tester", .errorCode, .errorDetail, .report)
+    Set run = ##class(sentai.dispatch.WaveDispatcher).Dispatch(id, ..CanonicalConfirmations(), "tester", .errorCode, .errorDetail, .report)
     Do $$$AssertEquals(errorCode, "")
 
-    Set stepRunId = ##class(sentai.model.StepRun).RunStepIndexOpen(run.%Id(), "01", 0)
-    Quit ##class(sentai.model.StepRun).%OpenId(stepRunId, 4)
+    Quit ##class(sentai.model.StepRun).OpenForRunStep(run.%Id(), "01", 4)
 }
 
 Method TestCompletedIsTerminal()

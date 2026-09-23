@@ -37,7 +37,7 @@ Method TestSaveAgainstStaleRevisionReturns409()
     Set payload = ..CanonicalFlowPayload("RestStale")
     Do payload.%Set("name", flow.name)
     Do ..NewRequest(payload)
-    Do %request.Data("revision", 1, 999)
+    Set %request.Data("revision", 1) = 999
     Do ##class(sentai.rest.Dispatcher).SaveFlow(id)
     Do $$$AssertEquals(%response.Status, 409)
 }
@@ -63,7 +63,7 @@ Method TestCycleClosingEdgeOnSaveReturns422()
     Do payload.%Set("name", flow.name)
     Do payload."edges".%Push({"source": "05", "target": "01"})
     Do ..NewRequest(payload)
-    Do %request.Data("revision", 1, 1)
+    Set %request.Data("revision", 1) = 1
     Do ##class(sentai.rest.Dispatcher).SaveFlow(id)
     Do $$$AssertEquals(%response.Status, 422)
 }

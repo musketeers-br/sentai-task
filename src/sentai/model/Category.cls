@@ -32,13 +32,12 @@ ClassMethod Mirror(name As %String, defaultWorkers As %Integer, maxActiveWorkers
 {
     Set sc = $$$OK
     Try {
-        Set id = ..NameIndexOpen(name, 0, .sc)
-        If (id = "") {
+        If ..NameIndexExists(name) {
+            Set cat = ..NameIndexOpen(name, 4, .sc)
+            $$$ThrowOnError(sc)
+        } Else {
             Set cat = ..%New()
             Set cat.name = name
-        } Else {
-            Set cat = ..%OpenId(id, 4, .sc)
-            If $$$ISERR(sc) Throw
         }
         Set cat.defaultWorkers = defaultWorkers
         Set cat.maxActiveWorkers = maxActiveWorkers

@@ -192,19 +192,21 @@ outside the purge family is explicitly refused (`quickstart.md` step 7).
 
 ## Phase 7: User Story 5 - Schedule and manage categories (Priority: P2)
 
-**Goal**: A validated flow can be compiled into native platform scheduling entries (one task id per
-step + next run time), and WQM category worker ceilings can be read/written with the nesting
-invariant enforced and `affectedTaskCount` reported before a write.
+**Goal**: A validated, non-destructive flow can be compiled into native platform scheduling entries
+(one task id per step + next run time), and WQM category worker ceilings can be read/written with
+the nesting invariant enforced and `affectedTaskCount` reported before a write.
 
-**Independent Test**: Schedule a validated flow, confirm one task id per step + next run time; attempt
-a category write violating the nesting invariant and confirm the block, with `affectedTaskCount`
-shown before a valid write (`quickstart.md` steps 8–9).
+**Independent Test**: Schedule a validated, non-destructive flow, confirm one task id per step +
+next run time; attempt to schedule a flow containing any destructive step and confirm explicit
+refusal with no native task creation; attempt a category write violating the nesting invariant and
+confirm the block, with `affectedTaskCount` shown before a valid write (`quickstart.md` steps 8–9,
+with destructive scheduling now explicitly rejected by scope).
 
 ### Tests for User Story 5 ⚠️
 
 - [X] T054 [P] [US5] Unit test in `tests/sentai/unittest/model/CategoryTest.cls`: local mirror stays a passthrough read-optimization only — every write call goes to the administrative-API test double, never a local-only write (research.md, FR-033–FR-036)
 - [X] T055 [P] [US5] Unit test in `tests/sentai/unittest/validation/CategoryInvariantTest.cls`: a category violating `defaultWorkers ≤ maxActiveWorkers ≤ maxWorkers ≤ maxTotalWorkers` is rejected as an error, never a warning (FR-034)
-- [X] T056 [P] [US5] REST contract test in `tests/sentai/unittest/rest/ScheduleEndpointTest.cls`: `POST /flows/{id}/schedule` on a validated flow returns 201 with one `taskId` per step + `nextRun`; scheduling a flow with any validation error is refused (FR-031, FR-032, `quickstart.md` step 9)
+- [X] T056 [P] [US5] REST contract test in `tests/sentai/unittest/rest/ScheduleEndpointTest.cls`: `POST /flows/{id}/schedule` on a validated, non-destructive flow returns 201 with one `taskId` per step + `nextRun`; scheduling a flow with any validation error is refused; scheduling a flow containing any destructive step is explicitly refused and creates no native `%SYS.Task` entry (FR-031, FR-032, scope reduction on destructive scheduling, `quickstart.md` step 9)
 - [X] T057 [P] [US5] REST contract test in `tests/sentai/unittest/rest/WqmCategoryEndpointTest.cls`: `PUT /wqm/categories/{name}` with an invariant-violating body returns 422; a valid write reports `affectedTaskCount` before/with the write and does not affect any in-progress run (FR-034, FR-035, FR-036, `quickstart.md` step 8)
 
 ### Implementation for User Story 5
@@ -212,7 +214,7 @@ shown before a valid write (`quickstart.md` steps 8–9).
 - [X] T058 [P] [US5] Implement `sentai.model.Category` (`%Persistent` + `%JSON.Adaptor`) in `src/sentai/model/Category.cls` as a local mirror only, unique index on `name`, never the source of truth (data-model.md)
 - [X] T059 [US5] Implement `sentai.wqm.CategoryService` in `src/sentai/wqm/CategoryService.cls`: read/write as immediate passthrough to `/api/admin/v2/wqm-categories`, nesting-invariant check before any write (FR-034), `affectedTaskCount` computation against `sentai.model.Category`/`sentai.model.Step` usage (FR-035), no retroactive effect on runs already in progress (FR-036) — depends on T058
 - [X] T060 [US5] Add `UrlMap` routes `GET /wqm/categories`, `GET /wqm/categories/{name}`, `PUT /wqm/categories/{name}` to `src/sentai/rest/Dispatcher.cls`, delegating to `sentai.wqm.CategoryService`, mapping the invariant violation to 422 (FR-033, FR-034, FR-035) — depends on T059
-- [X] T061 [US5] Implement `/flows/{flowId}/schedule` in `src/sentai/rest/Dispatcher.cls`: blocks on any `sentai.validation.FlowValidator` error (FR-032), compiles each step into a native `%SYS.Task.Definition` entry per `research.md` R-007/OQ-1 (only no-incoming-edge steps start a run when firing natively; `WaveDispatcher` takes over from there), returns one `taskId` per step + `nextRun` (FR-031) — depends on T028, T038
+- [X] T061 [US5] Implement `/flows/{flowId}/schedule` in `src/sentai/rest/Dispatcher.cls`: blocks on any `sentai.validation.FlowValidator` error (FR-032), explicitly refuses any flow containing a destructive step before task creation (scope reduction after implementation validation), compiles each remaining step of a validated non-destructive flow into a native `%SYS.Task` entry per `research.md` R-007/OQ-1, and returns one `taskId` per step + `nextRun` (FR-031) — depends on T028, T038
 
 **Checkpoint**: User Stories 1–5 all work independently — `quickstart.md` steps 1–9 pass
 
@@ -249,8 +251,23 @@ appear, filterable by free text/namespace/state/destructive (independent test in
 
 - [X] T067 [P] Audit every class under `src/sentai/` to confirm no request parameter reaches `Xecute`, `$system.Process`, or any dynamic-execution form (Constitution II, HANDOFF constraint) and no credential is read from source or a versioned file (FR-042) — code review, no new file
 - [X] T068 [P] Confirm the layered-architecture boundary by inspecting imports: `sentai.rest.Dispatcher` never touches `sentai.model.*` directly (always through `sentai.validation.FlowValidator`/`sentai.dispatch.WaveDispatcher`/service classes), and none of those import from `sentai.rest` (Constitution I) — code review, no new file
-- [ ] T069 Run `zpm "test sentai-task -v -only"` and confirm every `sentai.unittest.*` suite (model, validation, dispatch, rest, registry) passes with the administrative-API test double, per `research.md` R-012
-- [ ] T070 Run the full `quickstart.md` steps 1–9 end to end against a real IRIS instance, recording the outcome of Technical Done Criteria TD-01 (auth), TD-02 (per-step-type execution), TD-03 (SSE viability), TD-04 (scheduled ordering) in `specs/003-backend-objectscript/HANDOFF.md` or a follow-up note — resolves whether A-01–A-05 remain valid assumptions or must be escalated (plan.md §Assumptions, Open Questions, and Technical Done Criteria)
+- [X] T069 Run `zpm "test sentai-task -v -only"` and confirm every `sentai.unittest.*` suite (model, validation, dispatch, rest, registry) passes with the administrative-API test double, per `research.md` R-012
+- [X] T070 Run the full `quickstart.md` steps 1–9 end to end against a real IRIS instance, recording the outcome of Technical Done Criteria TD-01 (auth), TD-02 (per-step-type execution), TD-03 (SSE viability), TD-04 (scheduled ordering for non-destructive flows), and TD-06 (explicit refusal of destructive scheduling) in `specs/003-backend-objectscript/HANDOFF.md` or a follow-up note — resolves whether the remaining assumptions stay valid or must be escalated
+- [X] T071 [P] Produce a sanitation evidence note for orphaned persistence artifacts created by pre-fix builds: record pre-cleanup counts and sample ids for `flow = 0` records (at minimum `Step` and `Edge`), store the note under `specs/003-backend-objectscript/` or an agreed operational location, and attach the exact cleanup command/script used
+- [X] T072 Implement a controlled sanitation procedure for orphaned persistence artifacts from pre-fix builds: create a reviewable cleanup script or operational runbook that removes or repairs invalid records (`flow = 0` and equivalent broken references), execute it on the target instance, and record post-cleanup counts proving the environment is clean
+- [X] T073 Verify in a real IRIS instance that `/schedule` refuses flows containing destructive steps with an explicit blocking error and leaves no `%SYS.Task` entries behind; record the observed status/payload and task counts as evidence for TD-06
+
+### Follow-up from T070 (see `quickstart-evidence.md`)
+
+Escalations E-1 (background job cannot outlive the 60 s operator token), E-2 (5 of 7 assumed
+step-type endpoints return 404) and E-3 (scheduled runs carry no token) need a decision before
+tasks can be written for them; they are recorded in `HANDOFF.md`.
+
+- [ ] T074 [P] Fix `sentai.wqm.CategoryService.Write` to the validated `PUT /api/admin/v2/wqm-category?name=<name>` contract (spec 001 evidence 10a), with the test double asserting method and path (F-1)
+- [ ] T075 [P] Forward step and run cancellation to the platform via `POST /api/admin/v2/async-result/cancel?id=<id>` (spec 001 evidence 08c) from `WaveDispatcher.CancelStep`/`CancelRun` (F-2, FR-027)
+- [ ] T076 [P] Add a `FlowValidator` rule reporting a step whose WQM category does not exist on the platform, so it fails at validation instead of at enqueue (F-3)
+- [ ] T077 [P] Align the category nesting invariant with platform-reported values (`MaxTotalWorkers = 0`, `Dynamic (N)`) before it is applied to built-in categories (F-4)
+- [ ] T078 [P] Stop `DispatchEndpointTest` from starting real background jobs, and have the suite leave no `running` runs behind (F-5)
 
 ---
 
@@ -264,7 +281,7 @@ appear, filterable by free text/namespace/state/destructive (independent test in
 - **US2 (Phase 4)**: Depends on Foundational; reuses `sentai.model.Flow/Step/Edge` from US1 (T014–T017) for its rule inputs, and replaces the US1 validation stub (T020) with the full validator — start after US1's models exist
 - **US3 (Phase 5)**: Depends on Foundational and on US2's `FlowValidator` (dispatch blocks on structural errors, FR-018) and on US1's `Flow/Step/Edge/Join` — start after US1 and US2
 - **US4 (Phase 6)**: Depends on US3's `Run/StepRun`/`WaveDispatcher` (control operations act on running dispatches) — start after US3
-- **US5 (Phase 7)**: Depends on Foundational and US2's `FlowValidator` (schedule blocks on validation errors); independent of US3/US4 implementation details beyond reusing `WaveDispatcher` for post-schedule ordering — can start in parallel with US4 once US2 and US1 are done
+- **US5 (Phase 7)**: Depends on Foundational and US2's `FlowValidator` (schedule blocks on validation errors and destructive-step refusal); independent of US3/US4 implementation details beyond reusing `WaveDispatcher` for post-schedule ordering of non-destructive flows — can start in parallel with US4 once US2 and US1 are done
 - **US6 (Phase 8)**: Depends on Foundational (`sentai.registry.StepType`) only — can start in parallel with US3/US4/US5 once Foundational is done
 - **Polish (Phase 9)**: Depends on all desired user stories being complete
 
@@ -287,6 +304,7 @@ appear, filterable by free text/namespace/state/destructive (independent test in
 - T062–T063 (US6 tests) run in parallel
 - Once Foundational (Phase 2) completes, US6 (Phase 8) can be staffed in parallel with US1–US5 — it has no dependency on their models
 - T067–T068 (Polish) run in parallel — pure review tasks
+- T071–T073 (Polish follow-up) can run in parallel once the target instance and pre-fix artifact counts are available
 
 ---
 
@@ -325,9 +343,9 @@ Task: "Implement sentai.model.Edge in src/sentai/model/Edge.cls"
 3. US2 → explicit validation, reused by dispatch/schedule later → **quickstart 4**
 4. US3 → dispatch + wave execution → **quickstart 5–6**
 5. US4 → tracking + control + SSE → **quickstart 7**
-6. US5 → scheduling + WQM categories → **quickstart 8–9**
+6. US5 → scheduling of non-destructive flows + WQM categories → **quickstart 8–9**
 7. US6 → catalogs (P3, first to cut if time runs short)
-8. Polish → security/layering audit, full test suite, full quickstart, Technical Done Criteria review
+8. Polish → security/layering audit, full test suite, full quickstart, sanitation evidence/cleanup, Technical Done Criteria review
 
 ### Parallel Team Strategy
 
@@ -336,8 +354,8 @@ With multiple developers, after Foundational:
 - Developer A: US1 → US2 → US3 → US4 (the dependent chain, since dispatch needs validation and
   control needs dispatch)
 - Developer B: US6 (fully independent of the chain) once `sentai.registry.StepType` exists
-- Developer C: joins US5 once US1's models and US2's validator exist, working WQM categories and
-  scheduling in parallel with US3/US4
+- Developer C: joins US5 once US1's models and US2's validator exist, working WQM categories,
+  destructive-scheduling refusal, and scheduling in parallel with US3/US4
 
 ---
 
@@ -351,7 +369,11 @@ With multiple developers, after Foundational:
 - Verify tests fail before implementing
 - Commit after each task or logical group
 - Stop at any checkpoint to validate a story independently against the matching `quickstart.md` step
-- Two of the plan's flagged risks (R-002 token-validation mechanism, R-007/OQ-1 scheduled-run
-  ordering) have the highest chance of forcing a revision of T005 and T061 respectively once
-  validated against a real IRIS instance in T070 — do not treat their current implementation as
-  final until T070 confirms it
+- Two of the plan's flagged risks remain especially sensitive to real-environment validation: R-002
+  token-validation mechanism, and R-007/OQ-1 scheduled ordering for non-destructive flows. Do not
+  treat their current implementation as final until T070 confirms them.
+- Scheduling destructive flows is no longer an unresolved ambiguity in v1: it is explicitly out of
+  scope and must be refused by `/schedule`.
+- The cleanup of orphaned `flow = 0` persistence artifacts is operationally required after fixing
+  the reference-assignment bug; do not treat a green test suite as proof that historical instance
+  data is already clean.

@@ -4,6 +4,9 @@
 /// "one task identifier per scheduled step" (FR-031) and no-op at fire time — the run they
 /// belong to, if any, will already have carried them to a terminal state via
 /// WaveDispatcher's own wave progression.
+/// Only non-destructive flows are ever scheduled (/schedule refuses the rest, TD-06), so the
+/// dispatch below carries no typed confirmation; should a destructive step be added to the flow
+/// after scheduling, WaveDispatcher.Dispatch refuses the run (SC-006) and nothing starts.
 Class sentai.dispatch.ScheduledFlowTask Extends %SYS.Task.Definition
 {
 

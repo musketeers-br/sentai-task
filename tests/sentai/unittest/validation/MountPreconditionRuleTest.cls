@@ -32,7 +32,7 @@ Method TestReadOnlyDirectoryProducesWarningNotError()
     While iter3.%GetNext(.k, .e) {
         If (e.code = "PRECONDITION_READ_ONLY") Set foundError = 1
     }
-    Do $$$AssertFalse(foundError)
+    Do $$$AssertNotTrue(foundError)
 }
 
 Method TestReadOnlyWarningDoesNotBlockValidation()

@@ -16,6 +16,8 @@ ClassMethod Post(urlPath As %String, bearerToken As %String, body As %DynamicObj
     // Strip a trailing query string (?id=...) so pause/resume/cancel calls keyed by base
     // path still match a scripted response.
     Set basePath = $PIECE(urlPath, "?", 1)
+    // Recorded so tests can assert the request shape the platform requires (spec 001 evidence).
+    Set ^sentaiTestDouble("posted", basePath) = $LB(urlPath, $S($IsObject(body):body.%ToJSON(), 1:""))
     Quit ..Respond(basePath, "POST", .httpStatus, .locationHeader)
 }
 

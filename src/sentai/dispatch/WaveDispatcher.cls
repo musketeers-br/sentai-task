@@ -73,8 +73,7 @@ ClassMethod Dispatch(flowId As %String, confirmationsArray As %DynamicArray, dis
     }
 
     // FR-017: every destructive step needs a matching typed confirmation before ANY step starts.
-    Set confirmed("") = ""
-    Kill confirmed("")
+    Kill confirmed
     If (confirmationsArray '= "") {
         Set iter = confirmationsArray.%GetIterator()
         While iter.%GetNext(.k, .c) {
@@ -97,23 +96,23 @@ ClassMethod Dispatch(flowId As %String, confirmationsArray As %DynamicArray, dis
             }
         }
     }
-    If (errorCode '= "") Quit ""
+    If (errorCode '= "") Return ""
 
     Set sc = $$$OK
     TSTART
     Try {
         Set flow = ##class(sentai.model.Flow).%OpenId(flowId, 0, .sc)
-        If $$$ISERR(sc) Throw
+        $$$ThrowOnError(sc)
 
         Set run = ##class(sentai.model.Run).%New()
         Set run.guid = $SYSTEM.Util.CreateGUID()
-        Set run.flow = flowId
+        Do run.flowSetObjectId(flowId)
         Set run.flowRevision = flow.revision
         Set run.dispatchedBy = dispatchedBy
         Set run.state = "running"
         Set run.startedAt = $ZDATETIME($HOROLOG, 3)
         Set sc = run.%Save()
-        If $$$ISERR(sc) Throw
+        $$$ThrowOnError(sc)
 
         Do ..IndexRun(run.guid, flowId, flow.revision, run.startedAt, dispatchedBy)
 
@@ -124,7 +123,7 @@ ClassMethod Dispatch(flowId As %String, confirmationsArray As %DynamicArray, dis
             Set stepId = stepResult2.%Get("id")
             Set stepRun = ##class(sentai.model.StepRun).%New()
             Set stepRun.guid = $SYSTEM.Util.CreateGUID()
-            Set stepRun.run = run.%Id()
+            Do stepRun.runSetObjectId(run.%Id())
             Set stepRun.stepId = stepId
             Set stepRun.state = "queued"
             Set stepRun.timeQueued = $ZDATETIME($HOROLOG, 3)
@@ -133,7 +132,7 @@ ClassMethod Dispatch(flowId As %String, confirmationsArray As %DynamicArray, dis
                 Set stepRun.confirmedAt = $ZDATETIME($HOROLOG, 3)
             }
             Set sc = stepRun.%Save()
-            If $$$ISERR(sc) Throw
+            $$$ThrowOnError(sc)
 
             Do ..IndexStepRun(run.guid, stepId, stepRun.guid)
         }
@@ -166,8 +165,7 @@ ClassMethod StartBackgroundLoop(runGuid As %String, bearerToken As %String) As %
 ClassMethod RunLoop(runGuid As %String, bearerToken As %String) As %Status
 {
     Set run = ##class(sentai.model.Run).GuidIndexOpen(runGuid, 0, .sc)
-    Set run = ##class(sentai.model.Run).%OpenId(run, 4, .sc)
-    If $$$ISERR(sc) Quit sc
+    If '$IsObject(run) Quit sc
 
     For {
         Kill eligible
@@ -197,9 +195,10 @@ ClassMethod RunLoop(runGuid As %String, bearerToken As %String) As %Status
 ClassMethod ComputeEligibleSteps(runGuid As %String, ByRef anyFailed As %Boolean, ByRef eligible) As %Integer
 {
     Kill eligible
+    Set anyFailed = 0
     Set run = ##class(sentai.model.Run).GuidIndexOpen(runGuid, 0, .sc)
-    Set run = ##class(sentai.model.Run).%OpenId(run, 0, .sc)
-    Set flowId = run.flow.%Id()
+    If '$IsObject(run) Return 0
+    Set flowId = run.flowGetObjectId()
 
     Set stepRs = ##class(%SQL.Statement).%New()
     Do stepRs.%Prepare("SELECT id FROM sentai_model.Step WHERE flow = ?")
@@ -207,9 +206,8 @@ ClassMethod ComputeEligibleSteps(runGuid As %String, ByRef anyFailed As %Boolean
     Set n = 0
     While stepResult.%Next() {
         Set stepId = stepResult.%Get("id")
-        Set stepRunId = ##class(sentai.model.StepRun).RunStepIndexOpen(run.%Id(), stepId, 0, .srSc)
-        Continue:(stepRunId = "")
-        Set stepRun = ##class(sentai.model.StepRun).%OpenId(stepRunId, 0, .srSc)
+        Set stepRun = ##class(sentai.model.StepRun).OpenForRunStep(run.%Id(), stepId, 4)
+        Continue:'$IsObject(stepRun)
         Continue:(stepRun.state '= "queued")
         Continue:(stepRun.adminJobId '= "")
 
@@ -220,9 +218,8 @@ ClassMethod ComputeEligibleSteps(runGuid As %String, ByRef anyFailed As %Boolean
         Set allSourcesTerminal = 1, anySourceFailed = 0, sourceCount = 0
         While edgeResult.%Next() {
             Set sourceCount = sourceCount + 1
-            Set srcRunId = ##class(sentai.model.StepRun).RunStepIndexOpen(run.%Id(), edgeResult.%Get("source"), 0, .sSc)
-            If (srcRunId = "") { Set allSourcesTerminal = 0 Continue }
-            Set srcRun = ##class(sentai.model.StepRun).%OpenId(srcRunId, 0, .sSc)
+            Set srcRun = ##class(sentai.model.StepRun).OpenForRunStep(run.%Id(), edgeResult.%Get("source"), 0)
+            If '$IsObject(srcRun) { Set allSourcesTerminal = 0 Continue }
             If '$LISTFIND($LB("completed", "failed", "cancelled"), srcRun.state) Set allSourcesTerminal = 0
             If $LISTFIND($LB("failed", "cancelled"), srcRun.state) Set anySourceFailed = 1
         }
@@ -247,20 +244,29 @@ ClassMethod ComputeEligibleSteps(runGuid As %String, ByRef anyFailed As %Boolean
 /// StepRun transitions to `running` once the administrative API accepts the job (202).
 ClassMethod StartStep(run As sentai.model.Run, stepId As %String) As %Status
 {
-    Set flowId = run.flow.%Id()
-    Set stepRunId = ##class(sentai.model.StepRun).RunStepIndexOpen(run.%Id(), stepId, 0, .sc)
-    Set stepRun = ##class(sentai.model.StepRun).%OpenId(stepRunId, 4, .sc)
+    Set flowId = run.flowGetObjectId()
+    Set stepRun = ##class(sentai.model.StepRun).OpenForRunStep(run.%Id(), stepId, 0, .sc)
+    If '$IsObject(stepRun) Return sc
     Set step = ##class(sentai.model.Step).FlowStepIndexOpen(flowId, stepId, 0, .sc)
-    Set step = ##class(sentai.model.Step).%OpenId(step, 0, .sc)
+    If '$IsObject(step) Return sc
 
     Set category = $S(step.wqmCategory '= "":step.wqmCategory, 1:run.flow.defaultCategory)
-    Set queueMgr = ##class(%SYS.WorkQueueMgr).%New()
-    Do queueMgr.Initialize(category)
+    // The Work Queue Manager API is %SYSTEM.WorkMgr; the category must already exist on the
+    // platform. A refusal fails this step with the platform's own message (FR-023) instead of
+    // killing the background loop.
+    Set queueMgr = $SYSTEM.WorkMgr.%New(, , category)
+    If '$IsObject(queueMgr) {
+        Return stepRun.TransitionTo("failed", $SYSTEM.Status.GetErrorText($GET(%objlasterror)))
+    }
 
     // Actual execution: the async administrative endpoint (R-005) — parallelism/ceilings
-    // are entirely %SYS.WorkQueueMgr's, this call only starts the underlying job.
-    Do queueMgr.Queue("##class(sentai.dispatch.WaveDispatcher).ExecuteStepAsync", stepRun.guid)
-    Do queueMgr.WaitForComplete()
+    // are entirely the Work Queue Manager's, this call only starts the underlying job.
+    Set sc = queueMgr.Queue("##class(sentai.dispatch.WaveDispatcher).ExecuteStepAsync", stepRun.guid)
+    If $$$ISOK(sc) Set sc = queueMgr.Sync()
+    If $$$ISERR(sc) {
+        Do stepRun.%Reload()
+        If (stepRun.state = "queued") Return stepRun.TransitionTo("failed", $SYSTEM.Status.GetErrorText(sc))
+    }
 
     Return $$$OK
 }
@@ -270,21 +276,18 @@ ClassMethod StartStep(run As sentai.model.Run, stepId As %String) As %Status
 /// to `running`. Polling for completion happens in PollInFlightSteps (owning process).
 ClassMethod ExecuteStepAsync(stepRunGuid As %String) As %Status
 {
-    Set stepRunId = ##class(sentai.model.StepRun).GuidIndexOpen(stepRunGuid, 0, .sc)
-    Set stepRun = ##class(sentai.model.StepRun).%OpenId(stepRunId, 4, .sc)
-    Quit:'$IsObject(stepRun) $$$OK
+    Set stepRun = ##class(sentai.model.StepRun).GuidIndexOpen(stepRunGuid, 4, .sc)
+    If '$IsObject(stepRun) Quit $S($$$ISERR(sc):sc, 1:$$$ERROR($$$GeneralError, "SentaiNotFound: step run "_stepRunGuid))
 
-    Set runId = ##class(sentai.model.Run).GuidIndexOpen(stepRun.run.guid, 0, .sc2)
-    Set run = ##class(sentai.model.Run).%OpenId(stepRun.run.%Id(), 0, .sc2)
-    Set entry = $G(^sentaiRun(run.guid, "%dispatchedByToken"))
-
-    Set stepId = stepRun.stepId
-    Set step = ##class(sentai.model.Step).FlowStepIndexOpen(run.flow.%Id(), stepId, 0, .sc3)
-    Set step = ##class(sentai.model.Step).%OpenId(step, 0, .sc3)
+    Set run = stepRun.run
+    Set step = ##class(sentai.model.Step).FlowStepIndexOpen(run.flowGetObjectId(), stepRun.stepId, 0, .sc3)
+    Quit:'$IsObject(step) $$$OK
 
     Set endpoint = ..AdminEndpointFor(step.type)
     Set httpStatus = 0, location = ""
-    Do ##class(sentai.dispatch.AdminApiClient).Post(endpoint, $G(^sentaiRun(run.guid, "%token")), "", .httpStatus, .location)
+    // The platform rejects an empty POST (400 "HTTP POST has no content"); the validated start
+    // request carries an empty JSON object (spec 001 evidence/06-integrity-check-start.json).
+    Do ##class(sentai.dispatch.AdminApiClient).Post(endpoint, $G(^sentaiRun(run.guid, "%token")), {}, .httpStatus, .location)
 
     If (httpStatus = 202) && (location '= "") {
         Set stepRun.adminJobId = location
@@ -301,10 +304,10 @@ ClassMethod ExecuteStepAsync(stepRunGuid As %String) As %Status
 ClassMethod PollInFlightSteps(run As sentai.model.Run, bearerToken As %String) As %Status
 {
     Set rs = ##class(%SQL.Statement).%New()
-    Do rs.%Prepare("SELECT %ID FROM sentai_model.StepRun WHERE run = ? AND state = 'running'")
+    Do rs.%Prepare("SELECT %ID AS rowId FROM sentai_model.StepRun WHERE run = ? AND state = 'running'")
     Set result = rs.%Execute(run.%Id())
     While result.%Next() {
-        Set stepRun = ##class(sentai.model.StepRun).%OpenId(result.%Get("%ID"), 4)
+        Set stepRun = ##class(sentai.model.StepRun).%OpenId(result.%Get("rowId"), 4)
         Continue:(stepRun.adminJobId = "")
 
         Set httpStatus = 0, location = ""
@@ -337,11 +340,14 @@ ClassMethod FinalizeRun(run As sentai.model.Run) As %Status
     Do rs.%Prepare("SELECT COUNT(*) AS c FROM sentai_model.StepRun WHERE run = ? AND state = 'failed'")
     Set result = rs.%Execute(run.%Id())
     Do result.%Next()
+    // The loop's copy was loaded at start; pick up every eventVersion bump since, so the save
+    // below never writes a stale value back.
+    Do run.%Reload()
     Set run.state = $S(result.%Get("c") > 0:"failed", 1:"completed")
     Set run.finishedAt = $ZDATETIME($HOROLOG, 3)
-    Do run.%Save()
-    Do run.BumpEventVersion()
-    Return $$$OK
+    Set sc = run.%Save()
+    If $$$ISERR(sc) Return sc
+    Return ##class(sentai.model.Run).BumpEventVersionFor(run.%Id())
 }
 
 /// --- Control operations (FR-027, FR-028, FR-029, FR-030) ---
@@ -359,12 +365,13 @@ ClassMethod PauseRun(runGuid As %String) As %Status
 ClassMethod CancelRun(runGuid As %String) As %Status
 {
     Set ^sentaiRun(runGuid, "%paused") = 1
-    Set runId = ##class(sentai.model.Run).GuidIndexOpen(runGuid, 0, .sc)
+    Set run = ##class(sentai.model.Run).GuidIndexOpen(runGuid, 0, .sc)
+    If '$IsObject(run) Quit $$$ERROR($$$GeneralError, "SentaiNotFound")
     Set rs = ##class(%SQL.Statement).%New()
-    Do rs.%Prepare("SELECT %ID FROM sentai_model.StepRun WHERE run = ? AND state IN ('queued','running')")
-    Set result = rs.%Execute(runId)
+    Do rs.%Prepare("SELECT %ID AS rowId FROM sentai_model.StepRun WHERE run = ? AND state IN ('queued','running','paused')")
+    Set result = rs.%Execute(run.%Id())
     While result.%Next() {
-        Set stepRun = ##class(sentai.model.StepRun).%OpenId(result.%Get("%ID"), 4)
+        Set stepRun = ##class(sentai.model.StepRun).%OpenId(result.%Get("rowId"), 4)
         Do stepRun.TransitionTo("cancelled")
     }
     Quit $$$OK
@@ -374,8 +381,7 @@ ClassMethod CancelRun(runGuid As %String) As %Status
 /// (FR-028).
 ClassMethod CancelStep(runGuid As %String, stepGuid As %String) As %Status
 {
-    Set stepRun = ##class(sentai.model.StepRun).GuidIndexOpen(stepGuid, 0, .sc)
-    Set stepRun = ##class(sentai.model.StepRun).%OpenId(stepRun, 4, .sc)
+    Set stepRun = ##class(sentai.model.StepRun).GuidIndexOpen(stepGuid, 4, .sc)
     If '$IsObject(stepRun) Quit $$$ERROR($$$GeneralError, "SentaiNotFound")
     Quit stepRun.TransitionTo("cancelled")
 }
@@ -384,14 +390,12 @@ ClassMethod CancelStep(runGuid As %String, stepGuid As %String) As %Status
 /// Returns $$$ERROR("SentaiNotPausable") when the type does not support pause in v1.
 ClassMethod PauseStep(runGuid As %String, stepGuid As %String) As %Status
 {
-    Set stepRun = ##class(sentai.model.StepRun).GuidIndexOpen(stepGuid, 0, .sc)
-    Set stepRun = ##class(sentai.model.StepRun).%OpenId(stepRun, 4, .sc)
+    Set stepRun = ##class(sentai.model.StepRun).GuidIndexOpen(stepGuid, 4, .sc)
     If '$IsObject(stepRun) Quit $$$ERROR($$$GeneralError, "SentaiNotFound")
 
-    Set runId = ##class(sentai.model.Run).GuidIndexOpen(runGuid, 0, .sc2)
-    Set run = ##class(sentai.model.Run).%OpenId(runId, 0, .sc2)
-    Set step = ##class(sentai.model.Step).FlowStepIndexOpen(run.flow.%Id(), stepRun.stepId, 0, .sc3)
-    Set step = ##class(sentai.model.Step).%OpenId(step, 0, .sc3)
+    Set run = stepRun.run
+    Set step = ##class(sentai.model.Step).FlowStepIndexOpen(run.flowGetObjectId(), stepRun.stepId, 0, .sc3)
+    If '$IsObject(step) Quit $$$ERROR($$$GeneralError, "SentaiNotFound")
 
     If '##class(sentai.registry.StepType).IsPausable(step.type) {
         Quit $$$ERROR($$$GeneralError, "SentaiNotPausable: step type '"_step.type_"' does not support pause in v1")
@@ -399,7 +403,9 @@ ClassMethod PauseStep(runGuid As %String, stepGuid As %String) As %Status
 
     If (stepRun.adminJobId '= "") {
         Set httpStatus = 0, location = ""
-        Do ##class(sentai.dispatch.AdminApiClient).Post(stepRun.adminJobId_"/pause", $G(^sentaiRun(runGuid, "%token")), "", .httpStatus, .location)
+        // spec 001 evidence/08a-async-result-pause.json: POST /api/admin/v2/async-result/pause?id=<id>
+        Set jobId = $PIECE(stepRun.adminJobId, "id=", 2)
+        Do ##class(sentai.dispatch.AdminApiClient).Post("/api/admin/v2/async-result/pause?id="_jobId, $G(^sentaiRun(runGuid, "%token")), {}, .httpStatus, .location)
     }
     Quit stepRun.TransitionTo("paused")
 }
@@ -409,15 +415,12 @@ ClassMethod PauseStep(runGuid As %String, stepGuid As %String) As %Status
 ClassMethod RerunStep(runGuid As %String, stepGuid As %String, ByRef newStepRunGuid As %String) As %Status
 {
     Set oldStepRun = ##class(sentai.model.StepRun).GuidIndexOpen(stepGuid, 0, .sc)
-    Set oldStepRun = ##class(sentai.model.StepRun).%OpenId(oldStepRun, 0, .sc)
     If '$IsObject(oldStepRun) Quit $$$ERROR($$$GeneralError, "SentaiNotFound")
     If (oldStepRun.state '= "failed") Quit $$$ERROR($$$GeneralError, "SentaiNotFailed: only a failed step can be re-run")
 
-    Set runId = ##class(sentai.model.Run).GuidIndexOpen(runGuid, 0, .sc2)
-
     Set newStepRun = ##class(sentai.model.StepRun).%New()
     Set newStepRun.guid = $SYSTEM.Util.CreateGUID()
-    Set newStepRun.run = runId
+    Do newStepRun.runSetObjectId(oldStepRun.runGetObjectId())
     Set newStepRun.stepId = oldStepRun.stepId
     Set newStepRun.state = "queued"
     Set newStepRun.timeQueued = $ZDATETIME($HOROLOG, 3)

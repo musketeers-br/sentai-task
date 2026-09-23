@@ -12,7 +12,7 @@ Method DispatchCanonical() As sentai.model.Run
 
 Method StepRunFor(run As sentai.model.Run, stepId As %String) As sentai.model.StepRun
 {
-    Quit ##class(sentai.model.StepRun).%OpenId(##class(sentai.model.StepRun).RunStepIndexOpen(run.%Id(), stepId, 0), 4)
+    Quit ##class(sentai.model.StepRun).OpenForRunStep(run.%Id(), stepId, 4)
 }
 
 Method TestIndividualCancelAffectsOnlyThatStep()
@@ -40,7 +40,7 @@ Method TestWholeRunCancelStopsPendingAndCancelsRunning()
     Do ##class(sentai.dispatch.WaveDispatcher).CancelRun(run.guid)
 
     Set rs = ##class(%SQL.Statement).%New()
-    Do rs.%Prepare("SELECT state FROM sentai.model.StepRun WHERE run = ?")
+    Do rs.%Prepare("SELECT state FROM sentai_model.StepRun WHERE run = ?")
     Set result = rs.%Execute(run.%Id())
     While result.%Next() {
         Do $$$AssertEquals(result.%Get("state"), "cancelled")

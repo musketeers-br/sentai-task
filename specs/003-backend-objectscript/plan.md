@@ -42,6 +42,12 @@ close). `sentai.validation.FlowValidator` centralizes every validation rule, reu
 `/validate`, `/schedule`, and `/dispatch`. Execution events are published via SSE reading the same
 persisted state the 3-second polling fallback also reads, never a divergent copy.
 
+Post-validation scope adjustment: scheduling is now explicitly limited to non-destructive flows.
+Any flow containing a destructive step is refused by `/schedule` with an explicit validation error,
+because v1 has no approved mechanism for supplying the typed confirmation required by SC-006 at
+scheduled fire time. This is a deliberate scope reduction, not an implementation accident.
+
+
 ## Technical Context
 
 **Language/Version**: ObjectScript (IRIS 2026.2 Community, per `compatibility.md`); no additional
@@ -75,7 +81,9 @@ performance target is in the spec's scope.
 **Constraints**: Single instance (NFR-005, no multi-instance coordination); mandatory
 authentication on every surface (FR-040, NFR-006); no embedded credential (FR-042); no `Xecute` on
 a request parameter (HANDOFF); no `MatchRoles:"%All"` (HANDOFF); no private, in-process scheduler
-(FR-031, already-fixed decision).
+(FR-031, already-fixed decision); scheduled execution is limited to flows with no destructive steps
+(scope reduction decided after implementation validation).
+
 
 **Scale/Scope**: Seven persistent entities, ~20 REST endpoints (all already in `openapi.yaml`, none
 invented here), a closed catalog of seven step types. Scope entirely bounded by `spec.md` — no
@@ -220,11 +228,11 @@ Dispatch (`/dispatch`) is synchronous only up to the creation of `Run`+`StepRun`
 transaction, see §Transaction below); `WaveDispatcher` then continues as a background IRIS job —
 the HTTP 202 response does not wait for any step to finish.
 
-Scheduling (`/schedule`) is a **different** path: it compiles each step into a native
-`%SYS.Task.Definition` entry. Since edge ordering on that recurring path is not resolved by any
-attached contract, this plan assumes (R-007/OQ-1, flagged as the highest revision risk) that only
-the steps with no incoming edges actually start a run when firing natively, and that
-`WaveDispatcher` takes over from there — exactly as in manual dispatch.
+Scheduling (`/schedule`) is a **different** path: it compiles a validated, non-destructive flow into
+native `%SYS.Task` entries. As a post-validation scope reduction, any flow containing at least one
+destructive step is rejected by `/schedule` before task creation. This avoids inventing an implicit
+or hidden mechanism for satisfying SC-006's typed confirmation requirement during a future scheduled
+execution. In v1, destructive steps are dispatchable manually with confirmation, but not schedulable.
 
 ## Validation
 
@@ -300,8 +308,10 @@ validation:
 
 1. **Token-validation mechanism between dispatchers** (research.md R-002) — assumed reusable; a
    fallback is documented (an internal call to `GET /api/admin/info`) if it is not.
-2. **Edge ordering for flows scheduled recurrently** (research.md R-007/OQ-1) — the biggest real
-   gap in this plan; no attached contract resolves it unambiguously.
+2. **Dependency ordering for recurring scheduled runs of non-destructive flows** (research.md
+   R-007/OQ-1) — still the biggest remaining scheduling risk, but now narrowed because destructive
+   flows are explicitly excluded from `/schedule` in v1.
+
 
 The remaining risks (SSE connection duration; a 1:1 mapping of each step type to an asynchronous
 administrative endpoint equivalent to the one already validated) are in the same table, with
@@ -336,8 +346,8 @@ The following assumptions are used by this plan and MUST NOT be treated as perma
 - **A-03 — SSE is viable in the target IRIS deployment model.**  
   The plan assumes that a long-lived HTTP response can remain open for the duration needed to stream run events with the latency required by the spec.
 
-- **A-04 — Scheduled flows can preserve dependency ordering by delegating actual orchestration back to the backend dispatch path.**  
-  The current baseline assumes that native scheduling can trigger the backend orchestration entrypoint rather than independently reproducing dependency logic in each scheduled task.
+- **A-04 — Scheduled non-destructive flows can preserve dependency ordering by delegating actual orchestration back to the backend dispatch path.**  
+  The current baseline assumes that native scheduling can trigger the backend orchestration entrypoint rather than independently reproducing dependency logic in each scheduled task. This assumption applies only to non-destructive flows, since destructive flows are explicitly out of scheduling scope in v1.
 
 - **A-05 — Local category mirroring is acceptable as a read-optimization and impact-calculation aid.**  
   The plan assumes that keeping a local mirror of category metadata does not create unacceptable drift as long as the platform remains the source of truth and all writes remain passthrough.
@@ -348,7 +358,7 @@ The following questions remain open and should be tracked explicitly through imp
 
 - **OQ-01 — What is the exact supported mechanism for validating administrative bearer tokens inside `sentai.rest.Dispatcher`?**
 - **OQ-02 — For each non-validated step type, which administrative async endpoint is the exact execution target, and does it preserve the same lifecycle semantics required by the plan?**
-- **OQ-03 — What is the supported and production-safe strategy for preserving dependency ordering in recurring scheduled runs?**
+- **OQ-03 — What is the supported and production-safe strategy for preserving dependency ordering in recurring scheduled runs for non-destructive flows?**
 - **OQ-04 — What timeout, buffering, and connection-lifetime limits apply to SSE in the target IRIS web server configuration?**
 - **OQ-05 — Under restart or worker interruption, what operational recovery path is required for runs left in non-terminal states?**
 
@@ -371,6 +381,8 @@ The implementation MUST NOT be considered technically complete until the followi
 - **TD-05 — No assumption above remains implicit in code or docs.**  
   Any assumption that survives into implementation must be either validated, converted into an explicit product limitation, or escalated as a change request.
 
+- **TD-06 — Scheduling refusal for destructive flows is enforced and observable.**  
+  The implementation must demonstrate that any flow containing at least one destructive step is refused by `/schedule` with an explicit blocking error, and that no native `%SYS.Task` entry is created in that scenario.
 
 ## Requirements-to-technical-components mapping
 
@@ -416,9 +428,30 @@ request), each phase delivering something verifiable before the next one starts:
 9. **Catalog** — `sentai.catalog.TaskService` and the three `/catalog/tasks*` endpoints. P3,
    explicitly the first phase to cut if time does not allow it (the spec itself already marks
    this).
+10. **Operational sanitation and real-environment verification** — execute the controlled cleanup of
+    orphaned persistence artifacts from pre-fix builds, record before/after evidence, and rerun the
+    relevant quickstart and scheduling checks on a clean environment.
 
 Each phase 3–9 adds REST endpoints on top of an already-authenticated, already-tested base — no
 phase depends on "unlocking" authentication or tests later; both exist starting in phase 3.
+
+## Data sanitation after persistence bug fixes
+
+Implementation validation revealed that earlier versions of the backend persisted orphaned records
+with `flow = 0` due to assigning raw ids directly to reference properties. These invalid records can
+remain in the instance even after the code is fixed and must not be ignored operationally.
+
+Required sanitation procedure:
+1. record pre-cleanup counts of orphaned records by class (`Step`, `Edge`, and any related entity
+   found to carry `flow = 0` or equivalent invalid references)
+2. record sample evidence of affected ids before deletion or repair
+3. execute cleanup through a reviewable procedure, preferably a dedicated sanitation script checked
+   into the repository or attached to the operational handoff
+4. record post-cleanup counts proving the environment is clean
+5. preserve a short audit note describing what was removed, when, and by whom
+
+This sanitation activity is operational follow-up to the bug fix, not a substitute for the fix
+itself.
 
 ## Project Structure
 

@@ -39,6 +39,17 @@ Index GuidIndex On guid [ Unique ];
 
 Index RunStepIndex On (run, stepId);
 
+/// The current StepRun of `stepId` within run `runId`. RunStepIndex is not unique — a
+/// rerun (FR-030) adds a new StepRun for the same step — so the latest one wins, the same
+/// one ^sentaiRun(runGuid, stepId) points at. Returns "" when none exists.
+ClassMethod OpenForRunStep(runId As %String, stepId As %String, concurrency As %Integer = -1, Output sc As %Status) As sentai.model.StepRun
+{
+    Set sc = $$$OK
+    &sql(SELECT TOP 1 %ID INTO :stepRunId FROM sentai_model.StepRun WHERE run = :runId AND stepId = :stepId ORDER BY %ID DESC)
+    If (SQLCODE '= 0) Quit ""
+    Quit ..%OpenId(stepRunId, concurrency, .sc)
+}
+
 /// The six-state machine's legal-transition table (data-model.md), enforced here so no
 /// code path can ever produce an illegal transition:
 ///   completed -> *, failed -> *, cancelled -> * : forbidden (all three are terminal)
@@ -63,8 +74,7 @@ Method TransitionTo(newState As %String, failureReason As %String = "") As %Stat
     TSTART
     Try {
         If '..IsLegalTransition(..state, newState) {
-            Set sc = $$$ERROR($$$GeneralError, "SentaiIllegalTransition: "_..state_" -> "_newState_" is not allowed")
-            Throw
+            $$$ThrowStatus($$$ERROR($$$GeneralError, "SentaiIllegalTransition: "_..state_" -> "_newState_" is not allowed"))
         }
 
         Set ..state = newState
@@ -73,17 +83,15 @@ Method TransitionTo(newState As %String, failureReason As %String = "") As %Stat
         If (newState = "failed") && (failureReason '= "") Set ..failureReason = failureReason
 
         Set sc = ..%Save()
-        If $$$ISERR(sc) Throw
+        $$$ThrowOnError(sc)
 
-        Set run = ##class(sentai.model.Run).%OpenId(..run, 4, .sc)
-        If $$$ISERR(sc) Throw
-        Do run.BumpEventVersion()
+        $$$ThrowOnError(##class(sentai.model.Run).BumpEventVersionFor(..runGetObjectId()))
 
         TCOMMIT
     }
     Catch ex {
         TROLLBACK 1
-        Set sc = $S($$$ISERR($G(sc)):sc, 1:ex.AsStatus())
+        Set sc = ex.AsStatus()
     }
     Quit sc
 }

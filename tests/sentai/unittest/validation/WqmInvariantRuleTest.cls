@@ -46,7 +46,7 @@ Method TestCategorySatisfyingInvariantPassesThisRule()
     While iter2.%GetNext(.k, .e) {
         If (e.code = "WQM_INVARIANT_VIOLATED") Set found = 1
     }
-    Do $$$AssertFalse(found)
+    Do $$$AssertNotTrue(found)
 }
 
 }

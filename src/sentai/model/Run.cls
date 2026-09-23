@@ -28,13 +28,25 @@ Index FlowIndex On flow;
 /// JSON adaptor must never serialize eventVersion in REST bodies.
 Parameter %JSONIGNORE = "eventVersion";
 
-/// Atomically increments eventVersion and returns the new value — the only way any
-/// caller (StepRun/LogEntry writes) is allowed to bump it, so SSE and 3s-polling never
-/// diverge (contracts/sse-protocol.md §Guarantees).
+/// Atomically increments eventVersion of run `runId` — the only way any caller (StepRun/
+/// LogEntry writes) is allowed to bump it, so SSE and 3s-polling never diverge
+/// (contracts/sse-protocol.md §Guarantees). A row-level SQL update, locked only until the
+/// caller's transaction ends: never an object lock, because the background loop keeps its Run
+/// open for the whole run while worker processes transition its steps. A copy of the Run
+/// already open in this process is reloaded so it reflects the new value.
+ClassMethod BumpEventVersionFor(runId As %String) As %Status
+{
+    &sql(UPDATE sentai_model.Run SET eventVersion = eventVersion + 1 WHERE %ID = :runId)
+    If (SQLCODE '= 0) Quit $$$ERROR($$$SQLError, SQLCODE, $GET(%msg))
+    // %OpenId hands back this process's in-memory copy when there is one.
+    Set run = ..%OpenId(runId, 0)
+    If $IsObject(run) Quit run.%Reload()
+    Quit $$$OK
+}
+
 Method BumpEventVersion() As %Integer
 {
-    Set ..eventVersion = ..eventVersion + 1
-    Do ..%Save()
+    Do ..BumpEventVersionFor(..%Id())
     Quit ..eventVersion
 }
 

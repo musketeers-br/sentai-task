@@ -30,7 +30,7 @@ Method TestValidWriteReportsAffectedTaskCountAndDoesNotTouchInProgressRuns()
     Do $$$AssertEquals(%response.Status, 200)
 
     // The already-dispatched run's steps are untouched by the category change (FR-036).
-    Set sr01 = ##class(sentai.model.StepRun).%OpenId(##class(sentai.model.StepRun).RunStepIndexOpen(run.%Id(), "01", 0), 0)
+    Set sr01 = ##class(sentai.model.StepRun).OpenForRunStep(run.%Id(), "01", 0)
     Do $$$AssertEquals(sr01.state, "queued")
 }
 

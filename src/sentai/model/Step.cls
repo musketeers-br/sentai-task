@@ -4,7 +4,6 @@
 Class sentai.model.Step Extends (%Persistent, %JSON.Adaptor)
 {
 
-
 /// Stable within the flow; rendered as "#01", "#02", ... — not globally unique.
 Property id As %String(MAXLEN = 8) [ Required ];
 
@@ -27,10 +26,10 @@ Property wqmCategory As %String(MAXLEN = 64);
 
 /// Required when type = "custom" (FR-011); a subclass of %SYS.Task.Definition.
 Property customClass As %String(MAXLEN = 256);
+
 Relationship flow As sentai.model.Flow [ Cardinality = one, Inverse = steps ];
 
 Index FlowIndex On flow;
-
 
 Index FlowStepIndex On (flow, id) [ Unique ];
 
@@ -54,7 +53,7 @@ ClassMethod ReplaceAll(flowId As %String, stepsArray As %DynamicArray) As %Statu
         Set iter = stepsArray.%GetIterator()
         While iter.%GetNext(.k, .stepObj) {
             Set step = ..%New()
-            Set step.flow = flowId
+            Do step.flowSetObjectId(flowId)
             Set step.id = stepObj.id
             Set step.type = stepObj.type
             Set step.taskName = stepObj.taskName

@@ -34,14 +34,16 @@ ClassMethod Validate(flowId As %String) As %DynamicObject
 
     // Iterate steps for per-type rules.
     Set stepRs = ##class(%SQL.Statement).%New()
-    Do stepRs.%Prepare("SELECT id, type, customClass, databaseDirectory, namespace, wqmCategory, parameters FROM sentai_model.Step WHERE flow = ?")
+    Do stepRs.%Prepare("SELECT %ID AS rowId FROM sentai_model.Step WHERE flow = ?")
     Set stepResult = stepRs.%Execute(flowId)
     While stepResult.%Next() {
-        Set stepId = stepResult.%Get("id")
-        Set type = stepResult.%Get("type")
+        Set step = ##class(sentai.model.Step).%OpenId(stepResult.%Get("rowId"), 0)
+        Continue:'$IsObject(step)
+        Set stepId = step.id
+        Set type = step.type
 
         // 2. custom-with-no-class is always an error, never a warning (FR-011).
-        If (type = "custom") && (stepResult.%Get("customClass") = "") {
+        If (type = "custom") && (step.customClass = "") {
             Do errors.%Push({"stepId": (stepId), "code": "CUSTOM_CLASS_REQUIRED", "message": "A custom step requires a declared customClass before it can validate"})
         }
 
@@ -49,39 +51,29 @@ ClassMethod Validate(flowId As %String) As %DynamicObject
         If '##class(sentai.registry.StepType).IsKnownType(type) {
             Do errors.%Push({"stepId": (stepId), "code": "UNKNOWN_STEP_TYPE", "message": ("Step type '"_type_"' is not in the closed catalog")})
         } ElseIf (type = "purge-audit-records") {
-            Set paramsText = stepResult.%Get("parameters")
-            Set hasDaysToKeep = 0
-            Try {
-                If (paramsText '= "") {
-                    Set p = ##class(%DynamicAbstractObject).%FromJSON(paramsText)
-                    Set hasDaysToKeep = p.%IsDefined("daysToKeep")
-                }
-            } Catch { Set hasDaysToKeep = 0 }
+            Set hasDaysToKeep = $IsObject(step.parameters) && step.parameters.%IsDefined("daysToKeep")
             If 'hasDaysToKeep {
                 Do errors.%Push({"stepId": (stepId), "code": "PARAMETER_SCHEMA", "message": "purge-audit-records requires parameters.daysToKeep"})
             }
         }
 
         // 4. Namespace existence on the active instance.
-        Set ns = stepResult.%Get("namespace")
+        Set ns = step.namespace
         If (ns '= "") && '##class(%SYS.Namespace).Exists(ns) {
             Do errors.%Push({"stepId": (stepId), "code": "NAMESPACE_NOT_FOUND", "message": ("Namespace '"_ns_"' does not exist on this instance")})
         }
 
         // 5. WQM category nesting invariant (shared with CategoryService).
-        Set category = stepResult.%Get("wqmCategory")
+        Set category = step.wqmCategory
         If (category '= "") {
-            Set catId = ##class(sentai.model.Category).NameIndexOpen(category, 0, .catSc)
-            If (catId '= "") {
-                Set cat = ##class(sentai.model.Category).%OpenId(catId, 0, .catSc)
-                If $IsObject(cat) && '##class(sentai.model.Category).SatisfiesInvariant(cat.defaultWorkers, cat.maxActiveWorkers, cat.maxWorkers, cat.maxTotalWorkers) {
-                    Do errors.%Push({"stepId": (stepId), "code": "WQM_INVARIANT_VIOLATED", "message": ("WQM category '"_category_"' violates defaultWorkers<=maxActiveWorkers<=maxWorkers<=maxTotalWorkers")})
-                }
+            Set cat = ##class(sentai.model.Category).NameIndexOpen(category, 0, .catSc)
+            If $IsObject(cat) && '##class(sentai.model.Category).SatisfiesInvariant(cat.defaultWorkers, cat.maxActiveWorkers, cat.maxWorkers, cat.maxTotalWorkers) {
+                Do errors.%Push({"stepId": (stepId), "code": "WQM_INVARIANT_VIOLATED", "message": ("WQM category '"_category_"' violates defaultWorkers<=maxActiveWorkers<=maxWorkers<=maxTotalWorkers")})
             }
         }
 
         // 6. Fixed database-directory mount precondition — warning only, never an error (FR-014).
-        Set dbDir = stepResult.%Get("databaseDirectory")
+        Set dbDir = step.databaseDirectory
         If (dbDir '= "") && ..IsMountedReadOnly(dbDir) {
             Do warnings.%Push({"stepId": (stepId), "code": "PRECONDITION_READ_ONLY", "message": "Database mounted read-only. This step type requires write access to the directory."})
         }
@@ -90,21 +82,40 @@ ClassMethod Validate(flowId As %String) As %DynamicObject
     Return ..Report(errors, warnings)
 }
 
+/// The report /schedule blocks on (FR-032): everything Validate() reports, plus one error per
+/// destructive step — scheduling a flow with any destructive step is out of scope in v1, since
+/// no approved mechanism supplies SC-006's typed confirmation at fire time (spec.md Change Log
+/// 2026-09-22). Scoped to scheduling only: /validate and /dispatch keep calling Validate(), so
+/// destructive steps stay valid for manual dispatch with typed confirmation (FR-017).
+ClassMethod ValidateForSchedule(flowId As %String) As %DynamicObject
+{
+    Set report = ..Validate(flowId)
+
+    Set stepRs = ##class(%SQL.Statement).%New()
+    Do stepRs.%Prepare("SELECT id, type FROM sentai_model.Step WHERE flow = ?")
+    Set stepResult = stepRs.%Execute(flowId)
+    While stepResult.%Next() {
+        Continue:'##class(sentai.registry.StepType).IsDestructive(stepResult.%Get("type"))
+        Do report."errors".%Push({"stepId": (stepResult.%Get("id")), "code": "DESTRUCTIVE_NOT_SCHEDULABLE", "message": ("Step type '"_stepResult.%Get("type")_"' is destructive; flows with destructive steps are not schedulable in v1 and must be dispatched manually with typed confirmation")})
+    }
+    Quit report
+}
+
 /// The single fixed precondition check (not a general engine, FR-014): is the database
 /// directory's underlying mount currently read-only? Reads the live filesystem/IRIS
 /// directory-manager state — never persisted, always evaluated fresh (FR-015).
 ClassMethod IsMountedReadOnly(databaseDirectory As %String) As %Boolean
 {
-    Set testFile = databaseDirectory _ "/.sentai-write-probe"
-    Set result = 0
+    // %Stream.FileCharacter.Write() only buffers — nothing touches the filesystem until
+    // %Save(), so the probe opens the file directly with a zero timeout instead.
+    Set testFile = ##class(%File).NormalizeFilename(".sentai-write-probe", databaseDirectory)
+    Set result = 1
     Try {
-        Set stream = ##class(%Stream.FileCharacter).%New()
-        Set stream.Filename = testFile
-        Set sc = stream.Write("probe")
-        If $$$ISERR(sc) {
-            Set result = 1
-        } Else {
-            Do stream.%Delete(testFile)
+        Open testFile:("WNS"):0
+        If $TEST {
+            Close testFile
+            Do ##class(%File).Delete(testFile)
+            Set result = 0
         }
     }
     Catch {

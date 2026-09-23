@@ -45,7 +45,7 @@ ClassMethod ShapeTask(entry As %DynamicObject) As %DynamicObject
     Set out = {}
     Do out.%Set("taskId", entry."Id")
     Do out.%Set("name", entry."Name")
-    Do out.%Set("className", $G(entry."Type"))
+    Do out.%Set("className", entry."Type")
     Do out.%Set("namespace", entry."Namespace")
     Do out.%Set("nextRun", entry."NextScheduled")
     Do out.%Set("lastRun", entry."LastFinished")

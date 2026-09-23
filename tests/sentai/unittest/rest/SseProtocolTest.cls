@@ -14,7 +14,7 @@ Method TestEventVersionStrictlyIncreasesAndRunTerminalIsFinal()
     Do $$$AssertEquals(errorCode, "")
 
     Set v0 = run.eventVersion
-    Set sr01 = ##class(sentai.model.StepRun).%OpenId(##class(sentai.model.StepRun).RunStepIndexOpen(run.%Id(), "01", 0), 4)
+    Set sr01 = ##class(sentai.model.StepRun).OpenForRunStep(run.%Id(), "01", 4)
     Do sr01.TransitionTo("running")
     Set v1 = ##class(sentai.model.Run).%OpenId(run.%Id(), 0).eventVersion
     Do $$$AssertTrue(v1 > v0)
@@ -24,13 +24,58 @@ Method TestEventVersionStrictlyIncreasesAndRunTerminalIsFinal()
     Do $$$AssertTrue(v2 > v1)
 }
 
+/// Drives StreamEvents itself on a run already terminal — the loop emits the current state
+/// and run-terminal on its first pass and returns (observed on a real instance: the endpoint
+/// used to fail with 500 before writing anything).
+Method TestStreamEventsOnTerminalRunEmitsRunTerminalAndReturns()
+{
+    Set id = ..CreateCanonicalFlow("SseStream")
+    Set errorCode = "", errorDetail = "", report = ""
+    Set run = ##class(sentai.dispatch.WaveDispatcher).Dispatch(id, ..CanonicalConfirmations(), "tester", .errorCode, .errorDetail, .report)
+    Do $$$AssertEquals(errorCode, "")
+    Do ##class(sentai.dispatch.WaveDispatcher).CancelRun(run.guid)
+    Do run.%Reload()
+    Set run.state = "cancelled"
+    Do $$$AssertStatusOK(run.%Save())
+
+    Set %request = ##class(%CSP.Request).%New()
+    Set %response = ##class(%CSP.Response).%New()
+    Set out = ##class(%Stream.TmpCharacter).%New()
+    Set io = $IO
+    Set file = ##class(%File).TempFilename("sse")
+    Open file:("WNS"):2
+    Use file
+    Try {
+        Set sc = ##class(sentai.rest.Dispatcher).StreamEvents(run.guid)
+    }
+    Catch ex {
+        Set sc = ex.AsStatus()
+    }
+    Use io
+    Close file
+    Do $$$AssertStatusOK(sc)
+    Do $$$AssertEquals(%response.ContentType, "text/event-stream")
+    // %CSP.REST disables flushing by default; without it every event is held back until the
+    // request ends (observed on a real instance, TD-03).
+    Do $$$AssertEquals(%response.AllowOutputFlush, 1)
+
+    Set stream = ##class(%Stream.FileCharacter).%New()
+    Do stream.LinkToFile(file)
+    Set text = stream.Read(1000000)
+    Do ##class(%File).Delete(file)
+    Do $$$AssertTrue(text [ "event: step-state-changed")
+    Do $$$AssertTrue(text [ "event: run-terminal")
+    // run-terminal is the last event of the stream.
+    Do $$$AssertEquals($PIECE($PIECE(text, "event: ", *), $C(10), 1), "run-terminal")
+}
+
 Method TestPollingAndSseReadTheSamePersistedState()
 {
     Set id = ..CreateCanonicalFlow("SsePollingParity")
     Set errorCode = "", errorDetail = "", report = ""
     Set run = ##class(sentai.dispatch.WaveDispatcher).Dispatch(id, [{"stepId": "04", "typedName": "%SYS"}], "tester", .errorCode, .errorDetail, .report)
 
-    Set sr01 = ##class(sentai.model.StepRun).%OpenId(##class(sentai.model.StepRun).RunStepIndexOpen(run.%Id(), "01", 0), 4)
+    Set sr01 = ##class(sentai.model.StepRun).OpenForRunStep(run.%Id(), "01", 4)
     Do sr01.TransitionTo("running")
 
     // What GET /runs/{guid} (3s-polling fallback) would return:

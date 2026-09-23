@@ -127,11 +127,11 @@ ClassMethod ListFlows() As %Status
 {
     Set out = []
     Set rs = ##class(%SQL.Statement).%New()
-    Do rs.%Prepare("SELECT %ID, name, revision, savedAt, savedBy, scheduleSpec FROM sentai_model.Flow ORDER BY name")
+    Do rs.%Prepare("SELECT %ID AS rowId, name, revision, savedAt, savedBy, scheduleSpec FROM sentai_model.Flow ORDER BY name")
     Set result = rs.%Execute()
     While result.%Next() {
         Set item = {}
-        Do item.%Set("id", result.%Get("%ID"))
+        Do item.%Set("id", result.%Get("rowId"))
         Do item.%Set("name", result.%Get("name"))
         Do item.%Set("revision", result.%Get("revision"))
         Do item.%Set("savedAt", result.%Get("savedAt"))
@@ -169,7 +169,7 @@ ClassMethod ReadFlow(flowId As %String) As %Status
 ClassMethod SaveFlow(flowId As %String) As %Status
 {
     Set payload = ..ReadJSONBody()
-    Set expectedRevision = +%request.Data("revision", 1)
+    Set expectedRevision = +%request.Get("revision")
     If (expectedRevision = 0) {
         Set flow = ##class(sentai.model.Flow).%OpenId(flowId, 0, .sc)
         If $$$ISOK(sc) Set expectedRevision = flow.revision
@@ -258,7 +258,7 @@ ClassMethod ShapeFlow(flow As sentai.model.Flow, includeGraph As %Boolean) As %D
 
     Set joins = []
     Set rs3 = ##class(%SQL.Statement).%New()
-    Do rs3.%Prepare("SELECT target, policy, minSucceeded FROM sentai_model.Join WHERE flow = ?")
+    Do rs3.%Prepare("SELECT target, policy, minSucceeded FROM sentai_model.""Join"" WHERE flow = ?")
     Set result3 = rs3.%Execute(flow.%Id())
     While result3.%Next() {
         Do joins.%Push({"target": (result3.%Get("target")), "policy": (result3.%Get("policy")), "minSucceeded": (result3.%Get("minSucceeded"))})
@@ -302,18 +302,18 @@ ClassMethod DispatchFlow(flowId As %String) As %Status
 /// --- /runs (FR-024, User Story 3/4) ---
 ClassMethod ListRuns() As %Status
 {
-    Set flowId = %request.Data("flowId", 1)
+    Set flowId = %request.Get("flowId")
     Set out = []
     Set rs = ##class(%SQL.Statement).%New()
     If (flowId '= "") {
-        Do rs.%Prepare("SELECT %ID FROM sentai_model.Run WHERE flow = ? ORDER BY startedAt DESC")
+        Do rs.%Prepare("SELECT %ID AS rowId FROM sentai_model.Run WHERE flow = ? ORDER BY startedAt DESC")
         Set result = rs.%Execute(flowId)
     } Else {
-        Do rs.%Prepare("SELECT %ID FROM sentai_model.Run ORDER BY startedAt DESC")
+        Do rs.%Prepare("SELECT %ID AS rowId FROM sentai_model.Run ORDER BY startedAt DESC")
         Set result = rs.%Execute()
     }
     While result.%Next() {
-        Set run = ##class(sentai.model.Run).%OpenId(result.%Get("%ID"), 0)
+        Set run = ##class(sentai.model.Run).%OpenId(result.%Get("rowId"), 0)
         Do out.%Push(..ShapeRun(run, 0))
     }
     Quit ..WriteJSON(200, out)
@@ -321,9 +321,8 @@ ClassMethod ListRuns() As %Status
 
 ClassMethod ReadRun(runGuid As %String) As %Status
 {
-    Set runId = ##class(sentai.model.Run).GuidIndexOpen(runGuid, 0, .sc)
-    If $$$ISERR(sc) || (runId = "") Quit ..WriteProblem(404, "Not Found", "Run '"_runGuid_"' does not exist")
-    Set run = ##class(sentai.model.Run).%OpenId(runId, 0)
+    Set run = ##class(sentai.model.Run).GuidIndexOpen(runGuid, 0, .sc)
+    If '$IsObject(run) Quit ..WriteProblem(404, "Not Found", "Run '"_runGuid_"' does not exist")
     Quit ..WriteJSON(200, ..ShapeRun(run, 1))
 }
 
@@ -331,7 +330,7 @@ ClassMethod ShapeRun(run As sentai.model.Run, detail As %Boolean) As %DynamicObj
 {
     Set out = {}
     Do out.%Set("guid", run.guid)
-    Do out.%Set("flowId", run.flow.%Id())
+    Do out.%Set("flowId", run.flowGetObjectId())
     Do out.%Set("flowRevision", run.flowRevision)
     Do out.%Set("state", run.state)
     Do out.%Set("startedAt", run.startedAt)
@@ -343,10 +342,10 @@ ClassMethod ShapeRun(run As sentai.model.Run, detail As %Boolean) As %DynamicObj
 
     Set steps = [], sumMs = 0
     Set rs = ##class(%SQL.Statement).%New()
-    Do rs.%Prepare("SELECT %ID FROM sentai_model.StepRun WHERE run = ?")
+    Do rs.%Prepare("SELECT %ID AS rowId FROM sentai_model.StepRun WHERE run = ?")
     Set result = rs.%Execute(run.%Id())
     While result.%Next() {
-        Set sr = ##class(sentai.model.StepRun).%OpenId(result.%Get("%ID"), 0)
+        Set sr = ##class(sentai.model.StepRun).%OpenId(result.%Get("rowId"), 0)
         Do steps.%Push(..ShapeStepRun(sr))
         If (sr.timeStarted '= "") {
             Set endTs = $S(sr.timeFinished '= "":sr.timeFinished, 1:$ZDATETIME($HOROLOG, 3))
@@ -388,29 +387,38 @@ ClassMethod ShapeStepRun(sr As sentai.model.StepRun) As %DynamicObject
 /// --- /runs/{guid}/events (FR-025, FR-026, User Story 4, contracts/sse-protocol.md) ---
 ClassMethod StreamEvents(runGuid As %String) As %Status
 {
-    Set runId = ##class(sentai.model.Run).GuidIndexOpen(runGuid, 0, .sc)
-    If $$$ISERR(sc) || (runId = "") Quit ..WriteProblem(404, "Not Found", "Run '"_runGuid_"' does not exist")
-
+    Set run = ##class(sentai.model.Run).GuidIndexOpen(runGuid, 0, .sc)
+    If '$IsObject(run) Quit ..WriteProblem(404, "Not Found", "Run '"_runGuid_"' does not exist")
     Set %response.ContentType = "text/event-stream"
     Do %response.SetHeader("Cache-Control", "no-cache")
-    Do %response.WriteFlush("")
+    // %CSP.REST turns output flushing off; without this every Flush() below is ignored and the
+    // gateway delivers the whole stream only when the request ends (observed, TD-03).
+    Set %response.AllowOutputFlush = 1
+    Do %response.Flush()
 
-    Set lastVersion = 0
+    // -1 so the first pass always emits the current state, even for a run still at version 0.
+    Set lastVersion = -1
     Set maxDurationSeconds = $G(^sentaiRun("%config", "sseMaxDurationSeconds"), 600)
     Set startedAt = $ZH
 
-    For {
-        Set run = ##class(sentai.model.Run).%OpenId(runId, 0)
+    // A client that goes away surfaces as a write error on the next event; that ends the stream.
+    Try {
+        For {
+            // Other processes (the dispatch loop, its workers) change the run; re-read it.
+            Do run.%Reload()
 
-        If (run.eventVersion > lastVersion) {
-            Do ..EmitRunStateEvents(run, .lastVersion)
+            If (run.eventVersion > lastVersion) {
+                Do ..EmitRunStateEvents(run, .lastVersion)
+            }
+
+            Quit:($LISTFIND($LB("completed", "failed", "cancelled"), run.state))
+            Quit:(($ZH - startedAt) > maxDurationSeconds)
+
+            Hang 0.5
         }
-
-        Quit:'%response.IsClientConnected()
-        Quit:($LISTFIND($LB("completed", "failed", "cancelled"), run.state))
-        Quit:(($ZH - startedAt) > maxDurationSeconds)
-
-        Hang 0.5
+    }
+    Catch {
+        Return $$$OK
     }
 
     If $LISTFIND($LB("completed", "failed", "cancelled"), run.state) {
@@ -494,8 +502,7 @@ ClassMethod RerunStep(runGuid As %String, stepGuid As %String) As %Status
     Set sc = ##class(sentai.dispatch.WaveDispatcher).RerunStep(runGuid, stepGuid, .newGuid)
     If $$$ISERR(sc) Quit ..WriteProblem(409, "Conflict", $SYSTEM.Status.GetErrorText(sc))
 
-    Set stepRunId = ##class(sentai.model.StepRun).GuidIndexOpen(newGuid, 0)
-    Set stepRun = ##class(sentai.model.StepRun).%OpenId(stepRunId, 0)
+    Set stepRun = ##class(sentai.model.StepRun).GuidIndexOpen(newGuid, 0)
     Quit ..WriteJSON(202, ..ShapeStepRun(stepRun))
 }
 
@@ -508,10 +515,10 @@ ClassMethod ListStepTypes() As %Status
 /// --- /catalog/tasks (FR-038, FR-039, User Story 6, P3 reducible) ---
 ClassMethod ListCatalogTasks() As %Status
 {
-    Set q = %request.Data("q", 1)
-    Set namespace = %request.Data("namespace", 1)
-    Set filter = $S(%request.Data("filter", 1) '= "":%request.Data("filter", 1), 1:"all")
-    Set destructiveOnly = +%request.Data("destructiveOnly", 1)
+    Set q = %request.Get("q")
+    Set namespace = %request.Get("namespace")
+    Set filter = $S(%request.Get("filter") '= "":%request.Get("filter"), 1:"all")
+    Set destructiveOnly = +%request.Get("destructiveOnly")
     Quit ..WriteJSON(200, ##class(sentai.catalog.TaskService).List(..CurrentToken(), q, namespace, filter, destructiveOnly))
 }
 
@@ -562,7 +569,9 @@ ClassMethod WriteWqmCategory(name As %String) As %Status
 ClassMethod ScheduleFlow(flowId As %String) As %Status
 {
     Set payload = ..ReadJSONBody()
-    Set report = ##class(sentai.validation.FlowValidator).Validate(flowId)
+    // Blocks before any %SYS.Task is created: validation errors (FR-032) and any destructive
+    // step (out of scope for scheduling in v1, TD-06).
+    Set report = ##class(sentai.validation.FlowValidator).ValidateForSchedule(flowId)
     If '##class(sentai.validation.FlowValidator).HasNoErrors(report) {
         Quit ..WriteJSON(422, report)
     }
@@ -573,7 +582,8 @@ ClassMethod ScheduleFlow(flowId As %String) As %Status
     Set result = rs.%Execute(flowId)
     While result.%Next() {
         Set stepId = result.%Get("id")
-        Set taskId = ..CreateNativeTask(flowId, stepId, payload.scheduleSpec, $S(payload.%IsDefined("category"):payload.category, 1:""))
+        Set sc = ..CreateNativeTask(flowId, stepId, payload.scheduleSpec, $S(payload.%IsDefined("category"):payload.category, 1:""), .taskId)
+        If $$$ISERR(sc) Return ..WriteProblem(500, "Internal Error", $SYSTEM.Status.GetErrorText(sc))
         Do taskIds.%Push(taskId)
     }
 
@@ -587,32 +597,31 @@ ClassMethod ScheduleFlow(flowId As %String) As %Status
     Quit ..WriteJSON(201, out)
 }
 
-/// Compiles one step into a native %SYS.Task.Definition entry (never a private scheduler,
-/// FR-031). Per research.md R-007/OQ-1: only the step(s) with no incoming edges actually
-/// start a run when firing natively — they call back into POST /flows/{id}/dispatch on
-/// their OnTask(); tasks for downstream steps exist only to satisfy "one task id per
-/// scheduled step" and are suppressed at fire time by WaveDispatcher already having
-/// carried them to a terminal state via the earlier wave. Uses the `Id` from a subsequent
-/// listing, not from the creation response body (spec 001 already proved that body comes
-/// back with no identifier).
-ClassMethod CreateNativeTask(flowId As %String, stepId As %String, scheduleSpec As %String, category As %String) As %Integer
+/// Compiles one step into a native %SYS.Task entry running sentai.dispatch.ScheduledFlowTask
+/// (never a private scheduler, FR-031). Per research.md R-007/OQ-1: only the step(s) with
+/// no incoming edges actually start a run when firing natively — they call back into
+/// POST /flows/{id}/dispatch on their OnTask(); tasks for downstream steps exist only to
+/// satisfy "one task id per scheduled step" and are suppressed at fire time by
+/// WaveDispatcher already having carried them to a terminal state via the earlier wave.
+ClassMethod CreateNativeTask(flowId As %String, stepId As %String, scheduleSpec As %String, category As %String, Output taskId As %Integer) As %Status
 {
-    Set isRoot = '..StepHasIncomingEdge(flowId, stepId)
+    Set taskId = ""
+    Set definition = ##class(sentai.dispatch.ScheduledFlowTask).%New()
+    Set definition.FlowId = flowId
+    Set definition.StepId = stepId
+    Set definition.IsRoot = '..StepHasIncomingEdge(flowId, stepId)
 
-    Set task = ##class(%SYS.Task.Definition).%New()
+    Set task = ##class(%SYS.Task).%New()
     Set task.Name = "SentaiTask: "_flowId_"#"_stepId
     Set task.NameSpace = $NAMESPACE
-    Set task.TaskClass = "sentai.dispatch.ScheduledFlowTask"
-    Do task.Settings.SetAt(flowId, "FlowId")
-    Do task.Settings.SetAt(stepId, "StepId")
-    Do task.Settings.SetAt(isRoot, "IsRoot")
+    Set task.TaskClass = definition.%ClassName(1)
+    Set sc = task.AssignSettings(definition)
+    If $$$ISERR(sc) Quit sc
     Set sc = task.%Save()
+    If $$$ISERR(sc) Quit sc
 
-    Set rs = ##class(%SQL.Statement).%New()
-    Do rs.%Prepare("SELECT TOP 1 ID FROM %SYS.Task.Definition WHERE Name = ? ORDER BY ID DESC")
-    Set result = rs.%Execute(task.Name)
-    Quit:'result.%Next() 0
-    Quit result.%Get("ID")
+    Set taskId = task.%Id()
+    Quit $$$OK
 }
 
 ClassMethod StepHasIncomingEdge(flowId As %String, stepId As %String) As %Boolean

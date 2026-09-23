@@ -5,15 +5,14 @@ Method DispatchCanonical() As sentai.model.Run
 {
     Set id = ..CreateCanonicalFlow("EligibilityFixture")
     Set errorCode = "", errorDetail = "", report = ""
-    Set run = ##class(sentai.dispatch.WaveDispatcher).Dispatch(id, [], "tester", .errorCode, .errorDetail, .report)
+    Set run = ##class(sentai.dispatch.WaveDispatcher).Dispatch(id, ..CanonicalConfirmations(), "tester", .errorCode, .errorDetail, .report)
     Do $$$AssertEquals(errorCode, "")
     Quit run
 }
 
 Method StepRunFor(run As sentai.model.Run, stepId As %String) As sentai.model.StepRun
 {
-    Set stepRunId = ##class(sentai.model.StepRun).RunStepIndexOpen(run.%Id(), stepId, 0)
-    Quit ##class(sentai.model.StepRun).%OpenId(stepRunId, 4)
+    Quit ##class(sentai.model.StepRun).OpenForRunStep(run.%Id(), stepId, 4)
 }
 
 Method TestRootStepsAreImmediatelyEligible()
@@ -42,7 +41,7 @@ Method TestFanInTargetIneligibleUntilAllThreeSourcesComplete()
         Quit:i=""
         If (eligible(i) = "04") Set foundStep04 = 1
     }
-    Do $$$AssertFalse(foundStep04)
+    Do $$$AssertNotTrue(foundStep04)
 
     Do ..StepRunFor(run, "03").TransitionTo("completed")
     Kill eligible2

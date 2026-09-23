@@ -16,8 +16,7 @@ Method TestWriteIsAlwaysAPassthroughToTheAdministrativeApi()
     Set sc = ##class(sentai.wqm.CategoryService).Write(payload, "fake-token")
     Do $$$AssertStatusOK(sc)
 
-    Set catId = ##class(sentai.model.Category).NameIndexOpen("SENTAI.MIRROR_TEST", 0)
-    Set cat = ##class(sentai.model.Category).%OpenId(catId, 0)
+    Set cat = ##class(sentai.model.Category).NameIndexOpen("SENTAI.MIRROR_TEST", 0)
     Do $$$AssertEquals(cat.maxTotalWorkers, 16)
 }
 
@@ -35,8 +34,7 @@ Method TestInvariantViolationNeverReachesTheAdminApiCall()
     Do $$$AssertStatusNotOK(sc)
 
     // No local mirror row should have been created for a rejected write.
-    Set catId = ##class(sentai.model.Category).NameIndexOpen("SENTAI.MIRROR_BAD", 0)
-    Do $$$AssertEquals(catId, "")
+    Do $$$AssertNotTrue(##class(sentai.model.Category).NameIndexExists("SENTAI.MIRROR_BAD"))
 }
 
 }

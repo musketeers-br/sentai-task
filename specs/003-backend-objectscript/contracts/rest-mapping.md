@@ -13,7 +13,7 @@ satisfies. It serves as the index that `tasks.md` will decompose.
 | `GET /flows/{flowId}` | `sentai.rest.Dispatcher` → `sentai.model.Flow` (read) | FR-003 |
 | `PUT /flows/{flowId}` | `sentai.rest.Dispatcher` → `sentai.validation.FlowValidator` (structural) → `sentai.model.Flow` (save, revision) | FR-004, FR-005, FR-006, FR-007 |
 | `POST /flows/{flowId}/validate` | `sentai.rest.Dispatcher` → `sentai.validation.FlowValidator.Validate` | FR-012, FR-013, FR-014, FR-015 |
-| `POST /flows/{flowId}/schedule` | `sentai.rest.Dispatcher` → `sentai.validation.FlowValidator` (blocks on error) → call to the native administrative API (`%SYS.Task.Definition` creation per step) | FR-031, FR-032 |
+| `POST /flows/{flowId}/schedule` | `sentai.rest.Dispatcher` → `sentai.validation.FlowValidator.ValidateForSchedule` (blocks on any validation error and on any destructive step — `DESTRUCTIVE_NOT_SCHEDULABLE`, out of scope in v1) → native `%SYS.Task` creation per step (running `sentai.dispatch.ScheduledFlowTask`), only once nothing blocks | FR-031, FR-032, TD-06 |
 | `POST /flows/{flowId}/dispatch` | `sentai.rest.Dispatcher` → `sentai.validation.FlowValidator` (structural) → destructive-confirmation check → `sentai.model.Run`/`StepRun` (transaction) → `JOB` of `sentai.dispatch.WaveDispatcher` | FR-016, FR-017, FR-018 |
 | `GET /runs` | `sentai.rest.Dispatcher` → `sentai.model.Run` (query) | FR-024 |
 | `GET /runs/{runGuid}` | `sentai.rest.Dispatcher` → `sentai.model.Run/StepRun/LogEntry` (read) | FR-024 |

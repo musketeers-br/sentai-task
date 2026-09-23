@@ -6,16 +6,17 @@ Class sentai.model.Edge Extends (%Persistent, %JSON.Adaptor)
 Property source As %String(MAXLEN = 8) [ Required ];
 
 Property target As %String(MAXLEN = 8) [ Required ];
+
 Relationship flow As sentai.model.Flow [ Cardinality = one, Inverse = edges ];
 
 Index FlowIndex On flow;
-
 
 /// Supports wave-eligibility computation and cycle detection without scanning every edge
 /// of the flow on each check (data-model.md).
 Index FlowTargetIndex On (flow, target);
 
 Index FlowSourceIndex On (flow, source);
+
 /// Replaces every edge of `flow` with the submitted array, inside the caller's transaction.
 /// Rejects (without persisting anything) if the resulting graph would be cyclic.
 ClassMethod ReplaceAll(flowId As %String, edgesArray As %DynamicArray) As %Status
@@ -33,7 +34,7 @@ ClassMethod ReplaceAll(flowId As %String, edgesArray As %DynamicArray) As %Statu
         Set iter = edgesArray.%GetIterator()
         While iter.%GetNext(.k, .edgeObj) {
             Set edge = ..%New()
-            Set edge.flow = flowId
+            Do edge.flowSetObjectId(flowId)
             Set edge.source = edgeObj.source
             Set edge.target = edgeObj.target
             Set sc = edge.%Save()
@@ -53,8 +54,7 @@ ClassMethod ReplaceAll(flowId As %String, edgesArray As %DynamicArray) As %Statu
 ClassMethod WouldCreateCycle(flowId As %String, source As %String, target As %String) As %Boolean
 {
     If (source = target) Quit 1
-    Set visited("") = ""
-    Kill visited("")
+    Kill visited
     Quit ..IsReachable(flowId, target, source, .visited)
 }
 
@@ -131,5 +131,28 @@ ClassMethod WouldGraphBeCyclic(flowId As %String, edgesArray As %DynamicArray) A
     Quit (processed '= nodeCount)
 }
 
+Storage Default
+{
+<Data name="EdgeDefaultData">
+<Value name="1">
+<Value>%%CLASSNAME</Value>
+</Value>
+<Value name="2">
+<Value>source</Value>
+</Value>
+<Value name="3">
+<Value>target</Value>
+</Value>
+<Value name="4">
+<Value>flow</Value>
+</Value>
+</Data>
+<DataLocation>^sentai.model.EdgeD</DataLocation>
+<DefaultData>EdgeDefaultData</DefaultData>
+<IdLocation>^sentai.model.EdgeD</IdLocation>
+<IndexLocation>^sentai.model.EdgeI</IndexLocation>
+<StreamLocation>^sentai.model.EdgeS</StreamLocation>
+<Type>%Storage.Persistent</Type>
+}
 
 }

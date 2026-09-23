@@ -9,7 +9,7 @@ Method TestDirectlyInjectedCycleProducesError()
     // mutation-time guard (data-model.md), the way the independent test for User
     // Story 2 requires ("a cycle introduced by directly editing the contract").
     Set edge = ##class(sentai.model.Edge).%New()
-    Set edge.flow = id
+    Do edge.flowSetObjectId(id)
     Set edge.source = "05"
     Set edge.target = "01"
     Do edge.%Save()

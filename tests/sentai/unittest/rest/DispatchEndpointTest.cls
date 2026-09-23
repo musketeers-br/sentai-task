@@ -18,7 +18,7 @@ Method TestValidDispatchReturns202WithAllStepsQueued()
     Do $$$AssertEquals(%response.Status, 202)
 
     Set rs = ##class(%SQL.Statement).%New()
-    Do rs.%Prepare("SELECT COUNT(*) AS c FROM sentai.model.StepRun sr JOIN sentai.model.Run r ON sr.run = r.ID WHERE r.flow = ?")
+    Do rs.%Prepare("SELECT COUNT(*) AS c FROM sentai_model.StepRun sr JOIN sentai_model.Run r ON sr.run = r.ID WHERE r.flow = ?")
     Set result = rs.%Execute(id)
     Do result.%Next()
     Do $$$AssertEquals(result.%Get("c"), 5)
@@ -33,7 +33,7 @@ Method TestMissingDestructiveConfirmationReturns428NamingStep()
 
     // No StepRun should exist for this flow's steps.
     Set rs = ##class(%SQL.Statement).%New()
-    Do rs.%Prepare("SELECT COUNT(*) AS c FROM sentai.model.StepRun sr JOIN sentai.model.Run r ON sr.run = r.ID WHERE r.flow = ?")
+    Do rs.%Prepare("SELECT COUNT(*) AS c FROM sentai_model.StepRun sr JOIN sentai_model.Run r ON sr.run = r.ID WHERE r.flow = ?")
     Set result = rs.%Execute(id)
     Do result.%Next()
     Do $$$AssertEquals(result.%Get("c"), 0)

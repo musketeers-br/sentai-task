@@ -34,7 +34,7 @@ Method TestExistingNamespacePassesThisRule()
     While iter.%GetNext(.k, .e) {
         If (e.code = "NAMESPACE_NOT_FOUND") && (e.stepId = "04") Set found = 1
     }
-    Do $$$AssertFalse(found)
+    Do $$$AssertNotTrue(found)
 }
 
 }

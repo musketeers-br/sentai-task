@@ -21,7 +21,7 @@ Method TestCustomStepWithNoClassIsAlwaysAnError()
     While iter2.%GetNext(.k, .w) {
         If (w.code = "CUSTOM_CLASS_REQUIRED") Set foundAsWarning = 1
     }
-    Do $$$AssertFalse(foundAsWarning)
+    Do $$$AssertNotTrue(foundAsWarning)
 }
 
 Method TestCustomStepWithClassDeclaredDoesNotTriggerThisRule()
@@ -37,7 +37,7 @@ Method TestCustomStepWithClassDeclaredDoesNotTriggerThisRule()
     While iter.%GetNext(.k, .e) {
         If (e.code = "CUSTOM_CLASS_REQUIRED") Set found = 1
     }
-    Do $$$AssertFalse(found)
+    Do $$$AssertNotTrue(found)
 }
 
 }

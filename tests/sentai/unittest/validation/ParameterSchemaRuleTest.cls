@@ -36,7 +36,7 @@ Method TestPurgeAuditRecordsWithDaysToKeepPassesThisRule()
     While iter.%GetNext(.k, .e) {
         If (e.code = "PARAMETER_SCHEMA") Set found = 1
     }
-    Do $$$AssertFalse(found)
+    Do $$$AssertNotTrue(found)
 }
 
 }

@@ -13,7 +13,7 @@ Method DispatchCanonical() As sentai.model.Run
 Method TestPauseOnNonPausableTypeReturns409AndStepStaysRunning()
 {
     Set run = ..DispatchCanonical()
-    Set sr01 = ##class(sentai.model.StepRun).%OpenId(##class(sentai.model.StepRun).RunStepIndexOpen(run.%Id(), "01", 0), 4)
+    Set sr01 = ##class(sentai.model.StepRun).OpenForRunStep(run.%Id(), "01", 4)
     Do sr01.TransitionTo("running")
 
     Set %request = ##class(%CSP.Request).%New()
@@ -28,7 +28,7 @@ Method TestPauseOnNonPausableTypeReturns409AndStepStaysRunning()
 Method TestCancelStepReturns202()
 {
     Set run = ..DispatchCanonical()
-    Set sr01 = ##class(sentai.model.StepRun).%OpenId(##class(sentai.model.StepRun).RunStepIndexOpen(run.%Id(), "01", 0), 0)
+    Set sr01 = ##class(sentai.model.StepRun).OpenForRunStep(run.%Id(), "01", 0)
 
     Set %request = ##class(%CSP.Request).%New()
     Set %response = ##class(%CSP.Response).%New()

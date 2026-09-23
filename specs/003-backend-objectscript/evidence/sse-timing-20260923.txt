@@ -1,0 +1,88 @@
+# SSE delivery timing — GET /runs/{guid}/events, curl -N, transitions injected every 8 s
+# columns: arrival(UTC) type eventVersion stepId state 'sent' server-emission-time
+
+## before fix (AllowOutputFlush=0 under %CSP.REST): only the first flush reaches the client
+03:57:33 event: step-state-changed
+03:57:33 event: step-state-changed
+03:57:33 event: step-state-changed
+03:57:33 event: step-state-changed
+03:57:33 event: step-state-changed
+03:58:26 event: step-state-changed
+03:58:26 event: step-state-changed
+03:58:26 event: step-state-changed
+03:58:26 event: step-state-changed
+03:58:26 event: step-state-changed
+03:58:26 event: step-state-changed
+03:58:26 event: step-state-changed
+03:58:26 event: step-state-changed
+03:58:26 event: step-state-changed
+03:58:26 event: step-state-changed
+03:58:26 event: step-state-changed
+03:58:26 event: step-state-changed
+03:58:26 event: step-state-changed
+03:58:26 event: step-state-changed
+03:58:26 event: step-state-changed
+03:58:26 event: step-state-changed
+03:58:26 event: step-state-changed
+03:58:26 event: step-state-changed
+03:58:26 event: step-state-changed
+03:58:26 event: step-state-changed
+03:58:26 event: step-state-changed
+03:58:26 event: step-state-changed
+03:58:26 event: step-state-changed
+03:58:26 event: step-state-changed
+03:58:26 event: step-state-changed
+03:58:26 event: step-state-changed
+03:58:26 event: step-state-changed
+03:58:26 event: step-state-changed
+03:58:26 event: step-state-changed
+03:58:26 event: step-state-changed
+03:58:26 event: step-state-changed
+03:58:26 event: step-state-changed
+03:58:26 event: step-state-changed
+03:58:26 event: step-state-changed
+03:58:26 event: step-state-changed
+03:58:26 event: run-terminal
+
+## after fix (AllowOutputFlush=1)
+03:58:58 step-state-changed 0 01 queued sent 03:58:58
+03:58:58 step-state-changed 0 02 queued sent 03:58:58
+03:58:58 step-state-changed 0 03 queued sent 03:58:58
+03:58:58 step-state-changed 0 04 queued sent 03:58:58
+03:58:58 step-state-changed 0 05 queued sent 03:58:58
+03:59:02 step-state-changed 1 01 running sent 03:59:02
+03:59:02 step-state-changed 1 02 queued sent 03:59:02
+03:59:02 step-state-changed 1 03 queued sent 03:59:02
+03:59:02 step-state-changed 1 04 queued sent 03:59:02
+03:59:03 step-state-changed 1 05 queued sent 03:59:02
+03:59:10 step-state-changed 2 01 running sent 03:59:10
+03:59:11 step-state-changed 2 02 running sent 03:59:10
+03:59:11 step-state-changed 2 03 queued sent 03:59:10
+03:59:11 step-state-changed 2 04 queued sent 03:59:10
+03:59:11 step-state-changed 2 05 queued sent 03:59:10
+03:59:19 step-state-changed 3 01 running sent 03:59:19
+03:59:19 step-state-changed 3 02 running sent 03:59:19
+03:59:19 step-state-changed 3 03 running sent 03:59:19
+03:59:19 step-state-changed 3 04 queued sent 03:59:19
+03:59:19 step-state-changed 3 05 queued sent 03:59:19
+03:59:27 step-state-changed 4 01 completed sent 03:59:27
+03:59:27 step-state-changed 4 02 running sent 03:59:27
+03:59:27 step-state-changed 4 03 running sent 03:59:27
+03:59:27 step-state-changed 4 04 queued sent 03:59:27
+03:59:27 step-state-changed 4 05 queued sent 03:59:27
+03:59:35 step-state-changed 5 01 completed sent 03:59:35
+03:59:35 step-state-changed 5 02 completed sent 03:59:35
+03:59:35 step-state-changed 5 03 running sent 03:59:35
+03:59:35 step-state-changed 5 04 queued sent 03:59:35
+03:59:35 step-state-changed 5 05 queued sent 03:59:35
+03:59:43 step-state-changed 6 01 completed sent 03:59:43
+03:59:43 step-state-changed 6 02 completed sent 03:59:43
+03:59:43 step-state-changed 6 03 completed sent 03:59:43
+03:59:43 step-state-changed 6 04 queued sent 03:59:43
+03:59:43 step-state-changed 6 05 queued sent 03:59:43
+03:59:51 step-state-changed 9 01 completed sent 03:59:51
+03:59:51 step-state-changed 9 02 completed sent 03:59:51
+03:59:51 step-state-changed 9 03 completed sent 03:59:51
+03:59:51 step-state-changed 9 04 cancelled sent 03:59:51
+03:59:51 step-state-changed 9 05 cancelled sent 03:59:51
+03:59:51 run-terminal 9  cancelled sent 03:59:51

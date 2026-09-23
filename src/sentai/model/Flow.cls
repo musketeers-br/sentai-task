@@ -24,7 +24,6 @@ Index NameIndex On name [ Unique ];
 
 /// Every step, edge and join belonging to this flow — used by SaveGraph()/read, never by
 /// canvasGeometry.
-
 Relationship steps As sentai.model.Step [ Cardinality = many, Inverse = flow ];
 
 Relationship edges As sentai.model.Edge [ Cardinality = many, Inverse = flow ];
@@ -44,22 +43,18 @@ ClassMethod SaveGraph(payload As %DynamicObject, existingId As %String = "", exp
     Try {
         If (existingId '= "") {
             Set flow = ..%OpenId(existingId, 4, .sc)
-            If $$$ISERR(sc) Throw
+            $$$ThrowOnError(sc)
             If (flow.revision '= expectedRevision) {
-                Set sc = $$$ERROR($$$GeneralError, "SentaiStaleRevision: flow was saved by someone else since it was loaded")
-                Throw
+                $$$ThrowStatus($$$ERROR($$$GeneralError, "SentaiStaleRevision: flow was saved by someone else since it was loaded"))
             }
         } Else {
             Set flow = ..%New()
             Set flow.revision = 1
         }
 
-        Set dupCheck = ##class(%SQL.Statement).%New()
-        Do dupCheck.%PrepareClassQuery("sentai.model.Flow", "NameConflict")
-        Set rs = dupCheck.%Execute($ZCVT(payload.name, "U"), $S(existingId '= "":existingId, 1:"-1"))
-        If rs.%Next() {
-            Set sc = $$$ERROR($$$GeneralError, "SentaiNameConflict: a flow named '"_payload.name_"' already exists")
-            Throw
+        // NameIndex is SQLUPPER-collated, so the index lookup is already case-insensitive.
+        If ..NameIndexExists(payload.name, .conflictId) && (conflictId '= existingId) {
+            $$$ThrowStatus($$$ERROR($$$GeneralError, "SentaiNameConflict: a flow named '"_payload.name_"' already exists"))
         }
 
         Set flow.name = payload.name
@@ -74,31 +69,62 @@ ClassMethod SaveGraph(payload As %DynamicObject, existingId As %String = "", exp
         }
 
         Set sc = flow.%Save()
-        If $$$ISERR(sc) Throw
+        $$$ThrowOnError(sc)
 
         // Replace the step/edge/join set atomically within the same transaction.
         Set sc = ##class(sentai.model.Step).ReplaceAll(flow.%Id(), payload."steps")
-        If $$$ISERR(sc) Throw
+        $$$ThrowOnError(sc)
 
         Set sc = ##class(sentai.model.Edge).ReplaceAll(flow.%Id(), payload."edges")
-        If $$$ISERR(sc) Throw
+        $$$ThrowOnError(sc)
 
         Set sc = ##class(sentai.model.Join).ReplaceAll(flow.%Id(), payload."joins")
-        If $$$ISERR(sc) Throw
+        $$$ThrowOnError(sc)
 
         Set id = flow.%Id()
         TCOMMIT
     }
     Catch ex {
         TROLLBACK 1
-        Set:($$$ISERR($Get(sc))) sc = ex.AsStatus()
+        Set sc = ex.AsStatus()
     }
     Quit sc
 }
 
-Query NameConflict(upperName As %String, excludeId As %String) As %SQLQuery
+Storage Default
 {
-    SELECT ID FROM sentai_model.Flow WHERE UPPER(name) = :upperName AND ID <> :excludeId
+<Data name="FlowDefaultData">
+<Value name="1">
+<Value>%%CLASSNAME</Value>
+</Value>
+<Value name="2">
+<Value>name</Value>
+</Value>
+<Value name="3">
+<Value>revision</Value>
+</Value>
+<Value name="4">
+<Value>savedAt</Value>
+</Value>
+<Value name="5">
+<Value>savedBy</Value>
+</Value>
+<Value name="6">
+<Value>defaultCategory</Value>
+</Value>
+<Value name="7">
+<Value>scheduleSpec</Value>
+</Value>
+<Value name="8">
+<Value>canvasGeometry</Value>
+</Value>
+</Data>
+<DataLocation>^sentai.model.FlowD</DataLocation>
+<DefaultData>FlowDefaultData</DefaultData>
+<IdLocation>^sentai.model.FlowD</IdLocation>
+<IndexLocation>^sentai.model.FlowI</IndexLocation>
+<StreamLocation>^sentai.model.FlowS</StreamLocation>
+<Type>%Storage.Persistent</Type>
 }
 
 }

@@ -22,7 +22,7 @@ Method TestCustomIsSelectableButStillBlockedByValidationUntilClassDeclared()
     Do $$$AssertStatusOK(sc)
 
     Set report = ##class(sentai.validation.FlowValidator).Validate(id)
-    Do $$$AssertFalse(##class(sentai.validation.FlowValidator).HasNoErrors(report))
+    Do $$$AssertNotTrue(##class(sentai.validation.FlowValidator).HasNoErrors(report))
 }
 
 }

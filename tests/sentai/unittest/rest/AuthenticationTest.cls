@@ -28,7 +28,7 @@ Method TestMalformedAuthorizationHeaderYieldsEmptyToken()
 {
     Kill %request
     Set %request = ##class(%CSP.Request).%New()
-    Do %request.SetCgiEnv("HTTP_AUTHORIZATION", "Basic dXNlcjpwYXNz")
+    Set %request.CgiEnvs("HTTP_AUTHORIZATION") = "Basic dXNlcjpwYXNz"
     Do $$$AssertEquals(##class(sentai.rest.Dispatcher).ExtractBearerToken(), "")
 }
 
@@ -36,7 +36,7 @@ Method TestWellFormedBearerHeaderIsExtracted()
 {
     Kill %request
     Set %request = ##class(%CSP.Request).%New()
-    Do %request.SetCgiEnv("HTTP_AUTHORIZATION", "Bearer abc123")
+    Set %request.CgiEnvs("HTTP_AUTHORIZATION") = "Bearer abc123"
     Do $$$AssertEquals(##class(sentai.rest.Dispatcher).ExtractBearerToken(), "abc123")
 }
 

@@ -25,7 +25,7 @@ Method TestInvalidFlowReturnsPopulatedReportButStill200()
     Do $$$AssertEquals(%response.Status, 200)
 
     Set report = ##class(sentai.validation.FlowValidator).Validate(id)
-    Do $$$AssertFalse(##class(sentai.validation.FlowValidator).HasNoErrors(report))
+    Do $$$AssertNotTrue(##class(sentai.validation.FlowValidator).HasNoErrors(report))
 }
 
 }
