@@ -1,0 +1,810 @@
+{
+  "flowId": "1445",
+  "nonDestructiveFlowId": "1446",
+  "runGuid": "47618290-B703-11F1-B23C-EA12AC1842F3",
+  "calls": [
+    {
+      "step": "build",
+      "request": "GET /flows",
+      "status": 401,
+      "body": null,
+      "at": "2026-09-23T04:00:13Z"
+    },
+    {
+      "step": "1",
+      "request": "POST /flows",
+      "status": 201,
+      "body": {
+        "id": "1445",
+        "name": "Quickstart-20260923010013",
+        "revision": 1,
+        "savedAt": "2026-09-23 04:00:13",
+        "savedBy": "_SYSTEM",
+        "defaultCategory": "Default",
+        "steps": [
+          {
+            "id": "01",
+            "type": "integrity-check",
+            "taskName": "IC USER",
+            "namespace": "USER",
+            "databaseDirectory": "/usr/irissys/mgr/user/",
+            "runAsUser": "irisadm",
+            "timeoutMinutes": 90,
+            "wqmCategory": "Default",
+            "customClass": "",
+            "isDestructive": "0"
+          },
+          {
+            "id": "02",
+            "type": "integrity-check",
+            "taskName": "IC APP",
+            "namespace": "IRISAPP",
+            "databaseDirectory": "/data/IRISAPP_DATA/",
+            "runAsUser": "irisadm",
+            "timeoutMinutes": 45,
+            "wqmCategory": "Default",
+            "customClass": "",
+            "isDestructive": "0"
+          },
+          {
+            "id": "03",
+            "type": "integrity-check",
+            "taskName": "IC IRISSYS",
+            "namespace": "%SYS",
+            "databaseDirectory": "/usr/irissys/mgr/",
+            "runAsUser": "irisadm",
+            "timeoutMinutes": 45,
+            "wqmCategory": "Default",
+            "customClass": "",
+            "isDestructive": "0"
+          },
+          {
+            "id": "04",
+            "type": "purge-audit-records",
+            "taskName": "Purge audit",
+            "namespace": "%SYS",
+            "databaseDirectory": "",
+            "runAsUser": "irisadm",
+            "timeoutMinutes": 20,
+            "wqmCategory": "Default",
+            "customClass": "",
+            "isDestructive": "1"
+          },
+          {
+            "id": "05",
+            "type": "switch-journal",
+            "taskName": "Switch journal",
+            "namespace": "%SYS",
+            "databaseDirectory": "",
+            "runAsUser": "irisadm",
+            "timeoutMinutes": 5,
+            "wqmCategory": "Default",
+            "customClass": "",
+            "isDestructive": "0"
+          }
+        ],
+        "edges": [
+          {
+            "source": "01",
+            "target": "04"
+          },
+          {
+            "source": "02",
+            "target": "04"
+          },
+          {
+            "source": "03",
+            "target": "04"
+          },
+          {
+            "source": "04",
+            "target": "05"
+          }
+        ],
+        "joins": [
+          {
+            "target": "04",
+            "policy": "ALL_MUST_SUCCEED",
+            "minSucceeded": ""
+          }
+        ],
+        "canvasGeometry": ""
+      },
+      "at": "2026-09-23T04:00:13Z"
+    },
+    {
+      "step": "2",
+      "request": "GET /flows/1445",
+      "status": 200,
+      "body": {
+        "id": "1445",
+        "name": "Quickstart-20260923010013",
+        "revision": 1,
+        "savedAt": "2026-09-23 04:00:13",
+        "savedBy": "_SYSTEM",
+        "defaultCategory": "Default",
+        "steps": [
+          {
+            "id": "01",
+            "type": "integrity-check",
+            "taskName": "IC USER",
+            "namespace": "USER",
+            "databaseDirectory": "/usr/irissys/mgr/user/",
+            "runAsUser": "irisadm",
+            "timeoutMinutes": 90,
+            "wqmCategory": "Default",
+            "customClass": "",
+            "isDestructive": "0"
+          },
+          {
+            "id": "02",
+            "type": "integrity-check",
+            "taskName": "IC APP",
+            "namespace": "IRISAPP",
+            "databaseDirectory": "/data/IRISAPP_DATA/",
+            "runAsUser": "irisadm",
+            "timeoutMinutes": 45,
+            "wqmCategory": "Default",
+            "customClass": "",
+            "isDestructive": "0"
+          },
+          {
+            "id": "03",
+            "type": "integrity-check",
+            "taskName": "IC IRISSYS",
+            "namespace": "%SYS",
+            "databaseDirectory": "/usr/irissys/mgr/",
+            "runAsUser": "irisadm",
+            "timeoutMinutes": 45,
+            "wqmCategory": "Default",
+            "customClass": "",
+            "isDestructive": "0"
+          },
+          {
+            "id": "04",
+            "type": "purge-audit-records",
+            "taskName": "Purge audit",
+            "namespace": "%SYS",
+            "databaseDirectory": "",
+            "runAsUser": "irisadm",
+            "timeoutMinutes": 20,
+            "wqmCategory": "Default",
+            "customClass": "",
+            "isDestructive": "1"
+          },
+          {
+            "id": "05",
+            "type": "switch-journal",
+            "taskName": "Switch journal",
+            "namespace": "%SYS",
+            "databaseDirectory": "",
+            "runAsUser": "irisadm",
+            "timeoutMinutes": 5,
+            "wqmCategory": "Default",
+            "customClass": "",
+            "isDestructive": "0"
+          }
+        ],
+        "edges": [
+          {
+            "source": "01",
+            "target": "04"
+          },
+          {
+            "source": "02",
+            "target": "04"
+          },
+          {
+            "source": "03",
+            "target": "04"
+          },
+          {
+            "source": "04",
+            "target": "05"
+          }
+        ],
+        "joins": [
+          {
+            "target": "04",
+            "policy": "ALL_MUST_SUCCEED",
+            "minSucceeded": ""
+          }
+        ],
+        "canvasGeometry": ""
+      },
+      "at": "2026-09-23T04:00:13Z"
+    },
+    {
+      "step": "3",
+      "request": "PUT /flows/1445?revision=1",
+      "status": 422,
+      "body": {
+        "errors": [
+          {
+            "stepId": "",
+            "code": "CYCLE_DETECTED",
+            "message": "The submitted edge set contains a cycle"
+          }
+        ],
+        "warnings": []
+      },
+      "at": "2026-09-23T04:00:13Z"
+    },
+    {
+      "step": "3-check",
+      "request": "GET /flows/1445",
+      "status": 200,
+      "body": {
+        "id": "1445",
+        "name": "Quickstart-20260923010013",
+        "revision": 1,
+        "savedAt": "2026-09-23 04:00:13",
+        "savedBy": "_SYSTEM",
+        "defaultCategory": "Default",
+        "steps": [
+          {
+            "id": "01",
+            "type": "integrity-check",
+            "taskName": "IC USER",
+            "namespace": "USER",
+            "databaseDirectory": "/usr/irissys/mgr/user/",
+            "runAsUser": "irisadm",
+            "timeoutMinutes": 90,
+            "wqmCategory": "Default",
+            "customClass": "",
+            "isDestructive": "0"
+          },
+          {
+            "id": "02",
+            "type": "integrity-check",
+            "taskName": "IC APP",
+            "namespace": "IRISAPP",
+            "databaseDirectory": "/data/IRISAPP_DATA/",
+            "runAsUser": "irisadm",
+            "timeoutMinutes": 45,
+            "wqmCategory": "Default",
+            "customClass": "",
+            "isDestructive": "0"
+          },
+          {
+            "id": "03",
+            "type": "integrity-check",
+            "taskName": "IC IRISSYS",
+            "namespace": "%SYS",
+            "databaseDirectory": "/usr/irissys/mgr/",
+            "runAsUser": "irisadm",
+            "timeoutMinutes": 45,
+            "wqmCategory": "Default",
+            "customClass": "",
+            "isDestructive": "0"
+          },
+          {
+            "id": "04",
+            "type": "purge-audit-records",
+            "taskName": "Purge audit",
+            "namespace": "%SYS",
+            "databaseDirectory": "",
+            "runAsUser": "irisadm",
+            "timeoutMinutes": 20,
+            "wqmCategory": "Default",
+            "customClass": "",
+            "isDestructive": "1"
+          },
+          {
+            "id": "05",
+            "type": "switch-journal",
+            "taskName": "Switch journal",
+            "namespace": "%SYS",
+            "databaseDirectory": "",
+            "runAsUser": "irisadm",
+            "timeoutMinutes": 5,
+            "wqmCategory": "Default",
+            "customClass": "",
+            "isDestructive": "0"
+          }
+        ],
+        "edges": [
+          {
+            "source": "01",
+            "target": "04"
+          },
+          {
+            "source": "02",
+            "target": "04"
+          },
+          {
+            "source": "03",
+            "target": "04"
+          },
+          {
+            "source": "04",
+            "target": "05"
+          }
+        ],
+        "joins": [
+          {
+            "target": "04",
+            "policy": "ALL_MUST_SUCCEED",
+            "minSucceeded": ""
+          }
+        ],
+        "canvasGeometry": ""
+      },
+      "at": "2026-09-23T04:00:13Z"
+    },
+    {
+      "step": "4",
+      "request": "POST /flows/1445/validate",
+      "status": 200,
+      "body": {
+        "errors": [],
+        "warnings": []
+      },
+      "at": "2026-09-23T04:00:13Z"
+    },
+    {
+      "step": "5",
+      "request": "POST /flows/1445/dispatch",
+      "status": 202,
+      "body": {
+        "guid": "47618290-B703-11F1-B23C-EA12AC1842F3",
+        "flowId": "1445",
+        "flowRevision": 1,
+        "state": "running",
+        "startedAt": "2026-09-23 04:00:13",
+        "finishedAt": "",
+        "dispatchedBy": "_SYSTEM"
+      },
+      "at": "2026-09-23T04:00:13Z"
+    },
+    {
+      "step": "5-read",
+      "request": "GET /runs/47618290-B703-11F1-B23C-EA12AC1842F3",
+      "status": 200,
+      "body": {
+        "guid": "47618290-B703-11F1-B23C-EA12AC1842F3",
+        "flowId": "1445",
+        "flowRevision": 1,
+        "state": "running",
+        "startedAt": "2026-09-23 04:00:13",
+        "finishedAt": "",
+        "dispatchedBy": "_SYSTEM",
+        "totalDurationMs": 0,
+        "steps": [
+          {
+            "guid": "4761865C-B703-11F1-B23C-EA12AC1842F3",
+            "stepId": "01",
+            "state": "running",
+            "timeQueued": "2026-09-23 04:00:13",
+            "timeStarted": "2026-09-23 04:00:13",
+            "timeFinished": "",
+            "failureReason": "",
+            "progressCurrent": "",
+            "progressTotal": "",
+            "confirmedBy": "",
+            "confirmedAt": ""
+          },
+          {
+            "guid": "4761881D-B703-11F1-B23C-EA12AC1842F3",
+            "stepId": "02",
+            "state": "running",
+            "timeQueued": "2026-09-23 04:00:13",
+            "timeStarted": "2026-09-23 04:00:13",
+            "timeFinished": "",
+            "failureReason": "",
+            "progressCurrent": "",
+            "progressTotal": "",
+            "confirmedBy": "",
+            "confirmedAt": ""
+          },
+          {
+            "guid": "47618932-B703-11F1-B23C-EA12AC1842F3",
+            "stepId": "03",
+            "state": "running",
+            "timeQueued": "2026-09-23 04:00:13",
+            "timeStarted": "2026-09-23 04:00:13",
+            "timeFinished": "",
+            "failureReason": "",
+            "progressCurrent": "",
+            "progressTotal": "",
+            "confirmedBy": "",
+            "confirmedAt": ""
+          },
+          {
+            "guid": "476189FC-B703-11F1-B23C-EA12AC1842F3",
+            "stepId": "04",
+            "state": "queued",
+            "timeQueued": "2026-09-23 04:00:13",
+            "timeStarted": "",
+            "timeFinished": "",
+            "failureReason": "",
+            "progressCurrent": "",
+            "progressTotal": "",
+            "confirmedBy": "_SYSTEM",
+            "confirmedAt": "2026-09-23 04:00:13"
+          },
+          {
+            "guid": "47618AD3-B703-11F1-B23C-EA12AC1842F3",
+            "stepId": "05",
+            "state": "queued",
+            "timeQueued": "2026-09-23 04:00:13",
+            "timeStarted": "",
+            "timeFinished": "",
+            "failureReason": "",
+            "progressCurrent": "",
+            "progressTotal": "",
+            "confirmedBy": "",
+            "confirmedAt": ""
+          }
+        ],
+        "sumOfStepsMs": 0,
+        "log": []
+      },
+      "at": "2026-09-23T04:00:13Z"
+    },
+    {
+      "step": "6",
+      "request": "poll GET /runs/47618290-B703-11F1-B23C-EA12AC1842F3 every 3s",
+      "transitions": [
+        {
+          "t": 0.0,
+          "run": "running",
+          "steps": {
+            "01": "running",
+            "02": "running",
+            "03": "running",
+            "04": "queued",
+            "05": "queued"
+          }
+        },
+        {
+          "t": 30.4,
+          "run": "failed",
+          "steps": {
+            "01": "completed",
+            "02": "completed",
+            "03": "completed",
+            "04": "failed",
+            "05": "failed"
+          }
+        }
+      ]
+    },
+    {
+      "step": "6-final",
+      "request": "GET /runs/47618290-B703-11F1-B23C-EA12AC1842F3",
+      "status": 200,
+      "body": {
+        "guid": "47618290-B703-11F1-B23C-EA12AC1842F3",
+        "flowId": "1445",
+        "flowRevision": 1,
+        "state": "failed",
+        "startedAt": "2026-09-23 04:00:13",
+        "finishedAt": "2026-09-23 04:00:43",
+        "dispatchedBy": "_SYSTEM",
+        "totalDurationMs": 30000,
+        "steps": [
+          {
+            "guid": "4761865C-B703-11F1-B23C-EA12AC1842F3",
+            "stepId": "01",
+            "state": "completed",
+            "timeQueued": "2026-09-23 04:00:13",
+            "timeStarted": "2026-09-23 04:00:13",
+            "timeFinished": "2026-09-23 04:00:42",
+            "failureReason": "",
+            "progressCurrent": "",
+            "progressTotal": "",
+            "confirmedBy": "",
+            "confirmedAt": ""
+          },
+          {
+            "guid": "4761881D-B703-11F1-B23C-EA12AC1842F3",
+            "stepId": "02",
+            "state": "completed",
+            "timeQueued": "2026-09-23 04:00:13",
+            "timeStarted": "2026-09-23 04:00:13",
+            "timeFinished": "2026-09-23 04:00:42",
+            "failureReason": "",
+            "progressCurrent": "",
+            "progressTotal": "",
+            "confirmedBy": "",
+            "confirmedAt": ""
+          },
+          {
+            "guid": "47618932-B703-11F1-B23C-EA12AC1842F3",
+            "stepId": "03",
+            "state": "completed",
+            "timeQueued": "2026-09-23 04:00:13",
+            "timeStarted": "2026-09-23 04:00:13",
+            "timeFinished": "2026-09-23 04:00:42",
+            "failureReason": "",
+            "progressCurrent": "",
+            "progressTotal": "",
+            "confirmedBy": "",
+            "confirmedAt": ""
+          },
+          {
+            "guid": "476189FC-B703-11F1-B23C-EA12AC1842F3",
+            "stepId": "04",
+            "state": "failed",
+            "timeQueued": "2026-09-23 04:00:13",
+            "timeStarted": "",
+            "timeFinished": "2026-09-23 04:00:43",
+            "failureReason": "Administrative endpoint /api/admin/v2/audit/purge returned HTTP 404",
+            "progressCurrent": "",
+            "progressTotal": "",
+            "confirmedBy": "_SYSTEM",
+            "confirmedAt": "2026-09-23 04:00:13"
+          },
+          {
+            "guid": "47618AD3-B703-11F1-B23C-EA12AC1842F3",
+            "stepId": "05",
+            "state": "failed",
+            "timeQueued": "2026-09-23 04:00:13",
+            "timeStarted": "",
+            "timeFinished": "2026-09-23 04:00:43",
+            "failureReason": "One or more required inputs failed",
+            "progressCurrent": "",
+            "progressTotal": "",
+            "confirmedBy": "",
+            "confirmedAt": ""
+          }
+        ],
+        "sumOfStepsMs": 87000,
+        "log": []
+      },
+      "at": "2026-09-23T04:00:43Z"
+    },
+    {
+      "step": "7",
+      "request": "POST /runs/47618290-B703-11F1-B23C-EA12AC1842F3/steps/4761865C-B703-11F1-B23C-EA12AC1842F3/pause",
+      "status": 409,
+      "body": {
+        "status": 409,
+        "title": "Conflict",
+        "detail": "ERROR #5001: SentaiNotPausable: step type 'integrity-check' does not support pause in v1"
+      },
+      "at": "2026-09-23T04:00:43Z"
+    },
+    {
+      "step": "7-check",
+      "request": "GET /runs/47618290-B703-11F1-B23C-EA12AC1842F3",
+      "status": 200,
+      "body": {
+        "guid": "47618290-B703-11F1-B23C-EA12AC1842F3",
+        "flowId": "1445",
+        "flowRevision": 1,
+        "state": "failed",
+        "startedAt": "2026-09-23 04:00:13",
+        "finishedAt": "2026-09-23 04:00:43",
+        "dispatchedBy": "_SYSTEM",
+        "totalDurationMs": 30000,
+        "steps": [
+          {
+            "guid": "4761865C-B703-11F1-B23C-EA12AC1842F3",
+            "stepId": "01",
+            "state": "completed",
+            "timeQueued": "2026-09-23 04:00:13",
+            "timeStarted": "2026-09-23 04:00:13",
+            "timeFinished": "2026-09-23 04:00:42",
+            "failureReason": "",
+            "progressCurrent": "",
+            "progressTotal": "",
+            "confirmedBy": "",
+            "confirmedAt": ""
+          },
+          {
+            "guid": "4761881D-B703-11F1-B23C-EA12AC1842F3",
+            "stepId": "02",
+            "state": "completed",
+            "timeQueued": "2026-09-23 04:00:13",
+            "timeStarted": "2026-09-23 04:00:13",
+            "timeFinished": "2026-09-23 04:00:42",
+            "failureReason": "",
+            "progressCurrent": "",
+            "progressTotal": "",
+            "confirmedBy": "",
+            "confirmedAt": ""
+          },
+          {
+            "guid": "47618932-B703-11F1-B23C-EA12AC1842F3",
+            "stepId": "03",
+            "state": "completed",
+            "timeQueued": "2026-09-23 04:00:13",
+            "timeStarted": "2026-09-23 04:00:13",
+            "timeFinished": "2026-09-23 04:00:42",
+            "failureReason": "",
+            "progressCurrent": "",
+            "progressTotal": "",
+            "confirmedBy": "",
+            "confirmedAt": ""
+          },
+          {
+            "guid": "476189FC-B703-11F1-B23C-EA12AC1842F3",
+            "stepId": "04",
+            "state": "failed",
+            "timeQueued": "2026-09-23 04:00:13",
+            "timeStarted": "",
+            "timeFinished": "2026-09-23 04:00:43",
+            "failureReason": "Administrative endpoint /api/admin/v2/audit/purge returned HTTP 404",
+            "progressCurrent": "",
+            "progressTotal": "",
+            "confirmedBy": "_SYSTEM",
+            "confirmedAt": "2026-09-23 04:00:13"
+          },
+          {
+            "guid": "47618AD3-B703-11F1-B23C-EA12AC1842F3",
+            "stepId": "05",
+            "state": "failed",
+            "timeQueued": "2026-09-23 04:00:13",
+            "timeStarted": "",
+            "timeFinished": "2026-09-23 04:00:43",
+            "failureReason": "One or more required inputs failed",
+            "progressCurrent": "",
+            "progressTotal": "",
+            "confirmedBy": "",
+            "confirmedAt": ""
+          }
+        ],
+        "sumOfStepsMs": 87000,
+        "log": []
+      },
+      "at": "2026-09-23T04:00:44Z"
+    },
+    {
+      "step": "8",
+      "request": "PUT /wqm/categories/SENTAI.NIGHT",
+      "status": 422,
+      "body": {
+        "status": 422,
+        "title": "Validation Failed",
+        "detail": "ERROR #5001: SentaiInvariantViolated: defaultWorkers<=maxActiveWorkers<=maxWorkers<=maxTotalWorkers must hold"
+      },
+      "at": "2026-09-23T04:00:44Z"
+    },
+    {
+      "step": "9",
+      "request": "POST /flows/1445/schedule",
+      "status": 422,
+      "body": {
+        "errors": [
+          {
+            "stepId": "04",
+            "code": "DESTRUCTIVE_NOT_SCHEDULABLE",
+            "message": "Step type 'purge-audit-records' is destructive; flows with destructive steps are not schedulable in v1 and must be dispatched manually with typed confirmation"
+          }
+        ],
+        "warnings": []
+      },
+      "at": "2026-09-23T04:00:44Z"
+    },
+    {
+      "step": "9-check",
+      "sentaiTasksForFlow": 0,
+      "allTasksBefore": 16,
+      "allTasksAfter": 16
+    },
+    {
+      "step": "10-create",
+      "request": "POST /flows",
+      "status": 201,
+      "body": {
+        "id": "1446",
+        "name": "Quickstart-ND-20260923010013",
+        "revision": 1,
+        "savedAt": "2026-09-23 04:00:44",
+        "savedBy": "_SYSTEM",
+        "defaultCategory": "Default",
+        "steps": [
+          {
+            "id": "01",
+            "type": "integrity-check",
+            "taskName": "IC USER",
+            "namespace": "USER",
+            "databaseDirectory": "/usr/irissys/mgr/user/",
+            "runAsUser": "irisadm",
+            "timeoutMinutes": 90,
+            "wqmCategory": "Default",
+            "customClass": "",
+            "isDestructive": "0"
+          },
+          {
+            "id": "02",
+            "type": "integrity-check",
+            "taskName": "IC APP",
+            "namespace": "IRISAPP",
+            "databaseDirectory": "/data/IRISAPP_DATA/",
+            "runAsUser": "irisadm",
+            "timeoutMinutes": 45,
+            "wqmCategory": "Default",
+            "customClass": "",
+            "isDestructive": "0"
+          },
+          {
+            "id": "03",
+            "type": "integrity-check",
+            "taskName": "IC IRISSYS",
+            "namespace": "%SYS",
+            "databaseDirectory": "/usr/irissys/mgr/",
+            "runAsUser": "irisadm",
+            "timeoutMinutes": 45,
+            "wqmCategory": "Default",
+            "customClass": "",
+            "isDestructive": "0"
+          },
+          {
+            "id": "04",
+            "type": "compact-globals",
+            "taskName": "Compact globals",
+            "namespace": "%SYS",
+            "databaseDirectory": "",
+            "runAsUser": "irisadm",
+            "timeoutMinutes": 20,
+            "wqmCategory": "Default",
+            "customClass": "",
+            "isDestructive": "0"
+          },
+          {
+            "id": "05",
+            "type": "switch-journal",
+            "taskName": "Switch journal",
+            "namespace": "%SYS",
+            "databaseDirectory": "",
+            "runAsUser": "irisadm",
+            "timeoutMinutes": 5,
+            "wqmCategory": "Default",
+            "customClass": "",
+            "isDestructive": "0"
+          }
+        ],
+        "edges": [
+          {
+            "source": "01",
+            "target": "04"
+          },
+          {
+            "source": "02",
+            "target": "04"
+          },
+          {
+            "source": "03",
+            "target": "04"
+          },
+          {
+            "source": "04",
+            "target": "05"
+          }
+        ],
+        "joins": [
+          {
+            "target": "04",
+            "policy": "ALL_MUST_SUCCEED",
+            "minSucceeded": ""
+          }
+        ],
+        "canvasGeometry": ""
+      },
+      "at": "2026-09-23T04:00:44Z"
+    },
+    {
+      "step": "10",
+      "request": "POST /flows/1446/schedule",
+      "status": 201,
+      "body": {
+        "taskIds": [
+          "1105",
+          "1106",
+          "1107",
+          "1108",
+          "1109"
+        ],
+        "nextRun": "2026-09-23 04:00:44"
+      },
+      "at": "2026-09-23T04:00:44Z"
+    },
+    {
+      "step": "10-check",
+      "sentaiTasksForFlow": 5
+    }
+  ]
+}

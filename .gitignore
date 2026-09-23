@@ -19,3 +19,5 @@ iris-main.log
 ui/node_modules/
 ui/dist/
 ui/.svelte-kit/
+scripts/sanitation/backup-*.zwr
+
