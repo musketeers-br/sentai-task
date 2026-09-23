@@ -1,257 +1,285 @@
- [![Gitter](https://img.shields.io/badge/Available%20on-Intersystems%20Open%20Exchange-00b2a9.svg)](https://openexchange.intersystems.com/package/intersystems-iris-dev-template)
- [![Quality Gate Status](https://community.objectscriptquality.com/api/project_badges/measure?project=intersystems_iris_community%2Fintersystems-iris-dev-template&metric=alert_status)](https://community.objectscriptquality.com/dashboard?id=intersystems_iris_community%2Fintersystems-iris-dev-template)
- [![Reliability Rating](https://community.objectscriptquality.com/api/project_badges/measure?project=intersystems_iris_community%2Fintersystems-iris-dev-template&metric=reliability_rating)](https://community.objectscriptquality.com/dashboard?id=intersystems_iris_community%2Fintersystems-iris-dev-template)
-
+[![Gitter](https://img.shields.io/badge/Available%20on-Intersystems%20Open%20Exchange-00b2a9.svg)](https://openexchange.intersystems.com/package/sentai-task)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat&logo=AdGuard)](LICENSE)
-# intersystems-iris-dev-template
-This is a basic template for a development environment to work with ObjectScript in InterSystems IRIS. It helps you edit, compile, commit/push, debug and test your ObjectScript code. It also aids in packaging your application as a module installable with IPM.
-The template is embedded python compatible.
+[![InterSystems IRIS](https://img.shields.io/badge/InterSystems-IRIS%202026.2-blue.svg)](https://www.intersystems.com/)
+[![ObjectScript](https://img.shields.io/badge/Backend-ObjectScript-3b4b9c.svg)](https://docs.intersystems.com/)
 
-## Description
-This repository provides a ready-to-go development environment for coding productively with InterSystems ObjectScript. This template:
-* Runs InterSystems IRIS Community Edition in a docker container
-* Creates a new namespace and database IRISAPP
-* Loads the ObjectScript code into IRISAPP database using Package Manager
-* Promotes development with the 'Package First' paradigm. [Watch the video](https://www.youtube.com/watch?v=havPyPbUj1I)
-* Provides a unit testing environment: sample unit tests, tests module enablement
-* Ready for embedded python development: ENV varialbes are set up, CallIn service is On, all modules in requirements.txt will be installed during docker build.
+<p align="center">
+  <img src="./assets/sentai-task.png" alt="SentaiTask 戦隊 — red ranger holding a wrench and an IRIS crystal" width="420">
+</p>
 
-## Usage
-Start a new dev repository with InterSystems IRIS using this one as a template.
-Once you clone the new repo to your laptop and open VSCode (with the [InterSystems ObjectScript Extension Pack](https://marketplace.visualstudio.com/items?itemName=intersystems-community.objectscript-pack) installed) you'll be able to start development immediately.
+# 🦸 SentaiTask 戦隊
 
-## Prerequisites
-Make sure you have [git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) and [Docker desktop](https://www.docker.com/products/docker-desktop) installed.
+**Visual orchestration for InterSystems IRIS maintenance tasks**
 
-## Installation
+> *Every task a squad member. Every flow a coordinated attack.*
 
-Clone/git pull the repo into any local directory
+---
 
-```
-$ git clone https://github.com/intersystems-community/intersystems-iris-dev-template.git
-```
+## 🌌 Motivation
 
-Open the terminal in this directory and call the command to build and run InterSystems IRIS in container:
-*Note: Users running containers on a Linux CLI, should use "docker compose" instead of "docker-compose"*
-*See [Install the Compose plugin](https://docs.docker.com/compose/install/linux/)*
+IRIS maintenance jobs such as integrity checks, journal switches, purges and compaction are
+usually scheduled one at a time in the Task Manager. Their order, their dependencies and "what
+happens if one fails" are kept in someone's head or in a runbook.
 
+**SentaiTask** turns that tacit knowledge into a declared, validated, observable flow:
 
+- ✅ **Compose** a flow as a graph: steps run in parallel waves and fan in at join points.
+- ✅ **Validate before running**: cycles, unknown or unsupported step types, missing parameters,
+  missing namespaces, unknown WQM categories, read-only databases.
+- ✅ **Dispatch and track**: every step becomes a platform job with its own GUID, state and
+  verbatim failure reason, streamed live over Server-Sent Events.
+- ✅ **Stay honest**: the product only offers what the target IRIS instance was proven to do (see
+  [Known limitations](#%EF%B8%8F-known-limitations-v1)).
 
-```
-$ docker-compose up -d
-```
+Like a *sentai* squad, each step has its own role, and the flow decides when they move together.
 
-To open IRIS Terminal do:
+---
 
-```
-$ docker-compose exec iris iris session iris -U IRISAPP
-IRISAPP>
-```
+## 🛠️ How It Works
 
-To exit the terminal, do any of the following:
+SentaiTask is a pure ObjectScript backend on top of the IRIS management API (`/api/admin`). It
+does not reimplement the platform's permissions: every platform call is made with the operator's
+own credential (Constitution III, *Delegated Authorization*).
 
-```
-Enter HALT or H (not case-sensitive)
-```
+### Core pieces
 
-## What does it do
-THe sample repository contains two simplest examples of ObjectScript classes: ObjectScript method that returns value and method that creates a persistent record.
+1. **Flow model** (`sentai.model`): Flow, Step, Edge, Join, Run, StepRun and LogEntry, persisted
+   in IRIS. Edges are acyclic and fan-in joins use `ALL_MUST_SUCCEED`.
+2. **Step-type registry** (`sentai.registry.StepType`): a closed, compiled catalog. No code is ever
+   taken from input. Each type declares whether it is destructive, pausable and **available on the
+   target platform**.
+3. **Validator** (`sentai.validation.FlowValidator`): a single gate shared by validate, dispatch
+   and schedule, so a flow that fails `/validate` can never be run.
+4. **Wave dispatcher** (`sentai.dispatch.WaveDispatcher`): creates the Run and one StepRun per
+   step in a single transaction, enqueues eligible steps on the step's WQM category, starts the
+   platform job and follows it to a terminal state.
+5. **REST API + SSE** (`sentai.rest.Dispatcher`): `/csp/sentai/api/v1`, with password + JWT
+   authentication and no unauthenticated access.
 
-1. Open IRIS terminal and run the ObjectScript Test() method to see if runs the script and returns values from IRIS:
-
-```
-$ docker-compose exec iris iris session iris -U IRISAPP
-IRISAPP>write ##class(dc.sample.ObjectScript).Test()
-It works!
-42
-```
-
-
-
-2. Class `dc.sample.PersistentClass` contains a method `CreateRecord` that creates an object with one property, `Test`, and returns its id.
-
-Open IRIS terminal and run:
+### Architecture overview
 
 ```
-IRISAPP>write ##class(dc.sample.PersistentClass).CreateRecord(.id)
-1
-IRISAPP>write id
-1
+┌─────────────────────────────────────────────────────────────┐
+│                 Operator (curl / canvas UI)                 │
+└─────────────────────────┬───────────────────────────────────┘
+                          │ Bearer token from /api/admin/login
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│            REST  /csp/sentai/api/v1  (sentai.rest)          │
+│   flows · validate · dispatch · runs · events (SSE) · wqm   │
+└──────────┬──────────────────────────────┬───────────────────┘
+           │                              │
+           ▼                              ▼
+┌──────────────────────┐      ┌───────────────────────────────┐
+│   FlowValidator      │◀─────│   WaveDispatcher              │
+│   one gate for       │      │   Run + StepRuns (1 tx)       │
+│   validate/dispatch/ │      │   waves → %SYSTEM.WorkMgr     │
+│   schedule           │      │   (per WQM category)          │
+└──────────┬───────────┘      └──────────────┬────────────────┘
+           │ categories                      │ start / poll / pause
+           ▼                                 ▼
+┌─────────────────────────────────────────────────────────────┐
+│          IRIS management API  /api/admin  (platform)        │
+│   wqm-categories · database-dir/integrity-check ·           │
+│   async-result                                              │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-In your case the value of id could be different. And it will be different with every call of the method.
+---
 
-You can check whether the record exists and try to right the property of the object by its id.
+## 📋 Prerequisites
 
+- [Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop) with Docker Compose
+- **InterSystems IRIS 2026.2**. The container image built by this repo is the verified target.
+
+---
+
+## 🛠️ Installation
+
+### Docker
+
+```sh
+git clone https://github.com/musketeers-br/sentai-task.git
+cd sentai-task
+docker-compose up -d --build
 ```
-IRISAPP>write ##class(dc.sample.PersistentClass).ReadProperty(id)
-Test string
+
+The build loads the `sentai-task` module and registers the REST application
+`/csp/sentai/api/v1` on **http://localhost:52773**.
+
+### IPM
+
+In an IRIS instance with the IPM client:
+
+```objectscript
+USER>zpm "install sentai-task"
 ```
 
-## Known limitations (v1)
+---
 
-SentaiTask v1 promises only what was proven on IRIS 2026.2 (spec `004-backend-hardening`):
+## 💡 How to Use
+
+### 1. Get a token
+
+The API uses the same 60-second JWT as the IRIS management API:
+
+```sh
+TOKEN=$(curl -s -X POST -u _SYSTEM:SYS http://localhost:52773/api/admin/login | jq -r .access_token)
+```
+
+### 2. Compose a flow
+
+Two integrity checks run in parallel and fan in to a third:
+
+```sh
+curl -s -X POST http://localhost:52773/csp/sentai/api/v1/flows \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{
+    "schemaVersion": 1,
+    "name": "nightly-checks",
+    "defaultCategory": "Default",
+    "steps": [
+      {"id": "01", "type": "integrity-check", "taskName": "IC USER",    "namespace": "USER",    "wqmCategory": "Default"},
+      {"id": "02", "type": "integrity-check", "taskName": "IC IRISAPP", "namespace": "IRISAPP", "wqmCategory": "Default"},
+      {"id": "03", "type": "integrity-check", "taskName": "IC %SYS",    "namespace": "%SYS",    "wqmCategory": "Default"}
+    ],
+    "edges": [ {"source": "01", "target": "03"}, {"source": "02", "target": "03"} ],
+    "joins": [ {"target": "03", "policy": "ALL_MUST_SUCCEED"} ]
+  }'
+```
+
+### 3. Validate, dispatch and watch
+
+```sh
+curl -s -X POST http://localhost:52773/csp/sentai/api/v1/flows/<flowId>/validate  -H "Authorization: Bearer $TOKEN"
+# {"errors":[],"warnings":[]}
+
+curl -s -X POST http://localhost:52773/csp/sentai/api/v1/flows/<flowId>/dispatch  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" -d '{"confirmations": []}'
+# 202 {"guid": "<runGuid>", "state": "running", ...}
+
+curl -N http://localhost:52773/csp/sentai/api/v1/runs/<runGuid>/events -H "Authorization: Bearer $TOKEN"
+# event: step-state-changed ... event: run-terminal
+```
+
+Steps 01 and 02 start together. Step 03 stays `queued` until both complete.
+
+### API at a glance
+
+| Area | Endpoints |
+|---|---|
+| Flows | `GET/POST /flows` · `GET/PUT /flows/{id}` · `POST /flows/{id}/validate` · `POST /flows/{id}/dispatch` · `POST /flows/{id}/schedule` |
+| Runs | `GET /runs` · `GET /runs/{guid}` · `GET /runs/{guid}/events` (SSE) · `POST /runs/{guid}/cancel` · `POST /runs/{guid}/pause` |
+| Steps | `POST /runs/{guid}/steps/{stepGuid}/cancel` · `…/pause` · `…/rerun` |
+| Catalog | `GET /catalog/step-types` · `GET /catalog/tasks` · `GET /catalog/tasks/{id}` · `POST /catalog/tasks/{id}/suspend` |
+| WQM | `GET /wqm/categories` · `GET/PUT /wqm/categories/{name}` |
+
+Validation errors come back as `{"errors": [{"stepId", "code", "message"}], "warnings": [...]}`,
+with codes such as `CYCLE_DETECTED`, `STEP_TYPE_NOT_SUPPORTED_ON_TARGET` and `CATEGORY_NOT_FOUND`.
+
+---
+
+## ⚠️ Known limitations (v1)
+
+SentaiTask v1 only promises what was proven on IRIS 2026.2 (spec `004-backend-hardening`):
 
 - **Only `integrity-check` runs.** The other six step types (`compact-globals`,
   `defragment-globals`, `switch-journal`, `purge-audit-records`, `purge-task-history`, `custom`)
-  are still listed in `GET /catalog/step-types` with `available: false` and saved flows that use
-  them still load, but validate, dispatch, schedule and rerun refuse them with
+  are still listed in `GET /catalog/step-types` with `available: false`, and saved flows that use
+  them still load. Validate, dispatch, schedule and rerun refuse them with
   `STEP_TYPE_NOT_SUPPORTED_ON_TARGET`.
 - **Scheduling is not operational.** `/schedule` validates the flow and registers a native task,
   but scheduled runs cannot authenticate to the platform in v1 and are not a supported execution
   path. Use manual dispatch.
 - **60-second credential.** A dispatched run uses the operator's access token, which expires 60 s
-  after it was issued; platform calls made after that fail with 401, stored verbatim as the step's
-  failure reason. Keep runs short.
+  after it was issued. Platform calls made after that fail with 401, which is stored verbatim as
+  the step's failure reason. Keep runs short.
 - **Step parameters are not forwarded.** The platform start request carries no parameters, so
   `databaseDirectory` and similar fields do not choose what the platform operates on.
 - **Flows must name an existing WQM category.** Validation refuses an unknown category with
   `CATEGORY_NOT_FOUND`. The default for new flows, `SENTAI.DEFAULT`, does not exist on a stock
-  instance — set a category such as `Default`.
+  instance, so set a category such as `Default`.
 - No v1-available step type is destructive or pausable, so typed confirmation and pause are
-  implemented but not reachable.
+  implemented but cannot be reached.
 
-## How to start the development
+---
 
-This repository is ready to code in VSCode with the ObjectScript plugin.
+## 🧪 Running the tests
 
-Install [VSCode](https://code.visualstudio.com/), [Docker](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-docker) and the [InterSystems ObjectScript Extension Pack](https://marketplace.visualstudio.com/items?itemName=intersystems-community.objectscript-pack) plugin and open the folder in VSCode.
-
-Open the `/src/cls/PackageSample/ObjectScript.cls` class and make changes - it will be compiled in the running IRIS docker container.
-
-![docker_compose](https://user-images.githubusercontent.com/2781759/76656929-0f2e5700-6547-11ea-9cc9-486a5641c51d.gif)
-
-Feel free to delete the PackageSample folder and place your ObjectScript classes in the form
-`/src/organisation/package/Classname.cls`
-
-[Read more about folder setup for InterSystems ObjectScript](https://community.intersystems.com/post/simplified-objectscript-source-folder-structure-package-manager) and here on the [naming convention](https://community.intersystems.com/post/naming-convention-objectscript-packages-classes-and-package-manager-modules-names)
-
-## Running unit tests
-
-The template contains two test classes: `TestObjectScript.cls` and `TestPersistentClass.cls `
-
-To run the unit tests we can use the Package Manager environment.
-
-```
-IRISAPP>zpm
-
-=============================================================================
-|| Welcome to the Package Manager Shell (ZPM).                             ||
-|| Enter q/quit to exit the shell. Enter ?/help to view available commands ||
-=============================================================================
-zpm:IRISAPP>load /home/irisowner/dev
-
-[IRISAPP|dc-sample]     Reload START (/home/irisowner/dev/)
-[IRISAPP|dc-sample]     requirements.txt START
-[IRISAPP|dc-sample]     requirements.txt SUCCESS
-[IRISAPP|dc-sample]     Reload SUCCESS
-[dc-sample]     Module object refreshed.
-[IRISAPP|dc-sample]     Validate START
-[IRISAPP|dc-sample]     Validate SUCCESS
-[IRISAPP|dc-sample]     Compile START
-[IRISAPP|dc-sample]     Compile SUCCESS
-[IRISAPP|dc-sample]     Activate START
-[IRISAPP|dc-sample]     Configure START
-[IRISAPP|dc-sample]     Configure SUCCESS
-[IRISAPP|dc-sample]     Activate SUCCESS
-zpm:IRISAPP>test dc-sample
-
-[IRISAPP|dc-sample]     Reload START (/home/irisowner/dev/)
-[IRISAPP|dc-sample]     Reload SUCCESS
-[dc-sample]     Module object refreshed.
-[IRISAPP|dc-sample]     Validate START
-[IRISAPP|dc-sample]     Validate SUCCESS
-[IRISAPP|dc-sample]     Compile START
-[IRISAPP|dc-sample]     Compile SUCCESS
-[IRISAPP|dc-sample]     Activate START
-[IRISAPP|dc-sample]     Configure START
-[IRISAPP|dc-sample]     Configure SUCCESS
-[IRISAPP|dc-sample]     Activate SUCCESS
-[IRISAPP|dc-sample]     Test STARTHello World!
-This is InterSystems IRIS with version IRIS for UNIX (Ubuntu Server LTS for ARM64 Containers) 2023.2 (Build 221U) Fri Jul 21 2023 15:12:42 EDT
-Current time is: 16 Aug 2023 14:32:10
-Use the following URL to view the result:
-http://172.31.0.2:52773/csp/sys/%25UnitTest.Portal.Indices.cls?Index=2&$NAMESPACE=IRISAPP
-All PASSED
-
-[IRISAPP|dc-sample]     Test SUCCESS
-zpm:IRISAPP>
+```sh
+docker exec -it sentai-task-iris-1 iris session iris -U IRISAPP
 ```
 
-In case of test errors, you can find more details back in the UnitTest portal, which can be easily opened via ObjectScript menu in VSCode:
-
-![vscvode unittest](https://user-images.githubusercontent.com/2781759/152678943-7d9d9696-e26a-449f-b1d7-f924528c8e3a.png)
-
-If you have installed the [_InterSystems Testing Manager for VS Code_ extension](https://openexchange.intersystems.com/package/InterSystems-Testing-Manager-for-VS-Code)
-you can also run unit tests directly from VSCode :
-![vscvode unittest](https://raw.githubusercontent.com/intersystems-community/intersystems-testingmanager/main/images/README/Overview-Client.gif)
-
-## What else is inside the repository
-
-### .github folder
-
-Contains two GitHub actions workflows:
-1. `github-registry.yml`
-    Once changes pushed to the repo, the action builds the docker image on Github side and pushes the image to Github registry that can be very convenient to further cloud deployement, e.g. kubernetes.
-2. `objectscript-qaulity.yml`
-    with every push to master or main branch the workflow launches the repo test on objectscript issues with Objectscript Quality tool, [see the examples](https://community.objectscriptquality.com/projects?sort=-analysis_date). This works if the repo is open-source only.
-
-Both workflows are repo agnostic: so they work with any repository where they exist.
-
-### .vscode folder
-Contains two files to setup vscode environment:
-
-#### .vscode/settings.json
-
-Settings file to let you immediately code in VSCode with [VSCode ObjectScript plugin](https://marketplace.visualstudio.com/items?itemName=daimor.vscode-objectscript))
-
-#### .vscode/launch.json
-
-Config file if you want to debug with VSCode ObjectScript
-
-### src folder
-
-Contains source files.
-src/iris contains InterSystems IRIS Objectscript code
-
-### tests folder
-Contains unit tests for the ObjectScript classes
-
-### dev.md
-
-Contains a set of useful commands that will help during the development
-
-### docker-compose.yml
-
-A docker engine helper file to manage images building and rule ports mapping an the host to container folders(volumes) mapping
-
-### Dockerfile
-
-The simplest dockerfile which starts IRIS and imports code from /src folder into it.
-Use the related docker-compose.yml to easily setup additional parametes like port number and where you map keys and host folders.
-
-
-### iris.script
-
-Contains objectscript commands that are feeded to iris during the image building
-
-### module.xml
-
-IPM Module's description of the code in the repository.
-It describes what is loaded with the method, how it is being tested and what apps neeed to be created, what files need to be copied.
-
-[Read about all the files in this artilce](https://community.intersystems.com/post/dockerfile-and-friends-or-how-run-and-collaborate-objectscript-projects-intersystems-iris)
-
-
-
-## Troubleshooting
-
-If you have issues with docker image building here are some recipes that could help.
-
-1. You are out of free space in docker. You can expand the amount of space or clean up maually via docker desktop. Or you can call the following line to clean up:
-```
-docker system prune -f
+```objectscript
+IRISAPP>zpm "load /home/irisowner/dev"
+IRISAPP>zpm "test sentai-task -only"
 ```
 
-2. We use multi-stage image building which in some cases doesn't work. Switch the target to [builder](https://github.com/intersystems-community/intersystems-iris-dev-template/blob/6ab6791983e5783118efce1777a7671046652e4c/docker-compose.yml#L7) from final in the docker compose and try again.
+The suite (`sentai.unittest.*`, 105 methods) runs against a test double of the management API, so
+it never starts real platform jobs through the admin API.
+
+---
+
+## 🗂️ Project Structure
+
+```
+sentai-task/
+├── src/sentai/
+│   ├── model/          # Flow, Step, Edge, Join, Run, StepRun, Category, LogEntry
+│   ├── registry/       # StepType: closed catalog (destructive / pausable / available)
+│   ├── validation/     # FlowValidator: the single gate
+│   ├── dispatch/       # WaveDispatcher, AdminApiClient, ScheduledFlowTask
+│   ├── wqm/            # CategoryService: WQM read/write passthrough
+│   ├── catalog/        # TaskService: native Task Manager catalog
+│   └── rest/           # Dispatcher: REST API + SSE
+├── tests/sentai/unittest/   # %UnitTest suites + AdminApiDouble
+├── design/             # Canvas UI prototypes (spec 002)
+├── specs/              # Spec-driven history: 001 contract spike → 004 hardening
+├── scripts/sanitation/ # Reviewed cleanup of historical test residue
+├── module.xml
+└── docker-compose.yml
+```
+
+---
+
+## 📊 Roadmap
+
+### ✅ Done
+
+* [x] **001**: Contract spike against the real IRIS management API ([compatibility statement](specs/001-validate-async-job-contract/compatibility.md))
+* [x] **003**: ObjectScript backend: persistence, validation, wave dispatch, SSE tracking
+* [x] **004**: Hardening. The product only promises what IRIS 2026.2 proved.
+
+### 🚧 Next
+
+* [ ] **002**: Canvas UI for composing and watching flows (prototypes in [`design/`](design/))
+* [ ] Long-lived credential for background and scheduled runs (unblocks scheduling and runs > 60 s)
+* [ ] Prove and enable the remaining step types, one at a time
+
+---
+
+## 🎖️ Credits
+
+SentaiTask is developed with 💜 by the **Musketeers Team**:
+
+- [José Roberto Pereira](https://community.intersystems.com/user/jos%C3%A9-roberto-pereira-0)
+- [Henry Pereira](https://community.intersystems.com/user/henry-pereira)
+- [Henrique Dias](https://community.intersystems.com/user/henrique-dias-2)
+
+![3Musketeers-br](./assets/3musketeers.png)
+
+---
+
+## 📄 License
+
+This project is licensed under the [MIT License](LICENSE).
+
+---
+
+## 🎬 Bonus: Musketeers Sentai
+
+When the flow validates clean, the squad suits up.
+
+![Musketeers as a sentai squad](./assets/muskteers-rangers.jpg)
 
