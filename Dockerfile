@@ -1,3 +1,6 @@
+# `IMAGE` must stay declared before the FIRST `FROM` (global scope) so the IRIS
+# stage below can still consume it; an ARG declared between two FROMs is
+# scoped only to the stage that follows it, not to a later one.
 ARG IMAGE=intersystemsdc/irishealth-community:2020.3.0.200.0-zpm
 ARG IMAGE=intersystemsdc/iris-community:2020.4.0.547.0-zpm
 ARG IMAGE=containers.intersystems.com/intersystems/iris:2021.1.0.215.0
@@ -5,6 +8,26 @@ ARG IMAGE=intersystemsdc/irishealth-community
 ARG IMAGE=intersystemsdc/iris-community
 ARG IMAGE=intersystemsdc/iris-community:preview
 ARG IMAGE=intersystems/iris-community:latest-cd
+
+# --- Frontend build stage -------------------------------------------------
+# Builds the SvelteKit + Svelte Flow static bundle. This stage's Node runtime
+# is discarded from the final image (specs/002-canvas-ui/research.md R-002) —
+# only its `build/` output is copied into the IRIS stage below.
+FROM node:20-alpine AS frontend-builder
+
+WORKDIR /app
+
+COPY frontend/package.json frontend/package-lock.json* ./
+RUN npm ci
+
+COPY frontend/ ./
+# The token generator's single source of truth (see frontend/scripts/generate-tokens.mjs)
+# lives outside frontend/ in the real repo; mirror that same relative position here so the
+# generator's path resolution doesn't need a build-context-specific branch.
+COPY specs/002-canvas-ui/contracts/tokens.json /specs/002-canvas-ui/contracts/tokens.json
+RUN npm run build
+
+# --- IRIS stage --------------------------------------------------------
 FROM $IMAGE
 
 WORKDIR /home/irisowner/dev
@@ -31,6 +54,15 @@ RUN wget https://pm.community.intersystems.com/packages/zpm/latest/installer -O 
 USER root
 RUN mkdir -p /data/IRISAPP_DATA/ /data/IRISAPP_DATA/irisapp_dataenstemp /data/IRISAPP_DATA/irisapp_datasecondary && \
     chown irisowner:irisowner /data/ -R
+
+# Static frontend assets, served by IRIS's own private web server as a CSP
+# application with "Serve files" enabled (research.md R-001) — no Nginx, no
+# second container. Placed OUTSIDE /home/irisowner/dev on purpose: that
+# directory is bind-mounted over by docker-compose.yml for live ObjectScript
+# development, which would otherwise shadow this baked-in build output for
+# anyone who hasn't run `npm run build` on the host.
+COPY --from=frontend-builder /app/build /opt/sentai-web
+RUN chown -R irisowner:irisowner /opt/sentai-web
 USER ${ISC_PACKAGE_MGRUSER}
 
 

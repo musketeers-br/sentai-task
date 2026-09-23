@@ -1,0 +1,63 @@
+{
+  "captured_at": "2026-09-23T08:35:29.000Z",
+  "baseURL": "http://localhost:52773/csp/sentai/",
+  "requests": [
+    {
+      "url": "http://localhost:52773/csp/sentai/index.html",
+      "method": "GET"
+    },
+    {
+      "url": "https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap",
+      "method": "GET"
+    },
+    {
+      "url": "http://localhost:52773/csp/sentai/_app/immutable/entry/start.CFq7eBG4.js",
+      "method": "GET"
+    },
+    {
+      "url": "http://localhost:52773/csp/sentai/_app/immutable/chunks/DpPqFu3p.js",
+      "method": "GET"
+    },
+    {
+      "url": "http://localhost:52773/csp/sentai/_app/immutable/chunks/D8d-d7L2.js",
+      "method": "GET"
+    },
+    {
+      "url": "http://localhost:52773/csp/sentai/_app/immutable/entry/app.BibWOr8M.js",
+      "method": "GET"
+    },
+    {
+      "url": "http://localhost:52773/csp/sentai/_app/immutable/chunks/xihTtKlq.js",
+      "method": "GET"
+    },
+    {
+      "url": "http://localhost:52773/csp/sentai/_app/immutable/nodes/0.DwJB8PI-.js",
+      "method": "GET"
+    },
+    {
+      "url": "http://localhost:52773/csp/sentai/_app/immutable/nodes/2.CsBJMRLd.js",
+      "method": "GET"
+    },
+    {
+      "url": "http://localhost:52773/csp/sentai/_app/immutable/assets/0.BUBbVz7C.css",
+      "method": "GET"
+    },
+    {
+      "url": "http://localhost:52773/csp/sentai/_app/immutable/assets/2.CAAwcYc2.css",
+      "method": "GET"
+    },
+    {
+      "url": "https://fonts.gstatic.com/s/ibmplexmono/v20/-F63fjptAgt5VM-kVkqdyU8n1i8q1w.woff2",
+      "method": "GET"
+    },
+    {
+      "url": "https://fonts.gstatic.com/s/ibmplexsans/v23/zYXzKVElMYYaJe8bpLHnCwDKr932-G7dytD-Dmu1syxeKYY.woff2",
+      "method": "GET"
+    },
+    {
+      "url": "http://localhost:52773/csp/sentai/_app/immutable/nodes/1.DD6Dsbc5.js",
+      "method": "GET"
+    }
+  ],
+  "forbidden": []
+}

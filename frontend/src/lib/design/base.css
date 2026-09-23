@@ -1,0 +1,19 @@
+/* Hand-authored (not generated). Applies the generated tokens.css custom properties.
+   UI-006: IBM Plex Sans is the body/UI face; Chakra Petch is confined to labels and the
+   mark and never sets body text or a number; tabular-nums is global and must not be
+   overridden anywhere. */
+
+html,
+body {
+	margin: 0;
+	height: 100%;
+	background: var(--color-ground);
+	color: var(--color-text);
+	font-family: var(--font-ui);
+	font-variant-numeric: tabular-nums;
+}
+
+:focus-visible {
+	outline: var(--a11y-focus-ring-width) solid var(--color-focus-ring);
+	outline-offset: 2px;
+}

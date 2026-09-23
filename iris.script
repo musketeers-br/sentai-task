@@ -19,6 +19,21 @@
     //do $SYSTEM.OBJ.Load("/home/irisowner/dev/App.Installer.cls", "ck")
     //set sc = ##class(App.Installer).setup()
 
+    // Static frontend (tracer bullet, specs/002-canvas-ui): serve the SvelteKit build
+    // output baked into /opt/sentai-web at build time. AutheEnabled=64 (Unauthenticated) —
+    // this app only ever serves static files; real API calls go through the SysAdmin API
+    // and (later) SENTAI.REST.Dispatcher, each with their own auth.
+    set webName = "/csp/sentai"
+    kill webProperties
+    set webProperties("NameSpace") = "IRISAPP"
+    set webProperties("Enabled") = 1
+    set webProperties("Path") = "/opt/sentai-web"
+    set webProperties("ServeFiles") = 1
+    set webProperties("Recurse") = 1
+    set webProperties("AutheEnabled") = 64
+    set webProperties("CSPZENEnabled") = 0
+    set sc = ##class(Security.Applications).Create(webName, .webProperties)
+
     zn "IRISAPP"
 
     // Create /_vscode web app to support intersystems-community.testingmanager VS Code extension

@@ -1,0 +1,1123 @@
+ Image sentai-task-iris Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 553B done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile: 3.14kB 0.0s done
+#2 DONE 0.0s
+
+#3 [internal] load metadata for docker.io/library/node:20-alpine
+#3 ...
+
+#4 [auth] intersystems/iris-community:pull token for registry-1.docker.io
+#4 DONE 0.0s
+
+#5 [auth] library/node:pull token for registry-1.docker.io
+#5 DONE 0.0s
+
+#6 [internal] load metadata for docker.io/intersystems/iris-community:latest-cd
+#6 DONE 1.0s
+
+#3 [internal] load metadata for docker.io/library/node:20-alpine
+#3 DONE 1.0s
+
+#7 [internal] load .dockerignore
+#7 transferring context: 187B 0.0s done
+#7 DONE 0.0s
+
+#8 [internal] load build context
+#8 ...
+
+#9 [stage-1 1/8] FROM docker.io/intersystems/iris-community:latest-cd@sha256:cd2ebcab02d1ef80ec155def4418399f353d867162688c36a3705760e750bdaa
+#9 resolve docker.io/intersystems/iris-community:latest-cd@sha256:cd2ebcab02d1ef80ec155def4418399f353d867162688c36a3705760e750bdaa 0.1s done
+#9 DONE 0.1s
+
+#10 [frontend-builder 1/7] FROM docker.io/library/node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293
+#10 resolve docker.io/library/node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293 0.1s done
+#10 DONE 0.1s
+
+#8 [internal] load build context
+#8 transferring context: 431.90kB 0.2s done
+#8 DONE 0.3s
+
+#11 [frontend-builder 2/7] WORKDIR /app
+#11 CACHED
+
+#12 [frontend-builder 3/7] COPY frontend/package.json frontend/package-lock.json* ./
+#12 CACHED
+
+#13 [frontend-builder 4/7] RUN npm ci
+#13 CACHED
+
+#14 [frontend-builder 5/7] COPY frontend/ ./
+#14 DONE 0.1s
+
+#15 [frontend-builder 6/7] COPY specs/002-canvas-ui/contracts/tokens.json /specs/002-canvas-ui/contracts/tokens.json
+#15 DONE 0.1s
+
+#16 [frontend-builder 7/7] RUN npm run build
+#16 0.523 
+#16 0.523 > sentaitask-frontend@0.1.0 prebuild
+#16 0.523 > npm run generate:tokens
+#16 0.523 
+#16 0.654 
+#16 0.654 > sentaitask-frontend@0.1.0 generate:tokens
+#16 0.654 > node scripts/generate-tokens.mjs
+#16 0.654 
+#16 0.693 Wrote /app/src/lib/design/tokens.css
+#16 0.694 Wrote /app/src/lib/design/tokens.ts
+#16 0.704 
+#16 0.704 > sentaitask-frontend@0.1.0 build
+#16 0.704 > vite build
+#16 0.704 
+#16 1.862 vite v8.3.0 building ssr environment for production...
+#16 1.873 transforming...
+#16 2.447 ✓ 282 modules transformed.
+#16 2.531 rendering chunks...
+#16 3.509 vite v8.3.0 building client environment for production...
+#16 3.516 transforming...
+#16 3.901 ✓ 446 modules transformed.
+#16 3.977 rendering chunks...
+#16 4.028 computing gzip size...
+#16 4.033 .svelte-kit/output/client/_app/version.json                         0.02 kB │ gzip:  0.04 kB
+#16 4.033 .svelte-kit/output/client/.vite/manifest.json                       2.41 kB │ gzip:  0.52 kB
+#16 4.033 .svelte-kit/output/client/_app/immutable/assets/0.BUBbVz7C.css      4.51 kB │ gzip:  1.52 kB
+#16 4.033 .svelte-kit/output/client/_app/immutable/assets/2.CAAwcYc2.css     16.95 kB │ gzip:  2.93 kB
+#16 4.033 .svelte-kit/output/client/_app/immutable/chunks/xihTtKlq.js         0.06 kB │ gzip:  0.08 kB
+#16 4.033 .svelte-kit/output/client/_app/immutable/entry/start.CFq7eBG4.js    0.07 kB │ gzip:  0.08 kB
+#16 4.033 .svelte-kit/output/client/_app/immutable/nodes/0.DwJB8PI-.js        0.23 kB │ gzip:  0.19 kB
+#16 4.033 .svelte-kit/output/client/_app/immutable/nodes/1.DD6Dsbc5.js        0.57 kB │ gzip:  0.32 kB
+#16 4.033 .svelte-kit/output/client/_app/immutable/chunks/Bjy-W4x2.js         1.36 kB │ gzip:  0.65 kB
+#16 4.033 .svelte-kit/output/client/_app/immutable/entry/app.BibWOr8M.js      4.02 kB │ gzip:  1.89 kB
+#16 4.033 .svelte-kit/output/client/_app/immutable/chunks/DpPqFu3p.js        26.65 kB │ gzip: 10.30 kB
+#16 4.033 .svelte-kit/output/client/_app/immutable/chunks/D8d-d7L2.js        55.08 kB │ gzip: 20.83 kB
+#16 4.033 .svelte-kit/output/client/_app/immutable/nodes/2.CsBJMRLd.js      161.81 kB │ gzip: 52.66 kB
+#16 4.033 
+#16 4.034 ✓ built in 524ms
+#16 5.011 computing gzip size...
+#16 5.014 .svelte-kit/output/server/.vite/manifest.json                           3.17 kB │ gzip:  0.57 kB
+#16 5.014 .svelte-kit/output/server/_app/immutable/assets/_layout.BUBbVz7C.css    4.51 kB │ gzip:  1.52 kB
+#16 5.014 .svelte-kit/output/server/_app/immutable/assets/_page.C3VebXHZ.css     17.08 kB │ gzip:  2.94 kB
+#16 5.014 .svelte-kit/output/server/entries/pages/_layout.ts.js                   0.11 kB │ gzip:  0.10 kB
+#16 5.014 .svelte-kit/output/server/env.js                                        0.22 kB │ gzip:  0.14 kB
+#16 5.014 .svelte-kit/output/server/entries/pages/_layout.svelte.js               0.23 kB │ gzip:  0.18 kB
+#16 5.014 .svelte-kit/output/server/chunks/env.js                                 0.28 kB │ gzip:  0.17 kB
+#16 5.014 .svelte-kit/output/server/internal.js                                   0.40 kB │ gzip:  0.19 kB
+#16 5.014 .svelte-kit/output/server/chunks/internal.js                            0.75 kB │ gzip:  0.35 kB
+#16 5.014 .svelte-kit/output/server/entries/fallbacks/error.svelte.js             4.21 kB │ gzip:  1.66 kB
+#16 5.014 .svelte-kit/output/server/chunks/index-server.js                        7.83 kB │ gzip:  2.67 kB
+#16 5.014 .svelte-kit/output/server/chunks/shared.js                             10.57 kB │ gzip:  3.38 kB
+#16 5.014 .svelte-kit/output/server/chunks/exports.js                            11.25 kB │ gzip:  3.63 kB
+#16 5.014 .svelte-kit/output/server/chunks/utils.js                              31.76 kB │ gzip:  9.35 kB
+#16 5.014 .svelte-kit/output/server/chunks/internal2.js                          32.75 kB │ gzip:  9.45 kB
+#16 5.014 .svelte-kit/output/server/remote-entry.js                              54.49 kB │ gzip: 12.02 kB
+#16 5.014 .svelte-kit/output/server/entries/pages/_page.svelte.js                99.14 kB │ gzip: 21.81 kB
+#16 5.014 .svelte-kit/output/server/chunks/server.js                            123.71 kB │ gzip: 32.58 kB
+#16 5.014 .svelte-kit/output/server/index.js                                    126.01 kB │ gzip: 31.92 kB
+#16 5.014 
+#16 5.014 ✓ built in 3.15s
+#16 5.015 
+#16 5.015 Run npm run preview to preview your production build locally.
+#16 5.018 
+#16 5.018 > Using @sveltejs/adapter-static
+#16 5.025   Wrote site to "build"
+#16 5.026   ✔ done
+#16 DONE 5.1s
+
+#17 [stage-1 4/8] RUN wget https://pm.community.intersystems.com/packages/zpm/latest/installer -O /tmp/zpm.xml
+#17 CACHED
+
+#18 [stage-1 2/8] WORKDIR /home/irisowner/dev
+#18 CACHED
+
+#19 [stage-1 3/8] COPY .iris_init /home/irisowner/.iris_init
+#19 CACHED
+
+#20 [stage-1 5/8] RUN mkdir -p /data/IRISAPP_DATA/ /data/IRISAPP_DATA/irisapp_dataenstemp /data/IRISAPP_DATA/irisapp_datasecondary &&     chown irisowner:irisowner /data/ -R
+#20 CACHED
+
+#21 [stage-1 6/8] COPY --from=frontend-builder /app/build /opt/sentai-web
+#21 DONE 0.1s
+
+#22 [stage-1 7/8] RUN chown -R irisowner:irisowner /opt/sentai-web
+#22 DONE 0.3s
+
+#23 [stage-1 8/8] RUN --mount=type=bind,src=.,dst=.     iris start IRIS &&     iris merge iris ./merge.cpf && 	iris session IRIS < iris.script &&     ([ 0 -eq 0 ] || iris session iris -U IRISAPP "##class(%ZPM.PackageManager).Shell("test dc-sample -v -only",1,1)") &&     iris stop IRIS quietly
+#23 0.253 Using 'iris.cpf' configuration file
+#23 0.417 
+#23 0.514 Starting Control Process
+#23 0.514 Global buffer setting requires attention.  Auto-selected 25% of total memory.
+#23 0.514 Allocated 4965MB shared memory
+#23 0.514 3886MB global buffers, 388MB routine buffers
+#23 0.639 This copy of InterSystems IRIS has been licensed for use exclusively by:
+#23 0.639 InterSystems IRIS Community
+#23 0.639 Copyright (c) 1986-2026 by InterSystems Corporation
+#23 0.639 Any other use is a violation of your license agreement
+#23 3.762 Starting IRIS
+#23 3.762 
+#23 3.771 
+#23 3.771 IRIS Merge of /home/irisowner/dev/./merge.cpf into /usr/irissys/iris.cpf
+#23 5.649 IRIS Merge completed successfully
+#23 5.662 
+#23 5.662 Node: buildkitsandbox, Instance: IRIS
+#23 5.663 
+#23 5.663 USER>
+#23 5.663 
+#23 5.663 %SYS>
+#23 5.663 
+#23 5.663 %SYS>
+#23 5.664 
+#23 5.664 Load started on 09/23/2026 08:34:23
+#23 5.680 Loading file /tmp/zpm.xml as xml
+#23 5.707 Imported class: IPM.Installer
+#23 5.770 Compiling class IPM.Installer
+#23 5.885 Compiling routine IPM.Installer.1
+#23 5.887 Extracting package
+#23 6.036 Installing ZPM
+#23 20.18 Processing /tmp/dirLjEtMo/wheels/attrs-25.1.0-py3-none-any.whl
+#23 20.18 Installing collected packages: attrs
+#23 20.18 Successfully installed attrs-25.1.0
+#23 20.18 Processing /tmp/dirLjEtMo/wheels/certifi-2025.1.31-py3-none-any.whl
+#23 20.18 Installing collected packages: certifi
+#23 20.18 Successfully installed certifi-2025.1.31
+#23 20.18 Processing /tmp/dirLjEtMo/wheels/charset_normalizer-2.1.1-py3-none-any.whl
+#23 20.18 Installing collected packages: charset-normalizer
+#23 20.18 Successfully installed charset-normalizer-2.1.1
+#23 20.18 Processing /tmp/dirLjEtMo/wheels/idna-3.15-py3-none-any.whl
+#23 20.18 Installing collected packages: idna
+#23 20.18 Successfully installed idna-3.15
+#23 20.18 Processing /tmp/dirLjEtMo/wheels/jsonschema-4.23.0-py3-none-any.whl
+#23 20.18 Installing collected packages: jsonschema
+#23 20.18 Successfully installed jsonschema-4.23.0
+#23 20.18 WARNING: Target directory /usr/irissys/mgr/python/bin already exists. Specify --upgrade to force replacement.
+#23 20.18 Processing /tmp/dirLjEtMo/wheels/jsonschema_specifications-2024.10.1-py3-none-any.whl
+#23 20.18 Installing collected packages: jsonschema-specifications
+#23 20.18 Successfully installed jsonschema-specifications-2024.10.1
+#23 20.18 Processing /tmp/dirLjEtMo/wheels/oras-0.1.30-py3-none-any.whl
+#23 20.18 Installing collected packages: oras
+#23 20.18 Successfully installed oras-0.1.30
+#23 20.18 Processing /tmp/dirLjEtMo/wheels/referencing-0.36.2-py3-none-any.whl
+#23 20.18 Installing collected packages: referencing
+#23 20.18 Successfully installed referencing-0.36.2
+#23 20.18 Processing /tmp/dirLjEtMo/wheels/requests-2.33.0-py3-none-any.whl
+#23 20.18 Installing collected packages: requests
+#23 20.18 Successfully installed requests-2.33.0
+#23 20.18 Processing /tmp/dirLjEtMo/wheels/typing_extensions-4.12.2-py3-none-any.whl
+#23 20.18 Installing collected packages: typing-extensions
+#23 20.18 Successfully installed typing-extensions-4.12.2
+#23 20.18 Processing /tmp/dirLjEtMo/wheels/urllib3-2.7.0-py3-none-any.whl
+#23 20.18 Installing collected packages: urllib3
+#23 20.18 Successfully installed urllib3-2.7.0
+#23 20.18 .cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/DataType/LongString.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/DataType/ListOfOptions.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/DataType/PhaseWhen.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/DataType/GlobalReference.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/DataType/PythonWheelName.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/DataType/ModuleName.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/DataType/PhaseName.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/DataType/RepoLocation.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/DataType/RepoMoniker.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/DataType/RepoName.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/DataType/ResourceName.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/DataType/RegExString.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/DataType/ResourceDirectory.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/ExtensionBase/ResourceMappingCache.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/ExtensionBase/UniversalSettings.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/DataType/VersionString.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/ExtensionBase/Constants.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/ExtensionBase/Utils.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/ExtensionBase/ServerMenu/Interface.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/ExtensionBase/Composite.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/ExtensionBase/SourceControl/ResourceInfo.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Main.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/ExtensionBase/SourceControl/Interface.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/ExtensionBase/CompositeMethodOverrides.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/General/Archive.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/General/HistoryTemp.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/General/EnvironmentConfig.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/General/HistoryPhase.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/General/AbstractSettings.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/General/AbstractHistory.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/General/History.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/General/LogManager.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/General/IConfigurable.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/General/LockFile.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/General/ModuleInfo.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/General/SASchema.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/General/TempLocalRepoManager.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/General/LockFile/Dependency.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/General/Settings.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/General/SemanticVersionExpression.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/General/Singleton.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/General/SemanticVersion.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/General/LogManager/Message.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/General/SemanticVersion/Find.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/General/SemanticVersion/Properties.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/General/SemanticVersionExpression/Comparator.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/JSON/Adaptor.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/General/SemanticVersion/Index.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/General/Update/VersionBase.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/JSON/Generator.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/General/SemanticVersionExpression/IComparable.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Lifecycle/DeployedModule.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/General/SemanticVersionExpression/Range.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Lifecycle/StudioProject/ContainerClass.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Lifecycle/Module.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Lifecycle/StudioProject.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Lifecycle/StudioProject/XDataArchive/IFile.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Lifecycle/StudioProject/XDataArchive/FileBinary.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Lifecycle/StudioProject/XDataArchive/FileCharacter.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Lifecycle/StudioProject/XDataArchive.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Repo/IPackageService.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Repo/IPublishService.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Repo/SearchCriteria.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Repo/Definition.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Repo/Utils.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Repo/Filesystem/Cache.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Repo/UniversalSettings.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Repo/Manager.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Lifecycle/Base.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Repo/XSLTProvider.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Repo/Filesystem/PackageService.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Repo/Oras/ArtifactMetadata.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Repo/Oras/PublishManager.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Repo/Remote/Definition.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Repo/Http/PackageService.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Repo/Oras/PublishService.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Repo/Oras/Definition.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Repo/Filesystem/Definition.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Repo/Http/Definition.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Repo/Remote/Info.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Repo/Remote/ModuleInfo.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Repo/Oras/PackageService.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Repo/Remote/PackageService.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Repo/Remote/PublishManager.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Repo/Remote/PublishService.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/ResourceProcessor/AbstractCompilable.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/ResourceProcessor/CustomPhaseMixin.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/ResourceProcessor/CPF.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/ResourceProcessor/Abstract.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/ResourceProcessor/Copy.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/ResourceProcessor/ArtifactoryTarball.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/ResourceProcessor/FileCopy.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/ResourceProcessor/LegacyLocalizedMessages.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/ResourceProcessor/CSPApplication.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/ResourceProcessor/LocalizationExport.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/ResourceProcessor/UnitTest.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/ResourceProcessor/PropertyParameters.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/ResourceProcessor/PythonWheel.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/ResourceProcessor/ModuleExport.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/ResourceProcessor/SystemSetting.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/ResourceProcessor/WebApplication.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/ResourceProcessor/Default/Class.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/ResourceProcessor/Test.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/ResourceProcessor/Default/DeepSeeItem.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/ResourceProcessor/Default/Include.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/ResourceProcessor/Default/Interoperability.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/ResourceProcessor/Default/Global.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/ResourceProcessor/Default/LocalizedMessages.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/ResourceProcessor/Default/Package.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/ResourceProcessor/Default/Routine.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/ResourceProcessor/LocalizationExport/MsgDomain.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/ResourceProcessor/Default/Document.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/ResourceProcessor/LocalizationExport/MsgFile.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Storage/InvokeReference.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Storage/MappingReference.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Storage/ModuleAuthorInfo.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Storage/ModuleInfo.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Storage/LoadedResource.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Storage/ModuleSetting.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Storage/ModuleReference.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Storage/QualifiedModuleInfo.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Storage/ModuleSetting/NamespaceConfig.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Storage/ModuleTemplate.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Storage/ModuleSetting/Default.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Storage/ModuleSetting/Parameter.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Storage/ModuleSetting/ProcessorDefault.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Storage/SystemRequirements.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Storage/ResourceReference.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Storage/ModuleSetting/ProcessorDefault/Condition.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Storage/UpdateStep/AnyMember.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Storage/Module.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Storage/UpdateStep/PrimaryOnly.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/StudioDocument/LocalizedMessages.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Storage/UpdateStep/Base.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/StudioDocument/LocalizedMessageStream.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/StudioDocument/AbstractStream.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/StudioDocument/ModuleStream.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/StudioDocument/Projection.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Test/JsonOutput.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/StudioDocument/Abstract.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/StudioDocument/Module.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Test/Abstract.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Test/JUnitOutput.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Test/YamlOutput.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Test/ToonOutput.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Test/Utils.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Test/Manager.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Utils/CodeGeneration.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Utils/Build.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Utils/Class.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Utils/EmbeddedPython.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Utils/ComparisonAdaptor.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Utils/File.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Utils/InterruptManager.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Utils/LegacyCompat.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Utils/JournalManager.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Utils/FileBinaryTar.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Utils/ComparisonAdaptor/PropertyParams.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/inc/IPM/Formatting.inc as udl
+#23 20.18 %IPM.Formatting.INC Loaded
+#23 20.18 Loading file /tmp/dirLjEtMo/src/inc/IPM/Common.inc as udl
+#23 20.18 %IPM.Common.INC Loaded
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Utils/LockManager.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Utils/Migration.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Utils/TempFileManager.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Utils/OutputSuppressor.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Utils/XMLCommentHandler.cls as udl
+#23 20.18 Loading file /tmp/dirLjEtMo/src/cls/IPM/Utils/Module.cls as udl
+#23 20.18 
+#23 20.18 Compilation started on 09/23/2026 08:34:24 with qualifiers 'ck'
+#23 20.18 Compiling 171 classes
+#23 20.18 Compiling class %IPM.DataType.Any
+#23 20.18 Compiling class %IPM.JSON.Generator
+#23 20.18 Compiling class %IPM.Utils.ComparisonAdaptor.PropertyParams
+#23 20.18 Compiling routine %IPM.JSON.Generator.1
+#23 20.18 Compiling class %IPM.ResourceProcessor.PropertyParameters
+#23 20.18 Compiling class %IPM.Utils.CodeGeneration
+#23 20.18 Compiling class %IPM.JSON.Adaptor
+#23 20.18 Compiling class %IPM.General.SemanticVersion.Index
+#23 20.18 Compiling class %IPM.Utils.Module
+#23 20.18 Compiling routine %IPM.General.SemanticVersion.Index.1
+#23 20.18 Compiling routine %IPM.JSON.Adaptor.1
+#23 20.18 Compiling routine %IPM.Utils.CodeGeneration.1
+#23 20.18 Compiling routine %IPM.Utils.Module.1
+#23 20.18 Compiling class %IPM.Utils.ComparisonAdaptor
+#23 20.18 Compiling routine %IPM.Utils.ComparisonAdaptor.1
+#23 20.18 Compiling class %IPM.DataType.PhaseWhen
+#23 20.18 Compiling class %IPM.DataType.PhaseName
+#23 20.18 Compiling class %IPM.DataType.ModuleName
+#23 20.18 Compiling class %IPM.DataType.GlobalReference
+#23 20.18 Compiling class %IPM.DataType.CustomPhaseName
+#23 20.18 Compiling class %IPM.DataType.LongString
+#23 20.18 Compiling class %IPM.DataType.ResourceDirectory
+#23 20.18 Compiling class %IPM.DataType.VersionString
+#23 20.18 Compiling class %IPM.ExtensionBase.Constants
+#23 20.18 Compiling class %IPM.DataType.RegExString
+#23 20.18 Compiling class %IPM.DataType.ListOfOptions
+#23 20.18 Compiling class %IPM.DependencyAnalyzer
+#23 20.18 Compiling class %IPM.ExtensionBase.Utils
+#23 20.18 Compiling class %IPM.General.SASchema
+#23 20.18 Compiling class %IPM.ExtensionBase.SourceControl.Interface
+#23 20.18 Compiling class %IPM.General.IConfigurable
+#23 20.18 Compiling class %IPM.General.Update.VersionBase
+#23 20.18 Compiling class %IPM.Lifecycle.StudioProject.ContainerClass
+#23 20.18 Compiling class %IPM.General.SemanticVersionExpression.IComparable
+#23 20.18 Compiling class %IPM.General.LogManager.Message
+#23 20.18 Compiling class %IPM.ExtensionBase.SourceControl.ResourceInfo
+#23 20.18 Compiling class %IPM.ExtensionBase.ServerMenu.Interface
+#23 20.18 Compiling class %IPM.Lifecycle.StudioProject.XDataArchive
+#23 20.18 Compiling class %IPM.General.HistoryPhase
+#23 20.18 Compiling class %IPM.ExtensionBase.CompositeMethodOverrides
+#23 20.18 Compiling class %IPM.Repo.IPackageService
+#23 20.18 Compiling class %IPM.General.Singleton
+#23 20.18 Compiling class %IPM.General.TempLocalRepoManager
+#23 20.18 Compiling class %IPM.Repo.IPublishService
+#23 20.18 Compiling class %IPM.Lifecycle.StudioProject.XDataArchive.IFile
+#23 20.18 Compiling class %IPM.Repo.Utils
+#23 20.18 Compiling class %IPM.Repo.UniversalSettings
+#23 20.18 Compiling class %IPM.Repo.Remote.Info
+#23 20.18 Compiling class %IPM.ResourceProcessor.LocalizationExport.MsgDomain
+#23 20.18 Compiling class %IPM.ResourceProcessor.LocalizationExport.MsgFile
+#23 20.18 Compiling class %IPM.Repo.SearchCriteria
+#23 20.18 Compiling class %IPM.StudioDocument.Projection
+#23 20.18 Compiling class %IPM.ResourceProcessor.Abstract
+#23 20.18 Compiling class %IPM.Storage.ModuleSetting
+#23 20.18 Compiling class %IPM.Test.Utils
+#23 20.18 Compiling class %IPM.Utils.Class
+#23 20.18 Compiling class %IPM.Utils.Build
+#23 20.18 Compiling class %IPM.Utils.EmbeddedPython
+#23 20.18 Compiling class %IPM.Test.Abstract
+#23 20.18 Compiling class %IPM.Utils.File
+#23 20.18 Compiling class %IPM.Storage.ModuleAuthorInfo
+#23 20.18 Compiling class %IPM.Utils.LegacyCompat
+#23 20.18 Compiling class %IPM.Storage.ModuleSetting.ProcessorDefault.Condition
+#23 20.18 Compiling class %IPM.Utils.Migration
+#23 20.18 Compiling class %IPM.Storage.UpdateStep.Base
+#23 20.18 Compiling class %IPM.StudioDocument.AbstractStream
+#23 20.18 Compiling class %IPM.Utils.InterruptManager
+#23 20.18 Compiling class %IPM.Utils.JournalManager
+#23 20.18 Compiling class %IPM.Utils.OutputSuppressor
+#23 20.18 Compiling class %IPM.Utils.LockManager
+#23 20.18 Compiling class %IPM.Test.Manager
+#23 20.18 Compiling class %IPM.Utils.XMLCommentHandler
+#23 20.18 Compiling class %IPM.Storage.LoadedResource
+#23 20.18 Compiling class %IPM.CLI.Commands
+#23 20.18 Compiling class %IPM.Utils.FileBinaryTar
+#23 20.18 Compiling class %IPM.CLI
+#23 20.18 Compiling class %IPM.DataType.CommandLineArgs
+#23 20.18 Compiling class %IPM.DataType.ResourceName
+#23 20.18 Compiling class %IPM.DataType.PythonWheelName
+#23 20.18 Compiling class %IPM.DataType.OrasNamespace
+#23 20.18 Compiling class %IPM.General.Archive
+#23 20.18 Compiling class %IPM.DataType.RepoMoniker
+#23 20.18 Compiling class %IPM.DataType.RepoName
+#23 20.18 Compiling class %IPM.DataType.RepoLocation
+#23 20.18 Compiling class %IPM.ExtensionBase.ResourceMappingCache
+#23 20.18 Compiling class %IPM.Repo.Filesystem.PackageService
+#23 20.18 Compiling class %IPM.General.EnvironmentConfig
+#23 20.18 Compiling class %IPM.General.LogManager
+#23 20.18 Compiling class %IPM.Repo.Oras.PublishManager
+#23 20.18 Compiling class %IPM.ExtensionBase.Composite
+#23 20.18 Compiling class %IPM.General.SemanticVersion.Properties
+#23 20.18 Compiling class %IPM.General.AbstractSettings
+#23 20.18 Compiling class %IPM.Repo.Manager
+#23 20.18 Compiling class %IPM.Lifecycle.StudioProject.XDataArchive.FileBinary
+#23 20.18 Compiling class %IPM.Lifecycle.StudioProject.XDataArchive.FileCharacter
+#23 20.18 Compiling class %IPM.Repo.XSLTProvider
+#23 20.18 Compiling class %IPM.Repo.Remote.PublishManager
+#23 20.18 Compiling class %IPM.ResourceProcessor.CustomPhaseMixin
+#23 20.18 Compiling class %IPM.ResourceProcessor.AbstractCompilable
+#23 20.18 Compiling class %IPM.Repo.Oras.ArtifactMetadata
+#23 20.18 Compiling class %IPM.ResourceProcessor.ModuleExport
+#23 20.18 Compiling class %IPM.ResourceProcessor.ArtifactoryTarball
+#23 20.18 Compiling class %IPM.ResourceProcessor.Default.Global
+#23 20.18 Compiling class %IPM.ResourceProcessor.LocalizationExport
+#23 20.18 Compiling class %IPM.ResourceProcessor.SystemSetting
+#23 20.18 Compiling class %IPM.ResourceProcessor.WebApplication
+#23 20.18 Compiling class %IPM.ResourceProcessor.LegacyLocalizedMessages
+#23 20.18 Compiling class %IPM.ResourceProcessor.FileCopy
+#23 20.18 Compiling class %IPM.ResourceProcessor.Test
+#23 20.18 Compiling class %IPM.Storage.ModuleSetting.Default
+#23 20.18 Compiling class %IPM.Storage.ModuleSetting.NamespaceConfig
+#23 20.18 Compiling class %IPM.Test.JUnitOutput
+#23 20.18 Compiling class %IPM.Test.JsonOutput
+#23 20.18 Compiling class %IPM.Storage.ModuleSetting.Parameter
+#23 20.18 Compiling class %IPM.Test.ToonOutput
+#23 20.18 Compiling class %IPM.Test.YamlOutput
+#23 20.18 Compiling class %IPM.Storage.ModuleSetting.ProcessorDefault
+#23 20.18 Compiling class %IPM.Utils.TempFileManager
+#23 20.18 Compiling class %IPM.Storage.UpdateStep.AnyMember
+#23 20.18 Compiling class %IPM.StudioDocument.ModuleStream
+#23 20.18 Compiling class %IPM.StudioDocument.LocalizedMessageStream
+#23 20.18 Compiling class %IPM.Storage.UpdateStep.PrimaryOnly
+#23 20.18 Compiling class %IPM.ResourceProcessor.CSPApplication
+#23 20.18 Compiling class %IPM.Repo.Http.PackageService
+#23 20.18 Compiling class %IPM.General.LockFile.Dependency
+#23 20.18 Compiling class %IPM.ResourceProcessor.CPF
+#23 20.18 Compiling class %IPM.General.LockFile
+#23 20.18 Compiling class %IPM.General.SemanticVersion
+#23 20.18 Compiling class %IPM.General.SemanticVersionExpression.Comparator
+#23 20.18 Compiling class %IPM.ResourceProcessor.Copy
+#23 20.18 Compiling class %IPM.ResourceProcessor.PythonWheel
+#23 20.18 Compiling class %IPM.ResourceProcessor.Default.Document
+#23 20.18 Compiling class %IPM.ResourceProcessor.UnitTest
+#23 20.18 Compiling class %IPM.General.Settings
+#23 20.18 Compiling class %IPM.ExtensionBase.UniversalSettings
+#23 20.18 Compiling class %IPM.Main
+#23 20.18 Compiling class %IPM.Repo.Definition
+#23 20.18 Compiling class %IPM.General.SemanticVersionExpression.Range
+#23 20.18 Compiling class %IPM.Repo.Remote.PackageService
+#23 20.18 Compiling class %IPM.Repo.Oras.PackageService
+#23 20.18 Compiling class %IPM.General.ModuleInfo
+#23 20.18 Compiling class %IPM.General.AbstractHistory
+#23 20.18 Compiling class %IPM.ResourceProcessor.Default.Interoperability
+#23 20.18 Compiling class %IPM.ResourceProcessor.Default.DeepSeeItem
+#23 20.18 Compiling class %IPM.ResourceProcessor.Default.Class
+#23 20.18 Compiling class %IPM.ResourceProcessor.Default.Routine
+#23 20.18 Compiling class %IPM.ResourceProcessor.Default.LocalizedMessages
+#23 20.18 Compiling class %IPM.ResourceProcessor.Default.Package
+#23 20.18 Compiling class %IPM.Repo.Http.Definition
+#23 20.18 Compiling class %IPM.Repo.Filesystem.Definition
+#23 20.18 Compiling class %IPM.Repo.Remote.PublishService
+#23 20.18 Compiling class %IPM.Repo.Oras.PublishService
+#23 20.18 Compiling class %IPM.General.SemanticVersionExpression
+#23 20.18 Compiling class %IPM.ResourceProcessor.Default.Include
+#23 20.18 Compiling class %IPM.Storage.ModuleInfo
+#23 20.18 Compiling class %IPM.Repo.Remote.ModuleInfo
+#23 20.18 Compiling class %IPM.General.HistoryTemp
+#23 20.18 Compiling class %IPM.General.History
+#23 20.18 Compiling class %IPM.Repo.Filesystem.Cache
+#23 20.18 Compiling class %IPM.Repo.Oras.Definition
+#23 20.18 Compiling class %IPM.Repo.Remote.Definition
+#23 20.18 Compiling class %IPM.General.SemanticVersion.Find
+#23 20.18 Compiling class %IPM.Storage.ModuleReference
+#23 20.18 Compiling class %IPM.Storage.QualifiedModuleInfo
+#23 20.18 Compiling class %IPM.Storage.SystemRequirements
+#23 20.18 Compiling class %IPM.Storage.Module
+#23 20.18 Compiling class %IPM.Storage.InvokeReference
+#23 20.18 Compiling class %IPM.Storage.MappingReference
+#23 20.18 Compiling class %IPM.Storage.ResourceReference
+#23 20.18 Compiling class %IPM.Storage.ModuleTemplate
+#23 20.18 Compiling table %IPM_ExtensionBase.UniversalSettings
+#23 20.18 Compiling table %IPM_Repo.Definition
+#23 20.18 Compiling table %IPM_General.Settings
+#23 20.18 Compiling table %IPM_Storage.InvokeReference
+#23 20.18 Compiling table %IPM_Repo_Oras.Definition
+#23 20.18 Compiling table %IPM_Repo_Filesystem.Definition
+#23 20.18 Compiling table %IPM_General.HistoryTemp
+#23 20.18 Compiling table %IPM_Repo_Http.Definition
+#23 20.18 Compiling table %IPM_Storage.LoadedResource
+#23 20.18 Compiling table %IPM_General.History
+#23 20.18 Compiling table %IPM_Storage.MappingReference
+#23 20.18 Compiling table %IPM_Repo_Remote.Definition
+#23 20.18 Compiling table %IPM_Storage.ModuleItem_Defaults
+#23 20.18 Compiling table %IPM_Storage.ModuleItem_Dependencies
+#23 20.18 Compiling table %IPM_Storage.ModuleTemplate_Defaults
+#23 20.18 Compiling table %IPM_Storage.ResourceReference_Attributes
+#23 20.18 Compiling table %IPM_Storage.ResourceReference
+#23 20.18 Compiling table %IPM_Repo_Filesystem.Cache
+#23 20.18 Compiling table %IPM_Storage.ModuleTemplate_Dependencies
+#23 20.18 Compiling table %IPM_Storage.ResourceReference_Children
+#23 20.18 Compiling table %IPM_Storage.SystemRequirements
+#23 20.18 Compiling table %IPM_Storage.ModuleItem
+#23 20.18 Compiling table %IPM_Storage_UpdateStep.AnyMember
+#23 20.18 Compiling table %IPM_StudioDocument.LocalizedMessageStream
+#23 20.18 Compiling table %IPM_Storage_UpdateStep.PrimaryOnly
+#23 20.18 Compiling table %IPM_StudioDocument.ModuleStream
+#23 20.18 Compiling table %IPM_Storage.ModuleTemplate
+#23 20.18 Compiling routine %IPM.CLI.Commands.1
+#23 20.18 Compiling routine %IPM.DataType.CustomPhaseName.1
+#23 20.18 Compiling routine %IPM.DataType.LongString.1
+#23 20.18 Compiling routine %IPM.DataType.GlobalReference.1
+#23 20.18 Compiling routine %IPM.DataType.PhaseName.1
+#23 20.18 Compiling routine %IPM.DataType.PhaseWhen.1
+#23 20.18 Compiling routine %IPM.DataType.VersionString.1
+#23 20.18 Compiling routine %IPM.DataType.ListOfOptions.1
+#23 20.18 Compiling routine %IPM.DataType.ModuleName.1
+#23 20.18 Compiling routine %IPM.DataType.ResourceDirectory.1
+#23 20.18 Compiling routine %IPM.DataType.RegExString.1
+#23 20.18 Compiling routine %IPM.ExtensionBase.SourceControl.ResourceInfo.1
+#23 20.18 Compiling routine %IPM.ExtensionBase.SourceControl.Interface.1
+#23 20.18 Compiling routine %IPM.ExtensionBase.Utils.1
+#23 20.18 Compiling routine %IPM.DependencyAnalyzer.1
+#23 20.18 Compiling routine %IPM.General.IConfigurable.1
+#23 20.18 Compiling routine %IPM.General.Update.VersionBase.1
+#23 20.18 Compiling routine %IPM.General.SemanticVersionExpression.IComparable.1
+#23 20.18 Compiling routine %IPM.General.HistoryPhase.1
+#23 20.18 Compiling routine %IPM.General.LogManager.Message.1
+#23 20.18 Compiling routine %IPM.Repo.IPackageService.1
+#23 20.18 Compiling routine %IPM.Lifecycle.StudioProject.ContainerClass.1
+#23 20.18 Compiling routine %IPM.General.Singleton.1
+#23 20.18 Compiling routine %IPM.Repo.IPublishService.1
+#23 20.18 Compiling routine %IPM.General.SASchema.1
+#23 20.18 Compiling routine %IPM.Lifecycle.StudioProject.XDataArchive.IFile.1
+#23 20.18 Compiling routine %IPM.General.TempLocalRepoManager.1
+#23 20.18 Compiling routine %IPM.ExtensionBase.CompositeMethodOverrides.1
+#23 20.18 Compiling routine %IPM.Repo.Remote.Info.1
+#23 20.18 Compiling routine %IPM.Lifecycle.StudioProject.XDataArchive.1
+#23 20.18 Compiling routine %IPM.Repo.UniversalSettings.1
+#23 20.18 Compiling routine %IPM.ExtensionBase.ServerMenu.Interface.1
+#23 20.18 Compiling routine %IPM.Repo.Utils.1
+#23 20.18 Compiling routine %IPM.ResourceProcessor.Abstract.1
+#23 20.18 Compiling routine %IPM.Storage.ModuleSetting.1
+#23 20.18 Compiling routine %IPM.StudioDocument.Projection.1
+#23 20.18 Compiling routine %IPM.Test.Abstract.1
+#23 20.18 Compiling routine %IPM.Test.Manager.1
+#23 20.18 Compiling routine %IPM.Test.Utils.1
+#23 20.18 Compiling routine %IPM.Storage.ModuleAuthorInfo.1
+#23 20.18 Compiling routine %IPM.Storage.ModuleSetting.ProcessorDefault.Condition.1
+#23 20.18 Compiling routine %IPM.ResourceProcessor.LocalizationExport.MsgFile.1
+#23 20.18 Compiling routine %IPM.Storage.UpdateStep.Base.1
+#23 20.18 Compiling routine %IPM.Utils.Class.1
+#23 20.18 Compiling routine %IPM.Repo.SearchCriteria.1
+#23 20.18 Compiling routine %IPM.ResourceProcessor.LocalizationExport.MsgDomain.1
+#23 20.18 Compiling routine %IPM.Utils.LegacyCompat.1
+#23 20.18 Compiling routine %IPM.StudioDocument.AbstractStream.1
+#23 20.18 Compiling routine %IPM.Utils.InterruptManager.1
+#23 20.18 Compiling routine %IPM.Utils.JournalManager.1
+#23 20.18 Compiling routine %IPM.Utils.File.1
+#23 20.18 Compiling routine %IPM.Utils.OutputSuppressor.1
+#23 20.18 Compiling routine %IPM.Utils.Migration.1
+#23 20.18 Compiling routine %IPM.Utils.LockManager.1
+#23 20.18 Compiling routine %IPM.Utils.XMLCommentHandler.1
+#23 20.18 Compiling routine %IPM.Utils.Build.1
+#23 20.18 Compiling routine %IPM.Utils.FileBinaryTar.1
+#23 20.18 Compiling routine %IPM.Storage.LoadedResource.1
+#23 20.18 Compiling routine %IPM.Utils.EmbeddedPython.1
+#23 20.18 Compiling routine %IPM.ExtensionBase.ResourceMappingCache.1
+#23 20.18 Compiling routine %IPM.General.Archive.1
+#23 20.18 Compiling routine %IPM.Repo.Filesystem.PackageService.1
+#23 20.18 Compiling routine %IPM.General.EnvironmentConfig.1
+#23 20.18 Compiling routine %IPM.General.AbstractSettings.1
+#23 20.18 Compiling routine %IPM.General.LogManager.1
+#23 20.18 Compiling routine %IPM.CLI.1
+#23 20.18 Compiling routine %IPM.Repo.Oras.PublishManager.1
+#23 20.18 Compiling routine %IPM.Lifecycle.StudioProject.XDataArchive.FileBinary.1
+#23 20.18 Compiling routine %IPM.General.SemanticVersion.Properties.1
+#23 20.18 Compiling routine %IPM.Repo.XSLTProvider.1
+#23 20.18 Compiling routine %IPM.Lifecycle.StudioProject.XDataArchive.FileCharacter.1
+#23 20.18 Compiling routine %IPM.ResourceProcessor.CustomPhaseMixin.1
+#23 20.18 Compiling routine %IPM.Repo.Remote.PublishManager.1
+#23 20.18 Compiling routine %IPM.ResourceProcessor.AbstractCompilable.1
+#23 20.18 Compiling routine %IPM.Repo.Manager.1
+#23 20.18 Compiling routine %IPM.Repo.Oras.ArtifactMetadata.1
+#23 20.18 Compiling routine %IPM.ResourceProcessor.ArtifactoryTarball.1
+#23 20.18 Compiling routine %IPM.ResourceProcessor.ModuleExport.1
+#23 20.18 Compiling routine %IPM.ResourceProcessor.SystemSetting.1
+#23 20.18 Compiling routine %IPM.ResourceProcessor.LegacyLocalizedMessages.1
+#23 20.18 Compiling routine %IPM.ResourceProcessor.Default.Global.1
+#23 20.18 Compiling routine %IPM.ResourceProcessor.LocalizationExport.1
+#23 20.18 Compiling routine %IPM.ResourceProcessor.FileCopy.1
+#23 20.18 Compiling routine %IPM.ExtensionBase.Composite.1
+#23 20.18 Compiling routine %IPM.ResourceProcessor.Test.1
+#23 20.18 Compiling routine %IPM.Storage.ModuleSetting.NamespaceConfig.1
+#23 20.18 Compiling routine %IPM.Storage.ModuleSetting.Default.1
+#23 20.18 Compiling routine %IPM.Test.JUnitOutput.1
+#23 20.18 Compiling routine %IPM.Storage.ModuleSetting.Parameter.1
+#23 20.18 Compiling routine %IPM.Test.JsonOutput.1
+#23 20.18 Compiling routine %IPM.Test.ToonOutput.1
+#23 20.18 Compiling routine %IPM.ResourceProcessor.WebApplication.1
+#23 20.18 Compiling routine %IPM.Test.YamlOutput.1
+#23 20.18 Compiling routine %IPM.Utils.TempFileManager.1
+#23 20.18 Compiling routine %IPM.Storage.ModuleSetting.ProcessorDefault.1
+#23 20.18 Compiling routine %IPM.StudioDocument.ModuleStream.1
+#23 20.18 Compiling routine %IPM.Storage.UpdateStep.AnyMember.1
+#23 20.18 Compiling routine %IPM.StudioDocument.LocalizedMessageStream.1
+#23 20.18 Compiling routine %IPM.Storage.UpdateStep.PrimaryOnly.1
+#23 20.18 Compiling routine %IPM.ResourceProcessor.CSPApplication.1
+#23 20.18 Compiling routine %IPM.Repo.Http.PackageService.1
+#23 20.18 Compiling routine %IPM.ResourceProcessor.CPF.1
+#23 20.18 Compiling routine %IPM.General.LockFile.Dependency.1
+#23 20.18 Compiling routine %IPM.ResourceProcessor.Copy.1
+#23 20.18 Compiling routine %IPM.General.LockFile.1
+#23 20.18 Compiling routine %IPM.General.SemanticVersionExpression.Comparator.1
+#23 20.18 Compiling routine %IPM.General.SemanticVersion.1
+#23 20.18 Compiling routine %IPM.ResourceProcessor.PythonWheel.1
+#23 20.18 Compiling routine %IPM.ResourceProcessor.Default.Document.1
+#23 20.18 Compiling routine %IPM.General.Settings.1
+#23 20.18 Compiling routine %IPM.ExtensionBase.UniversalSettings.1
+#23 20.18 Compiling routine %IPM.Repo.Definition.1
+#23 20.18 Compiling routine %IPM.Main.1
+#23 20.18 Compiling routine %IPM.ResourceProcessor.Default.Interoperability.1
+#23 20.18 Compiling routine %IPM.ResourceProcessor.Default.Class.1
+#23 20.18 Compiling routine %IPM.Repo.Remote.PackageService.1
+#23 20.18 Compiling routine %IPM.General.ModuleInfo.1
+#23 20.18 Compiling routine %IPM.ResourceProcessor.Default.Package.1
+#23 20.18 Compiling routine %IPM.ResourceProcessor.Default.DeepSeeItem.1
+#23 20.18 Compiling routine %IPM.General.SemanticVersionExpression.Range.1
+#23 20.18 Compiling routine %IPM.ResourceProcessor.Default.LocalizedMessages.1
+#23 20.18 Compiling routine %IPM.ResourceProcessor.Default.Routine.1
+#23 20.18 Compiling routine %IPM.General.AbstractHistory.1
+#23 20.18 Compiling routine %IPM.Repo.Http.Definition.1
+#23 20.18 Compiling routine %IPM.Repo.Oras.PackageService.1
+#23 20.18 Compiling routine %IPM.Repo.Filesystem.Definition.1
+#23 20.18 Compiling routine %IPM.ResourceProcessor.Default.Include.1
+#23 20.18 Compiling routine %IPM.Repo.Remote.PublishService.1
+#23 20.18 Compiling routine %IPM.Repo.Oras.PublishService.1
+#23 20.18 Compiling routine %IPM.General.SemanticVersionExpression.1
+#23 20.18 Compiling routine %IPM.Storage.ModuleInfo.1
+#23 20.18 Compiling routine %IPM.Repo.Remote.ModuleInfo.1
+#23 20.18 Compiling routine %IPM.General.HistoryTemp.1
+#23 20.18 Compiling routine %IPM.General.History.1
+#23 20.18 Compiling routine %IPM.Repo.Remote.Definition.1
+#23 20.18 Compiling routine %IPM.Repo.Oras.Definition.1
+#23 20.18 Compiling routine %IPM.Repo.Filesystem.Cache.1
+#23 20.18 Compiling routine %IPM.General.SemanticVersion.Find.1
+#23 20.18 Compiling routine %IPM.Storage.ModuleReference.1
+#23 20.18 Compiling routine %IPM.Storage.QualifiedModuleInfo.1
+#23 20.18 Compiling routine %IPM.Storage.SystemRequirements.1
+#23 20.18 Compiling routine %IPM.Storage.ModuleDependencies.1
+#23 20.18 Compiling routine %IPM.Storage.ModuleDefaults.1
+#23 20.18 Compiling routine %IPM.Storage.Module.1
+#23 20.18 Compiling routine %IPM.Storage.ResourceReferenceAttributes.1
+#23 20.18 Compiling routine %IPM.Storage.ModuleTemplateDefaults.1
+#23 20.18 Compiling routine %IPM.Storage.ResourceReferenceChildren.1
+#23 20.18 Compiling routine %IPM.Storage.ModuleTemplateDependencies.1
+#23 20.18 Compiling routine %IPM.Storage.MappingReference.1
+#23 20.18 Compiling routine %IPM.Storage.InvokeReference.1
+#23 20.18 Compiling routine %IPM.Storage.ResourceReference.1
+#23 20.18 Compiling routine %IPM.Storage.ModuleTemplate.1
+#23 20.18 Compiling class %IPM.Lifecycle.Base
+#23 20.18 Compiling class %IPM.StudioDocument.Abstract
+#23 20.18 Compiling class %IPM.Lifecycle.Module
+#23 20.18 Compiling class %IPM.Lifecycle.StudioProject
+#23 20.18 Compiling class %IPM.StudioDocument.Module
+#23 20.18 Compiling class %IPM.StudioDocument.LocalizedMessages
+#23 20.18 Compiling class %IPM.Lifecycle.DeployedModule
+#23 20.18 Compiling routine %IPM.StudioDocument.Abstract.1
+#23 20.18 Compiling routine %IPM.Lifecycle.Base.1
+#23 20.18 Compiling routine %IPM.StudioDocument.LocalizedMessages.1
+#23 20.18 Compiling routine %IPM.Lifecycle.Module.1
+#23 20.18 Compiling routine %IPM.Lifecycle.StudioProject.1
+#23 20.18 Compiling routine %IPM.StudioDocument.Module.1
+#23 20.18 Compiling routine %IPM.Lifecycle.DeployedModule.1
+#23 20.18 Compilation finished successfully in 1.652s.
+#23 20.18 
+#23 20.18 Load finished successfully.
+#23 20.18 
+#23 20.18 Compiling routine : %ZLANGC00.mac
+#23 20.18 Compiling routine : %ZLANGF00.mac2026-09-23 08:34:26 3 Evaluate: ${REGISTRY} -> https://pm.community.intersystems.com
+#23 20.18 2026-09-23 08:34:26 3 Evaluate: ${TRACKINGID} -> UA-126752118-1
+#23 20.18 2026-09-23 08:34:26 3 Evaluate: ${MODDIR} -> /tmp/dirLjEtMo/
+#23 20.18 
+#23 20.18 Building dependency graph...Done.
+#23 20.18 [%SYS|ZPM]	Initialize START
+#23 20.18 Compilation started on 09/23/2026 08:34:32
+#23 20.18 Compiling class IPM.Installer
+#23 20.18 Compiling routine IPM.Installer.1
+#23 20.18 Compilation finished successfully in 0.046s.
+#23 20.18 
+#23 20.18 [%SYS|ZPM]	Initialize SUCCESS
+#23 20.18 [%SYS|ZPM]	Reload START (/tmp/dirLjEtMo/)
+#23 20.18 [%SYS|ZPM]	Reload SUCCESS
+#23 20.18 [ZPM]	Module object refreshed.
+#23 20.18 [%SYS|ZPM]	Validate START
+#23 20.18 [%SYS|ZPM]	Validate SUCCESS
+#23 20.18 [%SYS|ZPM]	Compile START
+#23 20.18 [%SYS|ZPM]	Compile SUCCESS
+#23 20.18 [%SYS|ZPM]	Activate START
+#23 20.18 [%SYS|ZPM]	Configure START
+#23 20.18 Compiling routine : %ZLANGC00.mac
+#23 20.18 Compiling routine : %ZLANGF00.mac
+#23 20.18 [%SYS|ZPM]	Configure SUCCESS
+#23 20.18 Installed ipm and iriscli scripts to /home/irisowner/.local/bin/
+#23 20.18 [%SYS|ZPM]	Activate SUCCESS2026-09-23 08:34:38 0 IPM.Installer: Installation succeeded at 2026-09-23 08:34:38
+#23 20.18 2026-09-23 08:34:38 0 %Installer: Elapsed time 14.139842s
+#23 20.18 Time spent 14.149313
+#23 20.18 Load finished successfully.
+#23 20.18 
+#23 20.18 %SYS>
+#23 20.25 
+#23 20.25 Version of IPM in current namespace: 
+#23 20.25 %SYS> [32mzpm [0m0.10.9
+#23 20.25 Skipping IPM mapping of %SYS - IPM already installed.
+#23 20.25 Mapping %IPM package in %SYS equivalently to IRISAPP
+#23 20.26 Mapping %IPM.* routines in %SYS equivalently to IRISAPP
+#23 20.27 Mapping %IPM package in %SYS equivalently to USER
+#23 20.27 Mapping %IPM.* routines in %SYS equivalently to USER
+#23 20.72 Done.
+#23 20.85 
+#23 20.85 [35m%SYS> [0m   [32mzpm[0m [39m0.10.9[0m
+#23 20.85 [35mIRISAPP> [0m[32mzpm[0m [39m0.10.9[0m
+#23 20.85          [39mInstalled In: [0m%SYS 
+#23 20.85 [35mUSER> [0m   [32mzpm[0m [39m0.10.9[0m
+#23 20.85          [39mInstalled In: [0m%SYS 
+#23 20.88 %SYS>
+#23 20.97 
+#23 20.97 Version of IPM in current namespace: 
+#23 20.97 %SYS> [32mzpm [0m0.10.9
+#23 20.97 
+#23 20.97 RUNNING command: "repo -delete-all"
+#23 20.98 [32mCommand "repo -delete-all" finished successfull[0m
+#23 20.98 
+#23 20.98 RUNNING command: "repo -reset-defaults"
+#23 21.01 [33mWARNING: Using -password via the CLI is insecure. Use -password-stdin or -password-env.[0m
+#23 21.02 registry
+#23 21.02 	Source: 			https://pm.community.intersystems.com
+#23 21.02 	Enabled?			Yes
+#23 21.02 	Available?			Yes
+#23 21.65 	Use for Snapshots?		Yes
+#23 21.65 	Use for Prereleases?		Yes
+#23 21.65 	Is Read-Only?			No
+#23 21.65 	Default Deployment Registry? 	No
+#23 21.69 
+#23 21.69 registry
+#23 21.69 	Source: 			https://pm.community.intersystems.com
+#23 21.69 	Enabled?			Yes
+#23 21.69 	Available?			Yes
+#23 22.30 	Use for Snapshots?		Yes
+#23 22.30 	Use for Prereleases?		Yes
+#23 22.30 	Is Read-Only?			No
+#23 22.30 	Default Deployment Registry? 	No
+#23 22.30 
+#23 22.30 [32mCommand "repo -reset-defaults" finished successfull[0m
+#23 22.30 
+#23 22.30 RUNNING command: "enable -map -repos -globally"
+#23 22.31 Version of IPM in current namespace: 
+#23 22.31 %SYS> [32mzpm [0m0.10.9
+#23 22.31 Skipping IPM mapping of %SYS - IPM already installed.
+#23 22.31 Mapping %IPM package in %SYS equivalently to IRISAPP
+#23 22.31 Mapping %IPM.* routines in %SYS equivalently to IRISAPP
+#23 22.31 Mapping %IPM package in %SYS equivalently to USER
+#23 22.31 Mapping %IPM.* routines in %SYS equivalently to USER
+#23 22.32 Skipping repository mapping of %SYS - IPM not mapped from source namespace.
+#23 22.32 Mapping IPM repository in %SYS equivalently to IRISAPP
+#23 22.47 Mapping IPM repository in %SYS equivalently to USER
+#23 23.37 Done.
+#23 23.57 
+#23 23.57 [35m%SYS> [0m   [32mzpm[0m [39m0.10.9[0m
+#23 23.57 [35mIRISAPP> [0m[32mzpm[0m [39m0.10.9[0m
+#23 23.57          [39mInstalled In: [0m%SYS 
+#23 23.57 [35mUSER> [0m   [32mzpm[0m [39m0.10.9[0m
+#23 23.57          [39mInstalled In: [0m%SYS 
+#23 24.18 [39mhttps://pm.community.intersystems.com[0m - 1.0.0
+#23 24.18 [32mCommand "enable -map -repos -globally" finished successfull[0m
+#23 24.18 %SYS>
+#23 24.18 
+#23 24.18 %SYS>
+#23 24.18 
+#23 24.18 %SYS>
+#23 24.18 
+#23 24.18 %SYS>
+#23 24.24 
+#23 24.24 %SYS>
+#23 24.24 
+#23 24.24 %SYS>
+#23 24.24 
+#23 24.24 %SYS>
+#23 24.24 
+#23 24.24 %SYS>
+#23 24.24 
+#23 24.24 %SYS>
+#23 24.24 
+#23 24.24 %SYS>
+#23 24.24 
+#23 24.24 %SYS>
+#23 24.24 
+#23 24.24 %SYS>
+#23 24.24 
+#23 24.24 %SYS>
+#23 24.24 
+#23 24.24 %SYS>
+#23 24.24 
+#23 24.24 %SYS>
+#23 24.24 
+#23 24.24 %SYS>
+#23 24.24 
+#23 24.24 %SYS>
+#23 24.24 
+#23 24.24 %SYS>
+#23 24.24 
+#23 24.24 %SYS>
+#23 24.24 
+#23 24.24 %SYS>
+#23 24.24 
+#23 24.24 %SYS>
+#23 24.24 
+#23 24.24 %SYS>
+#23 24.24 
+#23 24.24 %SYS>
+#23 24.24 
+#23 24.24 %SYS>
+#23 24.24 
+#23 24.24 %SYS>
+#23 24.24 
+#23 24.24 %SYS>
+#23 24.24 
+#23 24.24 %SYS>
+#23 24.24 
+#23 24.24 %SYS>
+#23 24.24 
+#23 24.24 %SYS>
+#23 24.24 
+#23 24.24 %SYS>
+#23 24.28 
+#23 24.28 %SYS>
+#23 24.28 
+#23 24.28 %SYS>
+#23 24.28 
+#23 24.28 IRISAPP>
+#23 24.28 
+#23 24.28 IRISAPP>
+#23 24.28 
+#23 24.28 IRISAPP>
+#23 27.68 
+#23 27.68 Building dependency graph...Done.
+#23 27.72 [IRISAPP|vscode-per-namespace-settings]	Initialize START
+#23 27.72 [IRISAPP|vscode-per-namespace-settings]	Initialize SUCCESS
+#23 27.72 [IRISAPP|vscode-per-namespace-settings]	Reload START (/usr/irissys/ipm/vscode-per-namespace-settings/1.0.0/)
+#23 27.84 [IRISAPP|vscode-per-namespace-settings]	Reload SUCCESS
+#23 27.84 [vscode-per-namespace-settings]	Module object refreshed.
+#23 27.84 [IRISAPP|vscode-per-namespace-settings]	Validate START
+#23 27.84 [IRISAPP|vscode-per-namespace-settings]	Validate SUCCESS
+#23 27.84 [IRISAPP|vscode-per-namespace-settings]	Compile START
+#23 27.94 [IRISAPP|vscode-per-namespace-settings]	Compile SUCCESS
+#23 27.94 [IRISAPP|vscode-per-namespace-settings]	Activate START
+#23 27.94 [IRISAPP|vscode-per-namespace-settings]	Configure START
+#23 27.95 Deleting class %Z.IPM.Bootstraps.Main
+#23 27.95 [IRISAPP|vscode-per-namespace-settings]	Configure SUCCESS
+#23 28.02 [IRISAPP|vscode-per-namespace-settings]	Activate SUCCESS
+#23 28.74 IRISAPP>
+#23 28.74 
+#23 28.74 IRISAPP>
+#23 28.74 
+#23 28.74 IRISAPP>
+#23 28.74 
+#23 28.74 IRISAPP>
+#23 28.74 
+#23 28.74 IRISAPP>
+#23 28.75 
+#23 28.75 Load started on 09/23/2026 08:34:46
+#23 28.75 Loading file /home/irisowner/dev/module.xml as xml
+#23 28.76 [31mWARNING: The <CSPApplication></CSPApplication> resource tag is deprecated and may be removed in a future release of IPM.[0m
+#23 28.76 [31m         Please contact the package developer of sentai-task to use <WebApplication></WebApplication> instead[0m
+#23 28.76 Imported document: sentai-task.ZPM
+#23 28.76 Load finished successfully.
+#23 28.76 
+#23 28.76 Building dependency graph...Done.
+#23 28.76 Created inverted dependency graph from dependency graph
+#23 28.76 Constructed flat dependency list from inverted dependency graph
+#23 28.76 Starting installation of dependencies...
+#23 28.76 
+#23 28.76 Load started on 09/23/2026 08:34:46
+#23 28.76 Loading file /home/irisowner/dev/module.xml as xml
+#23 28.80 Imported document: sentai-task.ZPM
+#23 28.80 Load finished successfully.
+#23 28.80 
+#23 28.80 Loading sentai-task in process 655
+#23 28.80 [IRISAPP|sentai-task]	Initialize START
+#23 28.80 Skipping preload - directory does not exist.
+#23 28.80 [IRISAPP|sentai-task]	Initialize SUCCESS
+#23 28.80 [IRISAPP|sentai-task]	Reload START (/home/irisowner/dev/)
+#23 28.86 [IRISAPP|sentai-task]	requirements.txt START
+#23 28.86 
+#23 28.86 Detecting pip caller
+#23 28.86 Attempting to find flexible python... 
+#23 28.86 Attempting to find python3 or python...Success!
+#23 29.08 Running command=$lb("python3","-m","pip","install","-r","requirements.txt","-t","/usr/irissys/mgr/python/","--python-version","3.12.3","--only-binary=:all:")
+#23 29.47 
+#23 29.47 [IRISAPP|sentai-task]	requirements.txt SUCCESS
+#23 29.47 Load of directory started on 09/23/2026 08:34:47 '*'
+#23 29.48 
+#23 29.48 Loading file /home/irisowner/dev/src/sentai/catalog/TaskService.cls as udl
+#23 29.49 Loading file /home/irisowner/dev/src/sentai/dispatch/AdminApiClient.cls as udl
+#23 29.50 Loading file /home/irisowner/dev/src/sentai/dispatch/ScheduledFlowTask.cls as udl
+#23 29.51 Loading file /home/irisowner/dev/src/sentai/dispatch/WaveDispatcher.cls as udl
+#23 29.53 Loading file /home/irisowner/dev/src/sentai/model/Category.cls as udl
+#23 29.54 Loading file /home/irisowner/dev/src/sentai/model/Edge.cls as udl
+#23 29.56 Loading file /home/irisowner/dev/src/sentai/model/Flow.cls as udl
+#23 29.57 Loading file /home/irisowner/dev/src/sentai/model/Join.cls as udl
+#23 29.58 Loading file /home/irisowner/dev/src/sentai/model/LogEntry.cls as udl
+#23 29.60 Loading file /home/irisowner/dev/src/sentai/model/Run.cls as udl
+#23 29.61 Loading file /home/irisowner/dev/src/sentai/model/Step.cls as udl
+#23 29.63 Loading file /home/irisowner/dev/src/sentai/model/StepRun.cls as udl
+#23 29.64 Loading file /home/irisowner/dev/src/sentai/registry/StepType.cls as udl
+#23 29.65 Loading file /home/irisowner/dev/src/sentai/rest/Dispatcher.cls as udl
+#23 29.67 Loading file /home/irisowner/dev/src/sentai/validation/FlowValidator.cls as udl
+#23 29.69 Loading file /home/irisowner/dev/src/sentai/wqm/CategoryService.cls as udl
+#23 29.70 Load finished successfully.
+#23 29.72 
+#23 29.72 [IRISAPP|sentai-task]	Reload SUCCESS
+#23 29.72 [sentai-task]	Module object refreshed.
+#23 29.72 [IRISAPP|sentai-task]	Validate START
+#23 29.72 [IRISAPP|sentai-task]	Validate SUCCESS
+#23 29.72 [IRISAPP|sentai-task]	Compile START
+#23 29.80 Compilation started on 09/23/2026 08:34:48 with qualifiers 'd-lck'
+#23 29.80 Compiling 16 classes
+#23 29.81 Compiling class sentai.catalog.TaskService
+#23 29.81 Compiling class sentai.dispatch.AdminApiClient
+#23 29.81 Compiling class sentai.dispatch.ScheduledFlowTask
+#23 29.83 Compiling class sentai.dispatch.WaveDispatcher
+#23 29.84 Compiling class sentai.model.Category
+#23 29.87 Compiling class sentai.model.Edge
+#23 29.89 Compiling class sentai.model.Flow
+#23 29.92 Compiling class sentai.model.Join
+#23 29.94 Compiling class sentai.model.LogEntry
+#23 29.96 Compiling class sentai.model.Run
+#23 29.98 Compiling class sentai.model.Step
+#23 30.01 Compiling class sentai.model.StepRun
+#23 30.04 Compiling class sentai.registry.StepType
+#23 30.04 Compiling class sentai.rest.Dispatcher
+#23 30.06 Compiling class sentai.validation.FlowValidator
+#23 30.06 Compiling class sentai.wqm.CategoryService
+#23 30.09 Compiling table sentai_model.Join
+#23 30.09 Compiling table sentai_model.Category
+#23 30.09 Compiling table sentai_model.Edge
+#23 30.09 Compiling table sentai_model.Flow
+#23 30.10 Compiling table sentai_model.LogEntry
+#23 30.10 Compiling table sentai_model.Run
+#23 30.10 Compiling table sentai_model.Step
+#23 30.10 Compiling table sentai_model.StepRun
+#23 30.11 Compiling routine sentai.catalog.TaskService.1
+#23 30.11 Compiling routine sentai.dispatch.AdminApiClient.1
+#23 30.11 Compiling routine sentai.dispatch.ScheduledFlowTask.1
+#23 30.11 Compiling routine sentai.dispatch.WaveDispatcher.1
+#23 30.12 Compiling routine sentai.model.Category.1
+#23 30.14 Compiling routine sentai.model.Edge.1
+#23 30.17 Compiling routine sentai.model.Flow.1
+#23 30.21 Compiling routine sentai.model.Join.1
+#23 30.24 Compiling routine sentai.model.LogEntry.1
+#23 30.26 Compiling routine sentai.model.Run.1
+#23 30.29 Compiling routine sentai.model.Step.1
+#23 30.34 Compiling routine sentai.model.StepRun.1
+#23 30.38 Compiling routine sentai.registry.StepType.1
+#23 30.38 Compiling routine sentai.rest.Dispatcher.1
+#23 30.39 Compiling routine sentai.validation.FlowValidator.1
+#23 30.39 Compiling routine sentai.wqm.CategoryService.1
+#23 30.40 Compilation finished successfully in 0.593s.
+#23 30.40 
+#23 30.40 [IRISAPP|sentai-task]	Compile SUCCESS
+#23 30.40 [IRISAPP|sentai-task]	Activate START
+#23 30.40 Creating Web Application /csp/sentai/api/v1
+#23 30.42     AutheEnabled: 32
+#23 30.42     AuthenticationMethods: 
+#23 30.42     AutoCompile: 1
+#23 30.42     CSPZENEnabled: 1
+#23 30.42     CSRFToken: 
+#23 30.42     ChangePasswordPage: 
+#23 30.42     CookiePath: /csp/sentai/api/v1/
+#23 30.42     DeepSeeEnabled: 0
+#23 30.42     Description: 
+#23 30.42     DispatchClass: sentai.rest.Dispatcher
+#23 30.42     Enabled: 1
+#23 30.42     ErrorPage: 
+#23 30.42     EventClass: 
+#23 30.42     GroupById: 
+#23 30.42     HyperEvent: 0
+#23 30.42     InbndWebServicesEnabled: 1
+#23 30.42     IsNameSpaceDefault: 0
+#23 30.42     JWTAccessTokenTimeout: 60
+#23 30.42     JWTAuthEnabled: 1
+#23 30.42     JWTRefreshTokenTimeout: 900
+#23 30.42     LockCSPName: 1
+#23 30.42     LoginPage: 
+#23 30.42     LoginTokenEnabled: 0
+#23 30.42     MatchRoles: 
+#23 30.42     NameSpace: IRISAPP
+#23 30.42     Package: 
+#23 30.42     Path: 
+#23 30.42     PermittedClasses: 
+#23 30.42     Recurse: 1
+#23 30.42     RedirectEmptyPath: 
+#23 30.42     Resource: 
+#23 30.42     ServeFiles: 
+#23 30.42     ServeFilesTimeout: 
+#23 30.42     SessionScope: 
+#23 30.42     SuperClass: 
+#23 30.42     Timeout: 
+#23 30.42     TwoFactorEnabled: 0
+#23 30.42     Type: 2
+#23 30.42     UseCookies: 0
+#23 30.42     UserCookieScope: 
+#23 30.42     WSGIAppLocation: 
+#23 30.42     WSGIAppName: 
+#23 30.42     WSGICallable: 
+#23 30.42     WSGIDebug: 
+#23 30.42     WSGIType: 
+#23 30.42     iKnowEnabled: 0
+#23 30.42 Done.
+#23 30.42 [IRISAPP|sentai-task]	Configure START
+#23 30.42 Updating Web Application /csp/sentai/api/v1
+#23 30.42 AuthenticationMethods: [missing] -> 
+#23 30.42 CorsAllowlist:  -> [missing]
+#23 30.42 CorsCredentialsAllowed: 1 -> [missing]
+#23 30.42 CorsHeadersList:  -> [missing]
+#23 30.42 LoginTokenEnabled: [missing] -> 0
+#23 30.42 Name: /csp/sentai/api/v1 -> [missing]
+#23 30.42 TraceEnabled: 0 -> [missing]
+#23 30.42 Done.
+#23 30.42 [IRISAPP|sentai-task]	Configure SUCCESS
+#23 30.42 Seeding update steps for module = sentai-task, for version = 0.0.3
+#23 30.48 
+#23 30.48 [IRISAPP|sentai-task]	Activate SUCCESS
+#23 DONE 31.1s
+
+#24 exporting to image
+#24 exporting layers
+#24 exporting layers 4.6s done
+#24 exporting manifest sha256:4899b29cf1157e33c39392251373d80ae2e98d1f367cdeb5888db2d7d413fa55 0.0s done
+#24 exporting config sha256:9d1cccf1393d256f2e906c30aa229cb687451d8b2ae856e8f824a1ca18d3e82a 0.0s done
+#24 exporting attestation manifest sha256:27cfd276c2e832ebfac32314751c68ef8a1d1006a6d85409cc77db58f369a9c2 0.0s done
+#24 exporting manifest list sha256:574bb06864d216a5868eecdce271dc938065ade3a609e3352647a8995a0634ca
+#24 exporting manifest list sha256:574bb06864d216a5868eecdce271dc938065ade3a609e3352647a8995a0634ca 0.0s done
+#24 naming to docker.io/library/sentai-task-iris:latest done
+#24 unpacking to docker.io/library/sentai-task-iris:latest
+#24 unpacking to docker.io/library/sentai-task-iris:latest 1.7s done
+#24 DONE 6.5s
+
+#25 resolving provenance for metadata file
+#25 DONE 0.0s
+ Image sentai-task-iris Built 

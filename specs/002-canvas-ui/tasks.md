@@ -47,13 +47,13 @@ Per `plan.md` §Project Structure: `frontend/` (new, SvelteKit app) at the repos
 **Purpose**: Scaffold the `frontend/` SvelteKit project so later stages have something to
 build.
 
-- [ ] T001 Create `frontend/package.json` — SvelteKit 2, Svelte 5, `@sveltejs/adapter-static`,
+- [X] T001 Create `frontend/package.json` — SvelteKit 2, Svelte 5, `@sveltejs/adapter-static`,
       `@xyflow/svelte` v1.x as dependencies; `typescript`, `vite`, `@playwright/test` as dev
       dependencies; `build`/`dev`/`test:e2e` npm scripts.
       **Done when**: `npm install` in `frontend/` completes with no missing-peer errors and
       `package.json` lists exactly these runtime deps (no DevExtreme, no unrelated UI kit).
       **Blocked by**: none.
-- [ ] T002 [P] Create `frontend/svelte.config.js` configuring `@sveltejs/adapter-static` with
+- [X] T002 [P] Create `frontend/svelte.config.js` configuring `@sveltejs/adapter-static` with
       a fallback-free single-page build (`pages: 'build'`, `assets: 'build'`, `strict: true`)
       and the app's base path set to `/csp/sentai` (matching the full spec's eventual CSP
       application path per `contracts/quickstart.md`, so this path is not renamed in a later
@@ -61,7 +61,7 @@ build.
       **Done when**: the file exports a valid SvelteKit config object using
       `@sveltejs/adapter-static`; `svelte-kit sync` does not error.
       **Blocked by**: T001.
-- [ ] T003 [P] Create `frontend/vite.config.ts` with the SvelteKit Vite plugin.
+- [X] T003 [P] Create `frontend/vite.config.ts` with the SvelteKit Vite plugin.
       **Done when**: `vite.config.ts` exports a config that includes `sveltekit()`;
       `npm run build` (once source files exist) picks it up with no config error.
       **Blocked by**: T001.
@@ -80,7 +80,7 @@ No tracer-bullet component work can be verified end-to-end until this phase is d
 are only *exercisable* once Phase 3 has source to compile — but the Dockerfile/CSP-app
 plumbing itself must be written now so Phase 3's route has somewhere to be served.
 
-- [ ] T004 Modify `Dockerfile`: add a `node:20` builder stage before the existing IRIS stage
+- [X] T004 Modify `Dockerfile`: add a `node:20` builder stage before the existing IRIS stage
       that runs `WORKDIR /app`, copies `frontend/`, then `npm ci && npm run build`; modify the
       final IRIS stage to `COPY --from=builder /app/build /home/irisowner/dev/frontend-build`
       (or equivalent path reachable by the CSP application in T005). The existing `FROM $IMAGE`
@@ -90,7 +90,7 @@ plumbing itself must be written now so Phase 3's route has somewhere to be serve
       `node` stage running `npm ci`/`npm run build`, and `docker history` on the final image
       shows no Node runtime layer.
       **Blocked by**: T001, T002, T003.
-- [ ] T005 Configure the CSP web application that serves the tracer bullet: add a
+- [X] T005 Configure the CSP web application that serves the tracer bullet: add a
       `CreateApplication:Name=/csp/sentai,Path=/home/irisowner/dev/frontend-build,...` action
       (physical path matching T004's copy destination, "Serve files" enabled, no dispatch
       class) to `merge.cpf`, or add the equivalent `##class(Security.Applications).Create()`
@@ -102,7 +102,7 @@ plumbing itself must be written now so Phase 3's route has somewhere to be serve
       200 for the built `index.html`, with no `/api/admin/*` or `/csp/sentai/api/v1/*` call
       involved in serving it.
       **Blocked by**: T004.
-- [ ] T006 Review `docker-compose.yml` against the new `Dockerfile` build stage and the CSP
+- [X] T006 Review `docker-compose.yml` against the new `Dockerfile` build stage and the CSP
       app path from T005; adjust only if the build context, published ports (1972, 52773,
       53773), or the `./:/home/irisowner/dev` volume mount would shadow the copied
       `frontend-build` directory at container start. If no conflict exists, leave the file
@@ -129,7 +129,7 @@ count node/edge DOM elements, inspect the edge's stroke width and colour, confir
 
 ### Fixture and rendering
 
-- [ ] T007 [P] [US1] Create `frontend/src/lib/fixtures/tracer-graph.ts` exporting exactly 3
+- [X] T007 [P] [US1] Create `frontend/src/lib/fixtures/tracer-graph.ts` exporting exactly 3
       `TracerNode` literals (`id: "01"|"02"|"03"`, `title`, one `category` each from
       `verification | storage | journal | purge | backup | custom`) and exactly 1
       `TracerEdge` literal (`source`, `target`, both referencing fixture node ids), per
@@ -137,7 +137,7 @@ count node/edge DOM elements, inspect the edge's stroke width and colour, confir
       **Done when**: the module exports a `tracerNodes` array of length 3 and a `tracerEdges`
       array of length 1, typed per `data-model.md`.
       **Blocked by**: T001.
-- [ ] T008 [P] [US1] Create `frontend/src/lib/design/tokens.ts` re-exporting the `category.*`
+- [X] T008 [P] [US1] Create `frontend/src/lib/design/tokens.ts` re-exporting the `category.*`
       and `edge.sequence` dark-theme values from `contracts/tokens.json` as typed constants
       (e.g. `categoryColor: Record<TracerNode['category'], string>`, `edgeSequence: { width:
       number; color: string }`). Values are copied verbatim from `tokens.json`'s `theme.dark`
@@ -146,7 +146,7 @@ count node/edge DOM elements, inspect the edge's stroke width and colour, confir
       `tokens.json` exactly (`#FF3B4A`, `#3B8DFF`, `#FFC93B`, `#35D07F`, `#FF6FB5`, `#9AA7BC`;
       width `1.5`, colour `#5E6E85`).
       **Blocked by**: T001.
-- [ ] T009 [US1] Create `frontend/src/lib/canvas/TracerNode.svelte`: a custom Svelte Flow node
+- [X] T009 [US1] Create `frontend/src/lib/canvas/TracerNode.svelte`: a custom Svelte Flow node
       component rendering the title, the `#NN`-formatted id, and a 3px left border coloured
       via `tokens.ts`'s `categoryColor[node.data.category]` (UI-001 §Node anatomy — left
       border only; no hazard band, namespace chip, database directory, timeout, WQM category,
@@ -154,7 +154,7 @@ count node/edge DOM elements, inspect the edge's stroke width and colour, confir
       **Done when**: given a fixture node, the rendered DOM shows the title text, `#01`/`#02`/
       `#03`, and a computed `border-left-color` equal to that node's category token.
       **Blocked by**: T007, T008.
-- [ ] T010 [US1] Create `frontend/src/lib/canvas/TracerCanvas.svelte`: a Svelte Flow (`
+- [X] T010 [US1] Create `frontend/src/lib/canvas/TracerCanvas.svelte`: a Svelte Flow (`
       @xyflow/svelte`) wrapper using its default pan/zoom viewport, registering `TracerNode`
       as the node type for all fixture nodes, and rendering the fixture edge with `type:
       'default'`/`straight'` styled per T011 below. Imports `tracerNodes`/`tracerEdges` from
@@ -162,7 +162,7 @@ count node/edge DOM elements, inspect the edge's stroke width and colour, confir
       **Done when**: mounting the component renders a `<svelte-flow>` root containing exactly
       3 node elements and 1 edge element from the fixture.
       **Blocked by**: T007, T009.
-- [ ] T011 [US1] Style the fixture edge in `frontend/src/lib/canvas/TracerCanvas.svelte` (or a
+- [X] T011 [US1] Style the fixture edge in `frontend/src/lib/canvas/TracerCanvas.svelte` (or a
       colocated `TracerEdge` style/markerEnd config) using `tokens.ts`'s `edgeSequence`:
       stroke width 1.5px, stroke colour `#5E6E85` (dark `edge.sequence`), an arrowhead
       `markerEnd` — the sequence treatment from UI-001/UI-006, explicitly **not** the 2.5px
@@ -170,7 +170,7 @@ count node/edge DOM elements, inspect the edge's stroke width and colour, confir
       **Done when**: the rendered edge's `<path>` has `stroke-width: 1.5`, `stroke: #5E6E85`,
       and a visible arrowhead marker; no diamond junction marker is present anywhere.
       **Blocked by**: T008, T010.
-- [ ] T012 [US1] Create `frontend/src/routes/+page.svelte` rendering `TracerCanvas` as the
+- [X] T012 [US1] Create `frontend/src/routes/+page.svelte` rendering `TracerCanvas` as the
       page's sole content, plus minimal `frontend/src/app.html` shell if not already
       scaffolded by T001. No palette, no inspector, no top bar, no status bar — none of
       UI-001's other four regions exist in this phase.
@@ -180,7 +180,7 @@ count node/edge DOM elements, inspect the edge's stroke width and colour, confir
 
 ### Test (write before the build/deploy verification below)
 
-- [ ] T013 [US1] Create `frontend/tests/tracer-bullet.spec.ts` (Playwright): load the served
+- [X] T013 [US1] Create `frontend/tests/tracer-bullet.spec.ts` (Playwright): load the served
       page, assert exactly 3 elements match Svelte Flow's node selector and exactly 1 matches
       its edge selector after hydration, assert the edge's computed stroke-width is `1.5` and
       it is not the join treatment, and assert the page's network log contains no request to
@@ -195,14 +195,14 @@ count node/edge DOM elements, inspect the edge's stroke width and colour, confir
 
 ### Build and deploy (contract items 1–3, evidence capture)
 
-- [ ] T014 [US1] Run `docker-compose build --no-cache` from the repository root. Save the full
+- [X] T014 [US1] Run `docker-compose build --no-cache` from the repository root. Save the full
       output as `specs/002-canvas-ui/tracer-build.log` (evidence item 1 of
       `contracts/tracer-bullet-deployment.md`).
       **Done when**: the build succeeds, the log shows the `node` builder stage running `npm
       ci && npm run build`, and the final image's base `FROM` line is unchanged from the
       pre-existing `Dockerfile`.
       **Blocked by**: T004, T005, T006, T013.
-- [ ] T015 [US1] Run `docker-compose up -d`, then run T013's Playwright spec against
+- [X] T015 [US1] Run `docker-compose up -d`, then run T013's Playwright spec against
       `http://localhost:52773/csp/sentai/` until it passes. Capture
       `specs/002-canvas-ui/tracer-render.png` (screenshot of the rendered canvas) and
       `specs/002-canvas-ui/tracer-network.json` (the page load's network log) as evidence
@@ -293,3 +293,27 @@ import/export, no Nginx sidecar, no Node runtime in the shipped container.
 - Commit after each task or logical group; stop at the Phase 3 checkpoint to validate the
   whole slice against `contracts/tracer-bullet-deployment.md` before considering this plan
   revision done.
+
+## Completion notes (2026-09-23)
+
+All 15 tasks done; T013 passes against the live container. Deviations from the task text:
+
+- **T004/T006** — build output is copied to `/opt/sentai-web`, not
+  `/home/irisowner/dev/frontend-build`: the `./:/home/irisowner/dev` bind mount in
+  `docker-compose.yml` would shadow anything baked under that path (the exact conflict T006
+  asks to check). `docker-compose.yml` unchanged. The `ARG IMAGE` block also had to move above
+  the new builder `FROM` so it stays in global scope for the IRIS stage.
+- **T005** — app created in `iris.script` (`AutheEnabled=64`, `ServeFiles=1`, `Recurse=1`). The
+  bare path `/csp/sentai/` returns 404: `ServeFiles` has no directory-index resolution, so the
+  served URL is `/csp/sentai/index.html`. Recorded in
+  `contracts/tracer-bullet-deployment.md` §Deviation.
+- **T008** — `tokens.ts`/`tokens.css` are generated from `contracts/tokens.json` by
+  `frontend/scripts/generate-tokens.mjs` (runs on `predev`/`prebuild`, output gitignored),
+  carrying both themes rather than a hand-copied dark subset, so later phases don't re-copy
+  values.
+- **T011** — the sequence-edge stroke is applied through a global CSS rule on
+  `.svelte-flow__edge-path` (`--edge-sequence-*` tokens); `@xyflow/svelte`'s per-edge `style`
+  string did not reach the rendered `<path>`.
+- **T014/T015** — evidence lives in `specs/002-canvas-ui/evidence/` (the directory spec.md's
+  Evidence Contract names). The container was left running for the next phase instead of
+  `docker-compose down`.

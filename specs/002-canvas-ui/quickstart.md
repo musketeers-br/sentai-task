@@ -39,8 +39,10 @@ no new service is added to `docker-compose.yml`.
 
 ## Verify
 
-1. Open `http://localhost:52773/<tracer-app-path>/` in a browser (or headless via Playwright).
-   **Expected**: HTTP 200, page loads.
+1. Open `http://localhost:52773/<tracer-app-path>/index.html` in a browser (or headless via
+   Playwright). **Expected**: HTTP 200, page loads. (The bare directory path 404s — IRIS's
+   `ServeFiles` static app has no directory-index resolution; see
+   `contracts/tracer-bullet-deployment.md` §Deviation.)
 2. Inspect the rendered canvas.
    **Expected**: exactly 3 nodes, each with a title, an `#NN` id, and a left-border colour from
    `tokens.json`'s `category.*` tokens; exactly 1 edge, rendered as a sequence edge (1.5px,
