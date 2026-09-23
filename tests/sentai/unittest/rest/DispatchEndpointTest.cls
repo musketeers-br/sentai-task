@@ -12,8 +12,8 @@ Method NewRequest(bodyObj As %DynamicObject) As %Status
 
 Method TestValidDispatchReturns202WithAllStepsQueued()
 {
-    Set id = ..CreateCanonicalFlow("DispatchOk")
-    Do ..NewRequest({"confirmations": [{"stepId": "04", "typedName": "%SYS"}]})
+    Set id = ..CreateSupportedFlow("DispatchOk")
+    Do ..NewRequest({"confirmations": []})
     Do ##class(sentai.rest.Dispatcher).DispatchFlow(id)
     Do $$$AssertEquals(%response.Status, 202)
 
@@ -21,15 +21,22 @@ Method TestValidDispatchReturns202WithAllStepsQueued()
     Do rs.%Prepare("SELECT COUNT(*) AS c FROM sentai_model.StepRun sr JOIN sentai_model.Run r ON sr.run = r.ID WHERE r.flow = ?")
     Set result = rs.%Execute(id)
     Do result.%Next()
-    Do $$$AssertEquals(result.%Get("c"), 5)
+    Do $$$AssertEquals(result.%Get("c"), 3)
 }
 
-Method TestMissingDestructiveConfirmationReturns428NamingStep()
+/// FR-017 still holds: a destructive step without a matching typed confirmation is named as
+/// pending. Since spec 004 no v1-available type is destructive, so over HTTP the canonical flow
+/// is refused earlier, by validation (422), and never reaches the 428 path.
+Method TestMissingDestructiveConfirmationNamesStep()
 {
     Set id = ..CreateCanonicalFlow("DispatchNoConfirm")
+    Do $$$AssertNotTrue(##class(sentai.dispatch.WaveDispatcher).CheckConfirmations(id, [], .pending))
+    Do $$$AssertEquals(pending, "04")
+    Do $$$AssertTrue(##class(sentai.dispatch.WaveDispatcher).CheckConfirmations(id, ..CanonicalConfirmations(), .pending))
+
     Do ..NewRequest({"confirmations": []})
     Do ##class(sentai.rest.Dispatcher).DispatchFlow(id)
-    Do $$$AssertEquals(%response.Status, 428)
+    Do $$$AssertEquals(%response.Status, 422)
 
     // No StepRun should exist for this flow's steps.
     Set rs = ##class(%SQL.Statement).%New()

@@ -278,7 +278,7 @@ ClassMethod ShapeFlow(flow As sentai.model.Flow, includeGraph As %Boolean) As %D
 /// --- /flows/{id}/validate (FR-012–FR-015, User Story 2) ---
 ClassMethod ValidateFlow(flowId As %String) As %Status
 {
-    Quit ..WriteJSON(200, ##class(sentai.validation.FlowValidator).Validate(flowId))
+    Quit ..WriteJSON(200, ##class(sentai.validation.FlowValidator).Validate(flowId, ..CurrentToken()))
 }
 
 /// --- /flows/{id}/dispatch (FR-016–FR-018, User Story 3) ---
@@ -287,7 +287,7 @@ ClassMethod DispatchFlow(flowId As %String) As %Status
     Set payload = ..ReadJSONBody()
     Set confirmations = $S($IsObject(payload) && payload.%IsDefined("confirmations"):payload."confirmations", 1:[])
 
-    Set run = ##class(sentai.dispatch.WaveDispatcher).Dispatch(flowId, confirmations, ..CurrentUser(), .errorCode, .errorDetail, .report)
+    Set run = ##class(sentai.dispatch.WaveDispatcher).Dispatch(flowId, confirmations, ..CurrentUser(), .errorCode, .errorDetail, .report, ..CurrentToken())
 
     If (errorCode = "VALIDATION_FAILED") Quit ..WriteJSON(422, report)
     If (errorCode = "CONFIRMATION_REQUIRED") Quit ..WriteProblem(428, "Confirmation Required", "Step '"_errorDetail_"' requires a matching typed confirmation before dispatch")
@@ -571,7 +571,7 @@ ClassMethod ScheduleFlow(flowId As %String) As %Status
     Set payload = ..ReadJSONBody()
     // Blocks before any %SYS.Task is created: validation errors (FR-032) and any destructive
     // step (out of scope for scheduling in v1, TD-06).
-    Set report = ##class(sentai.validation.FlowValidator).ValidateForSchedule(flowId)
+    Set report = ##class(sentai.validation.FlowValidator).ValidateForSchedule(flowId, ..CurrentToken())
     If '##class(sentai.validation.FlowValidator).HasNoErrors(report) {
         Quit ..WriteJSON(422, report)
     }

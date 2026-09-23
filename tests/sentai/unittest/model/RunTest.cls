@@ -5,7 +5,7 @@ Method TestEventVersionStartsAtZeroAndIncrements()
 {
     Set id = ..CreateCanonicalFlow("EventVersionFixture")
     Set errorCode = "", errorDetail = "", report = ""
-    Set run = ##class(sentai.dispatch.WaveDispatcher).Dispatch(id, ..CanonicalConfirmations(), "tester", .errorCode, .errorDetail, .report)
+    Set run = ..DispatchUngated(id)
     Do $$$AssertEquals(errorCode, "")
     Do $$$AssertEquals(run.eventVersion, 0)
 

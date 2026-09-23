@@ -5,7 +5,7 @@ Method DispatchCanonical() As sentai.model.Run
 {
     Set id = ..CreateCanonicalFlow("ControlEndpointsFixture")
     Set errorCode = "", errorDetail = "", report = ""
-    Set run = ##class(sentai.dispatch.WaveDispatcher).Dispatch(id, [{"stepId": "04", "typedName": "%SYS"}], "tester", .errorCode, .errorDetail, .report)
+    Set run = ..DispatchUngated(id)
     Do $$$AssertEquals(errorCode, "")
     Quit run
 }

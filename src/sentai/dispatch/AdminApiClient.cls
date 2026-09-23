@@ -57,6 +57,23 @@ ClassMethod Post(urlPath As %String, bearerToken As %String, body As %DynamicObj
     Quit ..ParseBody(req)
 }
 
+/// PUT urlPath (query string already embedded) with `body` — the WQM category write contract
+/// (spec 001 evidence 10a). Same return values as Post.
+ClassMethod Put(urlPath As %String, bearerToken As %String, body As %DynamicObject = "", ByRef httpStatus As %Integer, ByRef locationHeader As %String) As %DynamicObject
+{
+    If $G(^sentaiTestDouble("enabled")) {
+        Quit ##class(sentai.unittest.AdminApiDouble).Put(urlPath, bearerToken, body, .httpStatus, .locationHeader)
+    }
+    Set req = ..NewRequest(bearerToken)
+    If (body '= "") {
+        Do req.EntityBody.Write(body.%ToJSON())
+    }
+    Do req.Put(urlPath)
+    Set httpStatus = +req.HttpResponse.StatusCode
+    Set locationHeader = req.HttpResponse.GetHeader("LOCATION")
+    Quit ..ParseBody(req)
+}
+
 ClassMethod ParseBody(req As %Net.HttpRequest) As %DynamicObject
 {
     Set result = ""

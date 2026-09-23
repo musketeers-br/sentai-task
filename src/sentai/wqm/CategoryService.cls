@@ -1,17 +1,20 @@
 /// Work Queue Manager category read/write — immediate passthrough to the administrative
-/// API (`/api/admin/v2/wqm-categories`), plus the nesting-invariant check and
-/// `affectedTaskCount` (FR-033–FR-036). The platform is always the source of truth; the
-/// local `sentai.model.Category` mirror is a read-optimization only (data-model.md).
+/// API (read `GET /api/admin/v2/wqm-categories`, write `PUT /api/admin/v2/wqm-category?name=`),
+/// plus the nesting-invariant check and `affectedTaskCount` (FR-033–FR-036). The platform is
+/// always the source of truth; the local `sentai.model.Category` mirror is a read-optimization
+/// only (data-model.md).
 Class sentai.wqm.CategoryService Extends %RegisteredObject
 {
 
-/// Lists every WQM category, mirroring the read locally as it goes.
+/// Lists every WQM category, mirroring the read locally as it goes. A failed or malformed read
+/// (non-2xx, no `result` array) yields an empty list — a value, never an exception.
 ClassMethod List(bearerToken As %String) As %DynamicArray
 {
     Set httpStatus = 0, location = ""
     Set body = ##class(sentai.dispatch.AdminApiClient).Get("/api/admin/v2/wqm-categories", bearerToken, .httpStatus, .location)
     Set out = []
-    Quit:'$IsObject(body) out
+    Quit:((httpStatus >= 300) || '$IsObject(body)) out
+    Quit:(body.%GetTypeOf("result") '= "array") out
 
     Set iter = body."result".%GetIterator()
     While iter.%GetNext(.k, .entry) {
@@ -85,17 +88,19 @@ ClassMethod Write(payload As %DynamicObject, bearerToken As %String) As %Status
         Quit $$$ERROR($$$GeneralError, "SentaiInvariantViolated: defaultWorkers<=maxActiveWorkers<=maxWorkers<=maxTotalWorkers must hold")
     }
 
+    // Validated contract (spec 001 evidence 10a): PUT /api/admin/v2/wqm-category?name=<name>. The
+    // name goes only in the query string (a body `Name` is rejected with ERROR #40300), and the
+    // worker counts must be JSON numbers (WQM type asymmetry, compatibility.md).
     Set body = {}
-    Do body.%Set("Name", payload.name)
-    Do body.%Set("DefaultWorkers", payload.defaultWorkers)
-    Do body.%Set("MaxActiveWorkers", payload.maxActiveWorkers)
-    Do body.%Set("MaxWorkers", payload.maxWorkers)
-    Do body.%Set("MaxTotalWorkers", payload.maxTotalWorkers)
-    Do body.%Set("AlwaysQueue", payload.alwaysQueue)
+    Do body.%Set("DefaultWorkers", +payload.defaultWorkers, "number")
+    Do body.%Set("MaxActiveWorkers", +payload.maxActiveWorkers, "number")
+    Do body.%Set("MaxWorkers", +payload.maxWorkers, "number")
+    Do body.%Set("MaxTotalWorkers", +payload.maxTotalWorkers, "number")
+    Do body.%Set("AlwaysQueue", ''payload.alwaysQueue, "boolean")
 
     Set httpStatus = 0, location = ""
-    Do ##class(sentai.dispatch.AdminApiClient).Post("/api/admin/v2/wqm-categories/"_payload.name, bearerToken, body, .httpStatus, .location)
-    If (httpStatus >= 300) Quit $$$ERROR($$$GeneralError, "SentaiAdminApiError: wqm-categories write returned HTTP "_httpStatus)
+    Do ##class(sentai.dispatch.AdminApiClient).Put("/api/admin/v2/wqm-category?name="_$ZCONVERT(payload.name, "O", "URL"), bearerToken, body, .httpStatus, .location)
+    If (httpStatus >= 300) Quit $$$ERROR($$$GeneralError, "SentaiAdminApiError: wqm-category write returned HTTP "_httpStatus)
 
     Quit ##class(sentai.model.Category).Mirror(payload.name, payload.defaultWorkers, payload.maxActiveWorkers, payload.maxWorkers, payload.maxTotalWorkers, payload.alwaysQueue)
 }

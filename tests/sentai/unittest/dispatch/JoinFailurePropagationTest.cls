@@ -5,7 +5,7 @@ Method TestOneFailedInputFailsTheJoinTargetNamingIt()
 {
     Set id = ..CreateCanonicalFlow("JoinFailFixture")
     Set errorCode = "", errorDetail = "", report = ""
-    Set run = ##class(sentai.dispatch.WaveDispatcher).Dispatch(id, ..CanonicalConfirmations(), "tester", .errorCode, .errorDetail, .report)
+    Set run = ..DispatchUngated(id)
     Do $$$AssertEquals(errorCode, "")
 
     Set sr01 = ##class(sentai.model.StepRun).OpenForRunStep(run.%Id(), "01", 4)
@@ -30,7 +30,7 @@ Method TestNoNewStateIsIntroducedByJoinFailure()
 {
     Set id = ..CreateCanonicalFlow("JoinFailNoNewState")
     Set errorCode = "", errorDetail = "", report = ""
-    Set run = ##class(sentai.dispatch.WaveDispatcher).Dispatch(id, ..CanonicalConfirmations(), "tester", .errorCode, .errorDetail, .report)
+    Set run = ..DispatchUngated(id)
 
     Set sr01 = ##class(sentai.model.StepRun).OpenForRunStep(run.%Id(), "01", 4)
     Do sr01.TransitionTo("running")

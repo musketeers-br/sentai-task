@@ -1,4 +1,5 @@
-/// Closed, compiled catalog of the seven step types supported in v1 (FR-037).
+/// Closed, compiled catalog of the seven step types (FR-037); `available` marks the v1
+/// support set (spec 004 FR-001).
 /// Data, not code branches (Constitution II) — no value here comes from runtime
 /// configuration or operator input. See specs/003-backend-objectscript/data-model.md
 /// §Step-type registry.
@@ -8,13 +9,13 @@ Class sentai.registry.StepType Extends %RegisteredObject
 XData Catalog [ MimeType = application/json ]
 {
 [
-  { "type": "integrity-check",     "class": "%SYS.Task.IntegrityCheck",     "category": "verification", "destructive": false, "pausable": false },
-  { "type": "compact-globals",     "class": "%SYS.Task.CompactGlobals",     "category": "storage",      "destructive": false, "pausable": false },
-  { "type": "defragment-globals",  "class": "%SYS.Task.Defragment",         "category": "storage",      "destructive": false, "pausable": false },
-  { "type": "switch-journal",      "class": "%SYS.Task.SwitchJournal",      "category": "journal",      "destructive": false, "pausable": false },
-  { "type": "purge-audit-records", "class": "%SYS.Task.PurgeAuditDatabase", "category": "purge",        "destructive": true,  "pausable": true  },
-  { "type": "purge-task-history",  "class": "%SYS.Task.PurgeTaskHistory",   "category": "purge",        "destructive": true,  "pausable": true  },
-  { "type": "custom",              "class": "",                            "category": "custom",       "destructive": false, "pausable": false }
+  { "type": "integrity-check",     "class": "%SYS.Task.IntegrityCheck",     "category": "verification", "destructive": false, "pausable": false, "available": true  },
+  { "type": "compact-globals",     "class": "%SYS.Task.CompactGlobals",     "category": "storage",      "destructive": false, "pausable": false, "available": false },
+  { "type": "defragment-globals",  "class": "%SYS.Task.Defragment",         "category": "storage",      "destructive": false, "pausable": false, "available": false },
+  { "type": "switch-journal",      "class": "%SYS.Task.SwitchJournal",      "category": "journal",      "destructive": false, "pausable": false, "available": false },
+  { "type": "purge-audit-records", "class": "%SYS.Task.PurgeAuditDatabase", "category": "purge",        "destructive": true,  "pausable": true,  "available": false },
+  { "type": "purge-task-history",  "class": "%SYS.Task.PurgeTaskHistory",   "category": "purge",        "destructive": true,  "pausable": true,  "available": false },
+  { "type": "custom",              "class": "",                            "category": "custom",       "destructive": false, "pausable": false, "available": false }
 ]
 }
 
@@ -56,6 +57,16 @@ ClassMethod IsPausable(type As %String) As %Boolean
     Set entry = ..Lookup(type)
     If (entry = "") Quit 0
     Quit entry.pausable
+}
+
+/// Whether the type is in the v1 support set — proven end to end on the target platform
+/// (spec 004 D-1: integrity-check only). Unavailable types stay in the catalog so saved flows
+/// load, but validation and rerun refuse them with STEP_TYPE_NOT_SUPPORTED_ON_TARGET.
+ClassMethod IsAvailable(type As %String) As %Boolean
+{
+    Set entry = ..Lookup(type)
+    If (entry = "") Quit 0
+    Quit entry.available
 }
 
 /// Category the type belongs to (verification/storage/journal/purge/custom).

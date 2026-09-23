@@ -18,6 +18,7 @@ Method TestDestructiveStepIsAnErrorForScheduleNeverAWarning()
     }
     Do $$$AssertTrue(found)
     Do $$$AssertNotTrue(##class(sentai.validation.FlowValidator).HasNoErrors(report))
+    // Spec 004: additive to the availability errors for 04 and 05, never replaced by them.
 
     Set foundAsWarning = 0
     Set iter2 = report."warnings".%GetIterator()
@@ -32,25 +33,25 @@ Method TestDestructiveStepDoesNotAffectValidateOrManualDispatch()
     Set id = ..CreateCanonicalFlow("SchedRuleDispatchUnaffected")
 
     // /validate and /dispatch share Validate(): the scheduling-only rule never appears there.
+    // (Since spec 004 the canonical flow has availability errors for 04/05 — not this rule.)
     Set report = ##class(sentai.validation.FlowValidator).Validate(id)
-    Do $$$AssertTrue(##class(sentai.validation.FlowValidator).HasNoErrors(report))
+    Set iter = report."errors".%GetIterator()
+    While iter.%GetNext(.k, .e) {
+        Do $$$AssertNotEquals(e.code, "DESTRUCTIVE_NOT_SCHEDULABLE")
+    }
 
-    // Manual dispatch with the typed confirmation still succeeds (FR-017) ...
-    Set errorCode = "", errorDetail = "", vr = ""
-    Set run = ##class(sentai.dispatch.WaveDispatcher).Dispatch(id, ..CanonicalConfirmations(), "tester", .errorCode, .errorDetail, .vr)
-    Do $$$AssertEquals(errorCode, "")
-    Do $$$AssertTrue($IsObject(run))
+    // The manual-dispatch confirmation gate is unchanged (FR-017, SC-006): the typed
+    // confirmation satisfies it ...
+    Do $$$AssertTrue(##class(sentai.dispatch.WaveDispatcher).CheckConfirmations(id, ..CanonicalConfirmations(), .pending))
 
-    // ... and without it is still refused, naming the destructive step (SC-006 unchanged).
-    Set run2 = ##class(sentai.dispatch.WaveDispatcher).Dispatch(id, [], "tester", .errorCode, .errorDetail, .vr)
-    Do $$$AssertEquals(errorCode, "CONFIRMATION_REQUIRED")
-    Do $$$AssertEquals(errorDetail, "04")
+    // ... and without it the destructive step is named as pending.
+    Do $$$AssertNotTrue(##class(sentai.dispatch.WaveDispatcher).CheckConfirmations(id, [], .pending))
+    Do $$$AssertEquals(pending, "04")
 }
 
 Method TestNonDestructiveFlowPassesThisRule()
 {
-    Set sc = ##class(sentai.model.Flow).SaveGraph(..NonDestructiveFlowPayload("SchedRuleNonDestructive"), "", 0, "tester", .id)
-    Do $$$AssertStatusOK(sc)
+    Set id = ..CreateSupportedFlow("SchedRuleNonDestructive")
     Set report = ##class(sentai.validation.FlowValidator).ValidateForSchedule(id)
     Do $$$AssertTrue(##class(sentai.validation.FlowValidator).HasNoErrors(report))
 }

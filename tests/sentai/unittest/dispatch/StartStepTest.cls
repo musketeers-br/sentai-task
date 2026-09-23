@@ -13,7 +13,7 @@ Method DispatchWithCategory(category As %String) As sentai.model.Run
     Set sc = ##class(sentai.model.Flow).SaveGraph(payload, "", 0, "tester", .id)
     Do $$$AssertStatusOK(sc)
     Set errorCode = "", errorDetail = "", report = ""
-    Set run = ##class(sentai.dispatch.WaveDispatcher).Dispatch(id, ..CanonicalConfirmations(), "tester", .errorCode, .errorDetail, .report)
+    Set run = ..DispatchUngated(id)
     Do $$$AssertEquals(errorCode, "")
     Quit run
 }

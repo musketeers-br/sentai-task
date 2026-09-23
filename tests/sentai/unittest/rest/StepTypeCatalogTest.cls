@@ -10,6 +10,14 @@ Method TestCatalogExposesAllSevenTypesWithCategoryDestructiveAndPausable()
 
     Set catalog = ##class(sentai.registry.StepType).GetCatalog()
     Do $$$AssertEquals(catalog.%Size(), 7)
+
+    // Spec 004 FR-001: every entry the endpoint serves carries `available`.
+    Set iter = catalog.%GetIterator()
+    While iter.%GetNext(.k, .entry) {
+        Do $$$AssertTrue(entry.%IsDefined("available"), entry.type_" declares available")
+        Do $$$AssertEquals(entry.%GetTypeOf("available"), "boolean")
+        Do $$$AssertEquals(+entry.available, (entry.type = "integrity-check"), entry.type)
+    }
 }
 
 Method TestCustomIsSelectableButStillBlockedByValidationUntilClassDeclared()

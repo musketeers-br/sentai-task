@@ -7,6 +7,16 @@ Method TestAllSevenTypesPresent()
     Do $$$AssertEquals(catalog.%Size(), 7)
 }
 
+/// Spec 004 D-1 (amended): integrity-check is the only type proven end to end on IRIS 2026.2.
+Method TestAvailabilityIsIntegrityCheckOnly()
+{
+    Do $$$AssertEquals(##class(sentai.registry.StepType).IsAvailable("integrity-check"), 1)
+    For type = "compact-globals", "defragment-globals", "switch-journal", "purge-audit-records", "purge-task-history", "custom" {
+        Do $$$AssertEquals(##class(sentai.registry.StepType).IsAvailable(type), 0, type_" is not available in v1")
+    }
+    Do $$$AssertEquals(##class(sentai.registry.StepType).IsAvailable("bogus"), 0)
+}
+
 Method TestNonDestructiveTypes()
 {
     Do $$$AssertEquals(##class(sentai.registry.StepType).IsDestructive("integrity-check"), 0)

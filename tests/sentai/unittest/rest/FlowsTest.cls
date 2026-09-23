@@ -21,6 +21,30 @@ Method TestCreateReturns201WithIdAndRevision1()
     Do $$$AssertEquals(%response.Status, 201)
 }
 
+/// Spec 004 FR-003: unavailable types are refused on execution paths only — a flow made of
+/// them is still created, persisted with its types intact, and read back.
+Method TestFlowWithUnavailableTypeSavesAndReadsUnchanged()
+{
+    Set payload = ..CanonicalFlowPayload("RestUnavailable")
+    Do ..NewRequest(payload)
+    Do ##class(sentai.rest.Dispatcher).CreateFlow()
+    Do $$$AssertEquals(%response.Status, 201)
+
+    Set flow = ##class(sentai.model.Flow).NameIndexOpen(payload.name, 0)
+    Do $$$AssertTrue($IsObject(flow))
+    Set flowId = flow.%Id(), types = ""
+    &sql(DECLARE c CURSOR FOR SELECT type INTO :t FROM sentai_model.Step WHERE flow = :flowId ORDER BY id)
+    &sql(OPEN c)
+    For { &sql(FETCH c) Quit:SQLCODE  Set types = types_$S(types = "":"", 1:",")_t }
+    &sql(CLOSE c)
+    Do $$$AssertEquals(types, "integrity-check,integrity-check,integrity-check,purge-audit-records,switch-journal")
+
+    Set %request = ##class(%CSP.Request).%New()
+    Set %response = ##class(%CSP.Response).%New()
+    Do ##class(sentai.rest.Dispatcher).ReadFlow(flowId)
+    Do $$$AssertEquals(%response.Status, 200)
+}
+
 Method TestReadReturnsIdenticalStructure()
 {
     Set id = ..CreateCanonicalFlow("RestRead")

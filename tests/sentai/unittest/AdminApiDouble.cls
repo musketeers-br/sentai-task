@@ -8,6 +8,8 @@ Class sentai.unittest.AdminApiDouble Extends %RegisteredObject
 
 ClassMethod Get(urlPath As %String, bearerToken As %String, ByRef httpStatus As %Integer, ByRef locationHeader As %String) As %DynamicObject
 {
+    // Recorded with the credential used, so tests can assert who read what.
+    Set ^sentaiTestDouble("gets", urlPath) = bearerToken
     Quit ..Respond(urlPath, "GET", .httpStatus, .locationHeader)
 }
 
@@ -19,6 +21,15 @@ ClassMethod Post(urlPath As %String, bearerToken As %String, body As %DynamicObj
     // Recorded so tests can assert the request shape the platform requires (spec 001 evidence).
     Set ^sentaiTestDouble("posted", basePath) = $LB(urlPath, $S($IsObject(body):body.%ToJSON(), 1:""))
     Quit ..Respond(basePath, "POST", .httpStatus, .locationHeader)
+}
+
+ClassMethod Put(urlPath As %String, bearerToken As %String, body As %DynamicObject, ByRef httpStatus As %Integer, ByRef locationHeader As %String) As %DynamicObject
+{
+    // Same keying as Post: the query string (?name=...) is stripped for the scripted response and
+    // the full URL is recorded, so tests can assert the validated contract (spec 001 evidence 10a).
+    Set basePath = $PIECE(urlPath, "?", 1)
+    Set ^sentaiTestDouble("put", basePath) = $LB(urlPath, $S($IsObject(body):body.%ToJSON(), 1:""))
+    Quit ..Respond(basePath, "PUT", .httpStatus, .locationHeader)
 }
 
 ClassMethod Respond(urlPath As %String, method As %String, ByRef httpStatus As %Integer, ByRef locationHeader As %String) As %DynamicObject

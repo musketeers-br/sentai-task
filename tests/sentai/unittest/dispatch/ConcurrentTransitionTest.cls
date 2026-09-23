@@ -17,7 +17,7 @@ Method TestWorkerTransitionSucceedsWhileLoopProcessHoldsTheRun()
 {
     Set id = ..CreateCanonicalFlow("ConcurrentTransition")
     Set errorCode = "", errorDetail = "", report = ""
-    Set run = ##class(sentai.dispatch.WaveDispatcher).Dispatch(id, ..CanonicalConfirmations(), "tester", .errorCode, .errorDetail, .report)
+    Set run = ..DispatchUngated(id)
     Do $$$AssertEquals(errorCode, "")
 
     // Like RunLoop: this process keeps `run` open and performs a transition of its own.

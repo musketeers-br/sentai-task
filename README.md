@@ -88,6 +88,29 @@ IRISAPP>write ##class(dc.sample.PersistentClass).ReadProperty(id)
 Test string
 ```
 
+## Known limitations (v1)
+
+SentaiTask v1 promises only what was proven on IRIS 2026.2 (spec `004-backend-hardening`):
+
+- **Only `integrity-check` runs.** The other six step types (`compact-globals`,
+  `defragment-globals`, `switch-journal`, `purge-audit-records`, `purge-task-history`, `custom`)
+  are still listed in `GET /catalog/step-types` with `available: false` and saved flows that use
+  them still load, but validate, dispatch, schedule and rerun refuse them with
+  `STEP_TYPE_NOT_SUPPORTED_ON_TARGET`.
+- **Scheduling is not operational.** `/schedule` validates the flow and registers a native task,
+  but scheduled runs cannot authenticate to the platform in v1 and are not a supported execution
+  path. Use manual dispatch.
+- **60-second credential.** A dispatched run uses the operator's access token, which expires 60 s
+  after it was issued; platform calls made after that fail with 401, stored verbatim as the step's
+  failure reason. Keep runs short.
+- **Step parameters are not forwarded.** The platform start request carries no parameters, so
+  `databaseDirectory` and similar fields do not choose what the platform operates on.
+- **Flows must name an existing WQM category.** Validation refuses an unknown category with
+  `CATEGORY_NOT_FOUND`. The default for new flows, `SENTAI.DEFAULT`, does not exist on a stock
+  instance — set a category such as `Default`.
+- No v1-available step type is destructive or pausable, so typed confirmation and pause are
+  implemented but not reachable.
+
 ## How to start the development
 
 This repository is ready to code in VSCode with the ObjectScript plugin.
