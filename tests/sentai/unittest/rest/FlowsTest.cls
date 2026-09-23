@@ -30,6 +30,22 @@ Method TestReadReturnsIdenticalStructure()
     Do $$$AssertEquals(%response.Status, 200)
 }
 
+/// Step.parameters is part of the openapi.yaml Step schema; without it a read → save round
+/// trip from the canvas silently drops e.g. daysToKeep and the flow stops validating.
+Method TestReadReturnsStepParameters()
+{
+    Set id = ..CreateCanonicalFlow("RestParams")
+    Set shaped = ##class(sentai.rest.Dispatcher).ShapeFlow(##class(sentai.model.Flow).%OpenId(id, 0), 1)
+    Set purge = ""
+    Set iter = shaped."steps".%GetIterator()
+    While iter.%GetNext(.k, .step) {
+        If (step.id = "04") Set purge = step
+    }
+    Do $$$AssertTrue($IsObject(purge), "step 04 is returned")
+    Do $$$AssertTrue($IsObject(purge) && $IsObject(purge.parameters), "step 04 carries its parameters object")
+    Do $$$AssertEquals($S($IsObject(purge) && $IsObject(purge.parameters):purge.parameters.daysToKeep, 1:""), 30)
+}
+
 Method TestSaveAgainstStaleRevisionReturns409()
 {
     Set id = ..CreateCanonicalFlow("RestStale")

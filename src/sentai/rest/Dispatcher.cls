@@ -9,6 +9,12 @@ Class sentai.rest.Dispatcher Extends %CSP.REST
 
 Parameter HandleCorsRequest = 1;
 
+/// Browsers send UTF-8 JSON; without these, request bodies are read as Latin-1 and any
+/// non-ASCII text (e.g. "—", "ção") is persisted as mojibake.
+Parameter CHARSET = "utf-8";
+
+Parameter CONVERTINPUTSTREAM = 1;
+
 /// No "Unauthenticated" option (HANDOFF constraint, FR-040); a dedicated role
 /// (%SENTAI_Operator, proposed) is required at the CSP-application level, configured
 /// separately from this class (Security.Applications), not here — this class enforces
@@ -229,7 +235,7 @@ ClassMethod ShapeFlow(flow As sentai.model.Flow, includeGraph As %Boolean) As %D
 
     Set steps = []
     Set rs = ##class(%SQL.Statement).%New()
-    Do rs.%Prepare("SELECT id, type, taskName, namespace, databaseDirectory, runAsUser, timeoutMinutes, wqmCategory, customClass FROM sentai_model.Step WHERE flow = ?")
+    Do rs.%Prepare("SELECT %ID AS rowId, id, type, taskName, namespace, databaseDirectory, runAsUser, timeoutMinutes, wqmCategory, customClass FROM sentai_model.Step WHERE flow = ?")
     Set result = rs.%Execute(flow.%Id())
     While result.%Next() {
         Set s = {}
@@ -242,6 +248,9 @@ ClassMethod ShapeFlow(flow As sentai.model.Flow, includeGraph As %Boolean) As %D
         Do s.%Set("timeoutMinutes", result.%Get("timeoutMinutes"))
         Do s.%Set("wqmCategory", result.%Get("wqmCategory"))
         Do s.%Set("customClass", result.%Get("customClass"))
+        // %DynamicObject properties are not SQL-projected; read parameters from the object.
+        Set stepObj = ##class(sentai.model.Step).%OpenId(result.%Get("rowId"), 0)
+        Do s.%Set("parameters", $S($IsObject(stepObj) && $IsObject(stepObj.parameters):stepObj.parameters, 1:{}))
         Do s.%Set("isDestructive", ##class(sentai.registry.StepType).IsDestructive(result.%Get("type")))
         Do steps.%Push(s)
     }

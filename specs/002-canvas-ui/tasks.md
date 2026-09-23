@@ -317,3 +317,39 @@ All 15 tasks done; T013 passes against the live container. Deviations from the t
 - **T014/T015** — evidence lives in `specs/002-canvas-ui/evidence/` (the directory spec.md's
   Evidence Contract names). The container was left running for the next phase instead of
   `docker-compose down`.
+
+## Follow-on: User Story 1 — Flow Composition (2026-09-23)
+
+Implemented against the live `SENTAI.REST.Dispatcher` (spec 003), superseding the tracer
+fixture. Verified by `frontend/tests/us1-flow-composition.spec.ts` (Q1, Q2) against the deployed
+container, plus 27 vitest unit tests on the pure graph/document/wire logic. Evidence:
+`evidence/q1-flow-composition.png`, `evidence/q2-node-anatomy.png`.
+
+Delivered: sign-in with proactive 60 s token refresh (FR-034, in memory only); palette fed by
+`GET /catalog/step-types` (the registry is never duplicated client-side); drag-to-place with 8 px
+snap (click/Enter adds too, for keyboard users); full node anatomy (FR-006, FR-007, FR-011
+hazard band + seal); edge drawing with cycle/self/duplicate rejection at draw time (FR-002,
+FR-003); one shared junction diamond per fan-in target and diamond join handle (FR-004); 1.5/2.5
+px edge widths (FR-005); edge legend; zoom/fit/lock controls (FR-017); 168×104 minimap in category
+colours (FR-018); status-bar counts (FR-009 counts part); dark/light switch via `data-theme`
+(FR-038); create/save through `POST`/`PUT /flows` with revision check and canvas geometry.
+
+Deviations, each deliberate:
+
+- **Route** — a flow is addressed as `index.html?flow=<id>`, not `/flows/[id]`: `ServeFiles` has no
+  SPA fallback (see `contracts/tracer-bullet-deployment.md` §Deviation). A SvelteKit `reroute`
+  hook (`frontend/src/hooks.ts`) maps `…/index.html` onto the root route for the client router.
+- **Save flow** button in the top bar — UI-001's vocabulary has none, but nothing else persists
+  the canvas yet. *Validate flow* / *Schedule in Task Manager* arrive with US2/US3.
+- **Node footer** shows `wqm: <category>` rather than `wqm: N workers`: the worker count needs the
+  WQM category read that US5 brings.
+- **Inspector** region (FR-014–FR-016) and the precondition panel (FR-008) are US2.
+- **Sign-in screen** — not in the design export, required by the token model.
+
+Backend defects found by these tests and fixed in `src/sentai/rest/Dispatcher.cls`:
+
+- `ShapeFlow` omitted `steps[].parameters` (in the openapi `Step` schema), so a read → save round
+  trip dropped `daysToKeep` and the flow stopped validating. Regression test:
+  `sentai.unittest.rest.FlowsTest:TestReadReturnsStepParameters`.
+- No `CHARSET`/`CONVERTINPUTSTREAM`: UTF-8 request bodies were read as Latin-1, persisting any
+  non-ASCII name as mojibake ("—" → "â€""). Covered over real HTTP by Q2.
