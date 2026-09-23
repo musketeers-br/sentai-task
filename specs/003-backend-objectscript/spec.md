@@ -4,7 +4,7 @@
 
 **Created**: 2026-09-22
 
-**Status**: Draft
+**Status**: Accepted with Follow-up Required
 
 **Input**: User description: "Define the expected behavior of the backend so that it persists
 flows, validates them before use and before execution, executes them respecting dependencies
@@ -15,6 +15,15 @@ infrastructure, or decisions already closed (join policy, native scheduler, nati
 isDestructive, single instance, pause restricted to the purge family)."
 
 ## Change Log / Post-draft Addendum
+
+### 2026-09-23 — Closure note
+
+Spec 003 is considered complete for its primary backend scope and has been validated through
+automated tests, real HTTP quickstart execution, destructive-scheduling refusal, and historical
+data sanitation. However, real-environment validation exposed integration limitations that require
+a dedicated follow-up spec, especially around long-running/scheduled authentication and the actual
+set of administrative step endpoints supported by the target IRIS instance.
+
 
 ### 2026-09-22 — Scheduling scope reduction after implementation validation
 
