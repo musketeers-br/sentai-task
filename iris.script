@@ -20,12 +20,12 @@
     //set sc = ##class(App.Installer).setup()
 
     // The canvas app /csp/sentai (static build baked into /opt/sentai-web) is declared in
-    // module.xml and served by sentai.web.StaticFiles with password authentication.
-    // To answer an anonymous request with 401 + WWW-Authenticate: Basic (so the browser asks
-    // for the IRIS user), IRIS runs that class before login, as a user with no roles. Only
-    // the sentai.web package is therefore mapped to its own small database whose resource is
-    // publicly readable: it holds that file server's code and nothing else — no data, no
-    // other sentai code (IRISAPP_CODE and IRISAPP_DATA keep no public access).
+    // module.xml and served by sentai.web.StaticFiles without authentication: the operator
+    // signs in once, inside the canvas, which gets API tokens; the API stays password + JWT.
+    // An anonymous request runs as UnknownUser (no roles), so only the sentai.web package is
+    // mapped to its own small database whose resource is publicly readable: it holds that
+    // file server's code and nothing else — no data, no other sentai code (IRISAPP_CODE and
+    // IRISAPP_DATA keep no public access).
     set webDbDir = "/usr/irissys/mgr/sentaiweb/"
     do ##class(%File).CreateDirectoryChain(webDbDir)
     set sc = ##class(SYS.Database).CreateDatabase(webDbDir)
@@ -36,6 +36,9 @@
     set sc = ##class(Config.Databases).Create("SENTAIWEB", .dbProps)
     kill mapProps set mapProps("Database") = "SENTAIWEB"
     set sc = ##class(Config.MapPackages).Create("IRISAPP", "sentai.web", .mapProps)
+    // Entering the IRISAPP namespace requires read on its default globals database. The
+    // canvas app (and only it, via MatchRoles in module.xml) gets exactly that: read-only.
+    set sc = ##class(Security.Roles).Create("SentaiWebPage", "Anonymous canvas page: enter IRISAPP (read on its default globals database) - nothing else", "%DB_IRISAPP_DATA:R")
 
     zn "IRISAPP"
 

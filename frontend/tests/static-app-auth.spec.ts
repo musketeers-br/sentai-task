@@ -1,20 +1,20 @@
 import { expect, test } from '@playwright/test';
 
-// No unauthenticated web app (HANDOFF constraint): the canvas itself is behind the IRIS
-// password. Without it the browser gets a Basic challenge and none of the application.
-test('the canvas is not served without the IRIS password', async ({ browser, baseURL }) => {
-	// Plain fetch: Playwright's own contexts inherit the configured credentials.
+// The canvas page is public: no browser prompt, the operator signs in once inside the canvas.
+// What stays protected is the API — nothing about flows or runs is reachable without a token,
+// and its 401 carries no Basic challenge, so the browser never pops a prompt for it.
+test('the canvas page is public and the API is not', async ({ baseURL }) => {
 	for (const path of ['', 'index.html', '_app/version.json']) {
 		const res = await fetch(new URL(path, baseURL));
-		expect(res.status, path).toBe(401);
-		expect(res.headers.get('www-authenticate'), path).toBe('Basic');
-		expect(await res.text(), path).not.toContain('_app/immutable');
+		expect(res.status, path).toBe(200);
+		expect(res.headers.get('www-authenticate'), path).toBeNull();
 	}
 
-	const wrong = await browser.newContext({ httpCredentials: { username: '_SYSTEM', password: 'wrong' } });
-	const page = await wrong.newPage();
-	const res = await page.goto(new URL('index.html', baseURL).href);
-	expect(res?.status()).toBe(401);
-	await expect(page.getByLabel('User')).toHaveCount(0);
-	await wrong.close();
+	// Nothing outside the build root, however the path is spelled.
+	const escape = await fetch(new URL('..%2F..%2Fetc%2Fpasswd', baseURL));
+	expect(escape.status).toBe(404);
+
+	const api = await fetch(new URL('api/v1/flows', baseURL));
+	expect(api.status).toBe(401);
+	expect(api.headers.get('www-authenticate')).toBeNull();
 });

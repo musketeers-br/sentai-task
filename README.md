@@ -116,15 +116,15 @@ The build compiles the canvas, loads the `sentai-task` module and registers the 
 
 **http://localhost:52773/csp/sentai/**
 
-The browser first asks for your IRIS user and password: the canvas itself is never served
-without them. Then sign in to the canvas with the same credentials (`_SYSTEM` / `SYS` on this
-dev image); that second sign-in gets the short-lived API tokens, which stay in memory only.
+Sign in to the canvas with your IRIS user (`_SYSTEM` / `SYS` on this dev image). That sign-in
+exchanges the password for short-lived API tokens, which stay in memory only; the password is
+never stored.
 
-> **Why two prompts:** the browser prompt protects the page (HTTP Basic, remembered by the
-> browser until it closes); the canvas sign-in exchanges the password for 60-second API tokens
-> and never stores it. For IRIS to challenge an anonymous browser at all, the `sentai.web`
-> package (the file server, no data) lives in its own small database `SENTAIWEB` whose code is
-> publicly readable; every other database keeps no public access.
+> **What is public and what is not:** the page itself (HTML, JS, CSS) is served without
+> authentication by `sentai.web.StaticFiles`, which only reads the canvas build and holds no
+> data. Its code lives in a small database, `SENTAIWEB`, and the app's role `SentaiWebPage` only
+> lets the anonymous request enter the namespace (read on its default globals database). Every
+> flow and run goes through the REST API, which always requires a token.
 
 ### IPM
 

@@ -27,14 +27,18 @@
         CookiePath="/csp/sentai/api/v1/"/>
 
       <!-- The canvas (static SvelteKit build in /opt/sentai-web), served by
-           sentai.web.StaticFiles. Password authentication, never Unauthenticated: a request
-           without credentials gets 401 + WWW-Authenticate: Basic, so the browser asks for the
-           IRIS user once. The canvas then signs in to /api/admin on its own (tokens). -->
+           sentai.web.StaticFiles. Unauthenticated on purpose: the page itself is public
+           HTML/JS/CSS, and the operator signs in once, in the canvas, which exchanges the
+           password for API tokens. No data is reachable here — the file server reads only
+           /opt/sentai-web, and every flow/run call goes to /csp/sentai/api/v1 (JWT).
+           SentaiWebPage (created in iris.script) only lets the anonymous request enter the
+           IRISAPP namespace: read on its default globals database, nothing else. -->
       <CSPApplication
         Url="/csp/sentai"
         DispatchClass="sentai.web.StaticFiles"
-        PasswordAuthEnabled="1"
-        UnauthenticatedEnabled="0"
+        PasswordAuthEnabled="0"
+        UnauthenticatedEnabled="1"
+        MatchRoles=":SentaiWebPage"
         Recurse="1"
         UseSessionCookie="0"
         CookiePath="/csp/sentai/"/>

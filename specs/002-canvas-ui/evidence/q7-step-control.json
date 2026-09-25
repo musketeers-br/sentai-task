@@ -1,28 +1,28 @@
 {
   "evidence_id": "q7-step-control",
-  "captured_at": "2026-09-25T13:34:27.790Z",
+  "captured_at": "2026-09-25T21:02:44.650Z",
   "entries": [
     {
-      "timestamp": "2026-09-25T13:31:57.416Z",
+      "timestamp": "2026-09-25T21:01:22.881Z",
       "event": "dispatched",
       "detail": {
-        "run": "7A0F7495-B8E5-11F1-8E26-865C5E2CA438"
+        "run": "42C58F24-B924-11F1-8B7C-EAF7555A56CF"
       }
     },
     {
-      "timestamp": "2026-09-25T13:31:57.487Z",
+      "timestamp": "2026-09-25T21:01:22.943Z",
       "event": "step #04 cancel → cancelled",
       "detail": {
-        "elapsedMs": 71
+        "elapsedMs": 62
       }
     },
     {
-      "timestamp": "2026-09-25T13:31:57.502Z",
+      "timestamp": "2026-09-25T21:01:22.951Z",
       "event": "siblings #01 #02 #03 still running",
       "detail": {}
     },
     {
-      "timestamp": "2026-09-25T13:32:53.974Z",
+      "timestamp": "2026-09-25T21:01:55.967Z",
       "event": "states live together",
       "detail": {
         "states": [
@@ -34,7 +34,7 @@
       }
     },
     {
-      "timestamp": "2026-09-25T13:34:27.781Z",
+      "timestamp": "2026-09-25T21:02:44.644Z",
       "event": "run terminal",
       "detail": {
         "state": " RUN CANCELLED"

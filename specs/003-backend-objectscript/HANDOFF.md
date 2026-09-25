@@ -209,3 +209,14 @@ Changed on the backend side by the frontend work, for awareness (all with tests;
   package is mapped to database `SENTAIWEB` (resource public R, that code only). Declared in
   `module.xml`; `iris.script` creates the database and the mapping. Details:
   `specs/002-canvas-ui/tasks.md` §"static app authentication".
+
+## Exception to "no unauthenticated web app" (2026-09-25)
+
+Decided by the project owner: the operator authenticates only in the canvas, never in a browser
+prompt. `/csp/sentai` (the static page) is therefore **unauthenticated**; `/csp/sentai/api/v1`
+keeps password + JWT and remains the only way to reach flows and runs. Bounds of the exception:
+the app's dispatch class is `sentai.web.StaticFiles` (reads only `/opt/sentai-web`, no data,
+nothing outside that root), its code sits in `SENTAIWEB` (public R), and its only role,
+`SentaiWebPage` (`MatchRoles`), is `%DB_IRISAPP_DATA:R` — the minimum IRIS requires to enter the
+namespace. `IRISAPP_CODE` and `IRISAPP_DATA` keep no public access.
+

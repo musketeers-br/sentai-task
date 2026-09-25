@@ -1,9 +1,9 @@
 {
   "evidence_id": "q5-schedule",
-  "captured_at": "2026-09-25T13:31:54.466Z",
+  "captured_at": "2026-09-25T21:01:20.372Z",
   "request": {
     "method": "POST",
-    "url_path": "/csp/sentai/api/v1/flows/6/schedule",
+    "url_path": "/csp/sentai/api/v1/flows/103/schedule",
     "body": {
       "scheduleSpec": "WEEKLY SAT 03:00",
       "category": "Default"
@@ -13,13 +13,13 @@
     "status": 201,
     "body": {
       "taskIds": [
-        "1000",
-        "1001",
-        "1002",
         "1003",
-        "1004"
+        "1004",
+        "1005",
+        "1006",
+        "1007"
       ],
-      "nextRun": "2026-09-25 13:31:54"
+      "nextRun": "2026-09-25 21:01:20"
     }
   },
   "notes": [

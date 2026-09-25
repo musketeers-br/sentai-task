@@ -1,6 +1,6 @@
 {
   "evidence_id": "q10-token-audit",
-  "captured_at": "2026-09-25T13:37:36.709Z",
+  "captured_at": "2026-09-25T21:04:08.641Z",
   "rule": "UI-007 step 5 — a light value must never equal the channel-wise inverse of its dark value",
   "pairs": 51,
   "derived": 0,
