@@ -47,4 +47,24 @@ Method TestWholeRunCancelStopsPendingAndCancelsRunning()
     }
 }
 
+/// Constitution IV: a partial outcome is never reported as success. A cancelled wave — or any
+/// run that ends with a cancelled step and no failed one — finalizes as "cancelled".
+Method TestCancelledRunFinalizesAsCancelledNotCompleted()
+{
+    Set run = ..DispatchCanonical()
+    Do ##class(sentai.dispatch.WaveDispatcher).CancelRun(run.guid)
+    Do ##class(sentai.dispatch.WaveDispatcher).FinalizeRun(run)
+    Do $$$AssertEquals(##class(sentai.model.Run).%OpenId(run.%Id(), 0).state, "cancelled")
+}
+
+Method TestFailureOutranksCancellationWhenFinalizing()
+{
+    Set run = ..DispatchCanonical()
+    Do ..StepRunFor(run, "01").TransitionTo("running")
+    Do ..StepRunFor(run, "01").TransitionTo("failed", "boom")
+    Do ##class(sentai.dispatch.WaveDispatcher).CancelRun(run.guid)
+    Do ##class(sentai.dispatch.WaveDispatcher).FinalizeRun(run)
+    Do $$$AssertEquals(##class(sentai.model.Run).%OpenId(run.%Id(), 0).state, "failed")
+}
+
 }

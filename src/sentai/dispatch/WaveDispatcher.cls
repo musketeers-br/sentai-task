@@ -376,14 +376,16 @@ ClassMethod IsRunTerminal(runId As %String) As %Boolean
 
 ClassMethod FinalizeRun(run As sentai.model.Run) As %Status
 {
+    // Constitution IV: a partial outcome is never reported as success — failed outranks
+    // cancelled, which outranks completed.
     Set rs = ##class(%SQL.Statement).%New()
-    Do rs.%Prepare("SELECT COUNT(*) AS c FROM sentai_model.StepRun WHERE run = ? AND state = 'failed'")
+    Do rs.%Prepare("SELECT SUM(CASE WHEN state = 'failed' THEN 1 ELSE 0 END) AS failed, SUM(CASE WHEN state = 'cancelled' THEN 1 ELSE 0 END) AS cancelled FROM sentai_model.StepRun WHERE run = ?")
     Set result = rs.%Execute(run.%Id())
     Do result.%Next()
     // The loop's copy was loaded at start; pick up every eventVersion bump since, so the save
     // below never writes a stale value back.
     Do run.%Reload()
-    Set run.state = $S(result.%Get("c") > 0:"failed", 1:"completed")
+    Set run.state = $S(+result.%Get("failed") > 0:"failed", +result.%Get("cancelled") > 0:"cancelled", 1:"completed")
     Set run.finishedAt = $ZDATETIME($HOROLOG, 3)
     Set sc = run.%Save()
     If $$$ISERR(sc) Return sc
