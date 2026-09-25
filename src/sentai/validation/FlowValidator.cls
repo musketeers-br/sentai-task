@@ -9,7 +9,10 @@ Class sentai.validation.FlowValidator Extends %RegisteredObject
 /// Validates the currently PERSISTED flow (as saved) and returns the ValidationReport
 /// shape from openapi.yaml: {"errors": [...], "warnings": [...]}, each entry shaped as
 /// {"stepId", "code", "message"} (the Finding schema).
-ClassMethod Validate(flowId As %String) As %DynamicObject
+/// `bearerToken` is the operator's platform credential. With it, the WQM category-existence rule
+/// (spec 004 FR-006) reads the platform's category list once; without it (scheduled fire time,
+/// spec 004 D-2) that rule is skipped.
+ClassMethod Validate(flowId As %String, bearerToken As %String = "") As %DynamicObject
 {
     Set errors = []
     Set warnings = []
@@ -32,6 +35,17 @@ ClassMethod Validate(flowId As %String) As %DynamicObject
         Do errors.%Push({"stepId": "", "code": "CYCLE_DETECTED", "message": "The flow's edge graph contains a cycle"})
     }
 
+    // Category names known to the platform, read with the operator's credential. An unreadable
+    // list is empty, so every step reports CATEGORY_NOT_FOUND (fail closed).
+    Set checkCategories = (bearerToken '= "")
+    If checkCategories {
+        Kill knownCategory
+        Set catIter = ##class(sentai.wqm.CategoryService).List(bearerToken).%GetIterator()
+        While catIter.%GetNext(.k, .cat) {
+            Set:(cat.name '= "") knownCategory(cat.name) = ""
+        }
+    }
+
     // Iterate steps for per-type rules.
     Set stepRs = ##class(%SQL.Statement).%New()
     Do stepRs.%Prepare("SELECT %ID AS rowId FROM sentai_model.Step WHERE flow = ?")
@@ -47,13 +61,18 @@ ClassMethod Validate(flowId As %String) As %DynamicObject
             Do errors.%Push({"stepId": (stepId), "code": "CUSTOM_CLASS_REQUIRED", "message": "A custom step requires a declared customClass before it can validate"})
         }
 
-        // 3. Per-step-type parameter schema (closed catalog).
+        // 3. Closed catalog, v1 availability (spec 004 FR-002) and per-step-type parameter schema.
         If '##class(sentai.registry.StepType).IsKnownType(type) {
             Do errors.%Push({"stepId": (stepId), "code": "UNKNOWN_STEP_TYPE", "message": ("Step type '"_type_"' is not in the closed catalog")})
-        } ElseIf (type = "purge-audit-records") {
-            Set hasDaysToKeep = $IsObject(step.parameters) && step.parameters.%IsDefined("daysToKeep")
-            If 'hasDaysToKeep {
-                Do errors.%Push({"stepId": (stepId), "code": "PARAMETER_SCHEMA", "message": "purge-audit-records requires parameters.daysToKeep"})
+        } Else {
+            If '##class(sentai.registry.StepType).IsAvailable(type) {
+                Do errors.%Push({"stepId": (stepId), "code": "STEP_TYPE_NOT_SUPPORTED_ON_TARGET", "message": ("Step type '"_type_"' is not supported on the target platform in v1 (supported: integrity-check)")})
+            }
+            If (type = "purge-audit-records") {
+                Set hasDaysToKeep = $IsObject(step.parameters) && step.parameters.%IsDefined("daysToKeep")
+                If 'hasDaysToKeep {
+                    Do errors.%Push({"stepId": (stepId), "code": "PARAMETER_SCHEMA", "message": "purge-audit-records requires parameters.daysToKeep"})
+                }
             }
         }
 
@@ -63,7 +82,16 @@ ClassMethod Validate(flowId As %String) As %DynamicObject
             Do errors.%Push({"stepId": (stepId), "code": "NAMESPACE_NOT_FOUND", "message": ("Namespace '"_ns_"' does not exist on this instance")})
         }
 
-        // 5. WQM category nesting invariant (shared with CategoryService).
+        // 5. The step's effective WQM category exists on the platform (spec 004 FR-006) — the
+        //    same resolution the dispatcher uses at enqueue.
+        If checkCategories {
+            Set effective = $S(step.wqmCategory '= "":step.wqmCategory, 1:flow.defaultCategory)
+            If (effective = "") || '$D(knownCategory(effective)) {
+                Do errors.%Push({"stepId": (stepId), "code": "CATEGORY_NOT_FOUND", "message": ("WQM category '"_effective_"' does not exist on the target platform")})
+            }
+        }
+
+        // 6. WQM category nesting invariant (shared with CategoryService).
         Set category = step.wqmCategory
         If (category '= "") {
             Set cat = ##class(sentai.model.Category).NameIndexOpen(category, 0, .catSc)
@@ -72,7 +100,7 @@ ClassMethod Validate(flowId As %String) As %DynamicObject
             }
         }
 
-        // 6. Fixed database-directory mount precondition — warning only, never an error (FR-014).
+        // 7. Fixed database-directory mount precondition — warning only, never an error (FR-014).
         Set dbDir = step.databaseDirectory
         If (dbDir '= "") && ..IsMountedReadOnly(dbDir) {
             Do warnings.%Push({"stepId": (stepId), "code": "PRECONDITION_READ_ONLY", "message": "Database mounted read-only. This step type requires write access to the directory."})
@@ -87,9 +115,9 @@ ClassMethod Validate(flowId As %String) As %DynamicObject
 /// no approved mechanism supplies SC-006's typed confirmation at fire time (spec.md Change Log
 /// 2026-09-22). Scoped to scheduling only: /validate and /dispatch keep calling Validate(), so
 /// destructive steps stay valid for manual dispatch with typed confirmation (FR-017).
-ClassMethod ValidateForSchedule(flowId As %String) As %DynamicObject
+ClassMethod ValidateForSchedule(flowId As %String, bearerToken As %String = "") As %DynamicObject
 {
-    Set report = ..Validate(flowId)
+    Set report = ..Validate(flowId, bearerToken)
 
     Set stepRs = ##class(%SQL.Statement).%New()
     Do stepRs.%Prepare("SELECT id, type FROM sentai_model.Step WHERE flow = ?")

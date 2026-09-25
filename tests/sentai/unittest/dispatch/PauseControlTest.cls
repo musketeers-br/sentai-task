@@ -5,7 +5,7 @@ Method DispatchAndRun(stepId As %String) As %String
 {
     Set id = ..CreateCanonicalFlow("PauseFixture")
     Set errorCode = "", errorDetail = "", report = ""
-    Set run = ##class(sentai.dispatch.WaveDispatcher).Dispatch(id, [{"stepId": "04", "typedName": "%SYS"}], "tester", .errorCode, .errorDetail, .report)
+    Set run = ..DispatchUngated(id)
     Do $$$AssertEquals(errorCode, "")
     Set sr = ##class(sentai.model.StepRun).OpenForRunStep(run.%Id(), stepId, 4)
     Do sr.TransitionTo("running")

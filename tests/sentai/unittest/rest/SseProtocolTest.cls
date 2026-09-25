@@ -10,7 +10,7 @@ Method TestEventVersionStrictlyIncreasesAndRunTerminalIsFinal()
 {
     Set id = ..CreateCanonicalFlow("SseFixture")
     Set errorCode = "", errorDetail = "", report = ""
-    Set run = ##class(sentai.dispatch.WaveDispatcher).Dispatch(id, [{"stepId": "04", "typedName": "%SYS"}], "tester", .errorCode, .errorDetail, .report)
+    Set run = ..DispatchUngated(id)
     Do $$$AssertEquals(errorCode, "")
 
     Set v0 = run.eventVersion
@@ -31,7 +31,7 @@ Method TestStreamEventsOnTerminalRunEmitsRunTerminalAndReturns()
 {
     Set id = ..CreateCanonicalFlow("SseStream")
     Set errorCode = "", errorDetail = "", report = ""
-    Set run = ##class(sentai.dispatch.WaveDispatcher).Dispatch(id, ..CanonicalConfirmations(), "tester", .errorCode, .errorDetail, .report)
+    Set run = ..DispatchUngated(id)
     Do $$$AssertEquals(errorCode, "")
     Do ##class(sentai.dispatch.WaveDispatcher).CancelRun(run.guid)
     Do run.%Reload()
@@ -73,7 +73,7 @@ Method TestPollingAndSseReadTheSamePersistedState()
 {
     Set id = ..CreateCanonicalFlow("SsePollingParity")
     Set errorCode = "", errorDetail = "", report = ""
-    Set run = ##class(sentai.dispatch.WaveDispatcher).Dispatch(id, [{"stepId": "04", "typedName": "%SYS"}], "tester", .errorCode, .errorDetail, .report)
+    Set run = ..DispatchUngated(id)
 
     Set sr01 = ##class(sentai.model.StepRun).OpenForRunStep(run.%Id(), "01", 4)
     Do sr01.TransitionTo("running")

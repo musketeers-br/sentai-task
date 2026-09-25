@@ -61,18 +61,35 @@ ClassMethod ResolveRunStep(stepRunGuid As %String, ByRef runGuid As %String, ByR
 /// On failure returns "" and sets `errorCode`/`errorDetail`:
 ///   "VALIDATION_FAILED"       — see `validationReport` for the ValidationReport
 ///   "CONFIRMATION_REQUIRED"   — errorDetail names the pending stepId (FR-017, HTTP 428)
-ClassMethod Dispatch(flowId As %String, confirmationsArray As %DynamicArray, dispatchedBy As %String, ByRef errorCode As %String, ByRef errorDetail As %String, ByRef validationReport As %DynamicObject) As %DynamicObject
+/// `bearerToken` is passed to validation (category existence, spec 004 FR-006); the scheduled
+/// path has none.
+ClassMethod Dispatch(flowId As %String, confirmationsArray As %DynamicArray, dispatchedBy As %String, ByRef errorCode As %String, ByRef errorDetail As %String, ByRef validationReport As %DynamicObject, bearerToken As %String = "") As %DynamicObject
 {
-    Set errorCode = "", errorDetail = "", result = ""
+    Set errorCode = "", errorDetail = ""
 
     // FR-018: structural validation blocks dispatch regardless of any earlier /validate call.
-    Set validationReport = ##class(sentai.validation.FlowValidator).Validate(flowId)
+    Set validationReport = ##class(sentai.validation.FlowValidator).Validate(flowId, bearerToken)
     If '##class(sentai.validation.FlowValidator).HasNoErrors(validationReport) {
         Set errorCode = "VALIDATION_FAILED"
         Return ""
     }
 
     // FR-017: every destructive step needs a matching typed confirmation before ANY step starts.
+    If '..CheckConfirmations(flowId, confirmationsArray, .pendingStepId) {
+        Set errorCode = "CONFIRMATION_REQUIRED"
+        Set errorDetail = pendingStepId
+        Return ""
+    }
+
+    Quit ..CreateRun(flowId, confirmationsArray, dispatchedBy, .errorCode, .errorDetail)
+}
+
+/// FR-017 gate on its own: true when every destructive step of `flowId` has a typed
+/// confirmation matching its database directory (or namespace when it has none). On the first
+/// missing or mismatched confirmation returns 0 and sets `pendingStepId`.
+ClassMethod CheckConfirmations(flowId As %String, confirmationsArray As %DynamicArray, ByRef pendingStepId As %String) As %Boolean
+{
+    Set pendingStepId = ""
     Kill confirmed
     If (confirmationsArray '= "") {
         Set iter = confirmationsArray.%GetIterator()
@@ -90,13 +107,28 @@ ClassMethod Dispatch(flowId As %String, confirmationsArray As %DynamicArray, dis
         If ##class(sentai.registry.StepType).IsDestructive(type) {
             Set expected = $S(stepResult.%Get("databaseDirectory") '= "":stepResult.%Get("databaseDirectory"), 1:stepResult.%Get("namespace"))
             If '$D(confirmed(stepId)) || (confirmed(stepId) '= expected) {
-                Set errorCode = "CONFIRMATION_REQUIRED"
-                Set errorDetail = stepId
+                Set pendingStepId = stepId
                 Quit
             }
         }
     }
-    If (errorCode '= "") Return ""
+    Quit (pendingStepId = "")
+}
+
+/// Creates Run + one StepRun per step + the ^sentaiRun index inside one transaction (FR-016,
+/// NFR-002, NFR-004, research.md R-011), recording confirmedBy/At for the confirmed steps.
+/// Applies no gate: Dispatch() calls it only after validation and confirmations passed.
+/// On failure returns "" with errorCode "INTERNAL_ERROR".
+ClassMethod CreateRun(flowId As %String, confirmationsArray As %DynamicArray, dispatchedBy As %String, ByRef errorCode As %String, ByRef errorDetail As %String) As %DynamicObject
+{
+    Set errorCode = "", errorDetail = "", result = ""
+    Kill confirmed
+    If (confirmationsArray '= "") {
+        Set iter = confirmationsArray.%GetIterator()
+        While iter.%GetNext(.k, .c) {
+            Set confirmed(c.stepId) = c.typedName
+        }
+    }
 
     Set sc = $$$OK
     TSTART
@@ -417,6 +449,14 @@ ClassMethod RerunStep(runGuid As %String, stepGuid As %String, ByRef newStepRunG
     Set oldStepRun = ##class(sentai.model.StepRun).GuidIndexOpen(stepGuid, 0, .sc)
     If '$IsObject(oldStepRun) Quit $$$ERROR($$$GeneralError, "SentaiNotFound")
     If (oldStepRun.state '= "failed") Quit $$$ERROR($$$GeneralError, "SentaiNotFailed: only a failed step can be re-run")
+
+    // Spec 004 FR-002: rerun bypasses validation, so it checks v1 availability itself — a failed
+    // step of a type the target platform does not support is never sent to it again.
+    Set flowId = oldStepRun.run.flowGetObjectId(), stepId = oldStepRun.stepId, type = ""
+    &sql(SELECT type INTO :type FROM sentai_model.Step WHERE flow = :flowId AND id = :stepId)
+    If '##class(sentai.registry.StepType).IsAvailable(type) {
+        Quit $$$ERROR($$$GeneralError, "STEP_TYPE_NOT_SUPPORTED_ON_TARGET: step '"_stepId_"' type '"_type_"' is not supported on the target platform in v1")
+    }
 
     Set newStepRun = ##class(sentai.model.StepRun).%New()
     Set newStepRun.guid = $SYSTEM.Util.CreateGUID()

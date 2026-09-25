@@ -5,7 +5,7 @@ Method TestFailureReasonIsStoredVerbatimFromAdminApi()
 {
     Set id = ..CreateCanonicalFlow("FailureReasonFixture")
     Set errorCode = "", errorDetail = "", report = ""
-    Set run = ##class(sentai.dispatch.WaveDispatcher).Dispatch(id, ..CanonicalConfirmations(), "tester", .errorCode, .errorDetail, .report)
+    Set run = ..DispatchUngated(id)
     Do $$$AssertEquals(errorCode, "")
 
     Set weirdMessage = "  Some Verbatim Text -- with (parentheses) and a trailing period.  "

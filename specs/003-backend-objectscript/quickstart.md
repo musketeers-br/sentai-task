@@ -1,5 +1,8 @@
 # Quickstart — Backend ObjectScript
 
+> **Superseded for v1** by [`specs/004-backend-hardening/quickstart.md`](../004-backend-hardening/quickstart.md).
+> Kept as the T070 record: its canonical flow uses step types that spec 004 blocks.
+
 Feature: `003-backend-objectscript` · Date: 2026-09-22
 
 Validates that the backend described in this plan compiles, persists, validates, dispatches, and

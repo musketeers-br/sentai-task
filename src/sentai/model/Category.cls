@@ -20,12 +20,19 @@ Property alwaysQueue As %Boolean;
 Index NameIndex On name [ Unique ];
 
 /// The nesting invariant every write MUST satisfy (FR-034):
-/// defaultWorkers <= maxActiveWorkers <= maxWorkers <= maxTotalWorkers.
-/// Per Config.WorkQueues, MaxTotalWorkers applies only "if non-zero": 0 means no ceiling,
-/// as on the platform's built-in categories, so the last clause is skipped for 0.
+/// defaultWorkers <= maxActiveWorkers <= maxWorkers <= maxTotalWorkers, where 0 in maxWorkers or
+/// maxTotalWorkers means "no limit" (+inf) — how the platform's built-in categories report them
+/// (spec 004 D-3). defaultWorkers and maxActiveWorkers are always plain numbers.
 ClassMethod SatisfiesInvariant(defaultWorkers As %Integer, maxActiveWorkers As %Integer, maxWorkers As %Integer, maxTotalWorkers As %Integer) As %Boolean
 {
-    Quit (defaultWorkers <= maxActiveWorkers) && (maxActiveWorkers <= maxWorkers) && ((+maxTotalWorkers = 0) || (maxWorkers <= maxTotalWorkers))
+    Set workersUnbounded = (+maxWorkers = 0), totalUnbounded = (+maxTotalWorkers = 0)
+    If (defaultWorkers > maxActiveWorkers) Quit 0
+    If 'workersUnbounded && (maxActiveWorkers > maxWorkers) Quit 0
+    // maxWorkers <= maxTotalWorkers: anything fits under an unbounded total; an unbounded
+    // maxWorkers fits only under an unbounded total.
+    If totalUnbounded Quit 1
+    If workersUnbounded Quit 0
+    Quit (maxWorkers <= maxTotalWorkers)
 }
 
 /// Refreshes (or creates) the local mirror row after a confirmed passthrough write to the

@@ -9,7 +9,20 @@ Method OnBeforeOneTest() As %Status
 {
     Do ##class(sentai.unittest.AdminApiDouble).Reset()
     Do ##class(sentai.unittest.AdminApiDouble).Enable()
+    // The platform's category list (spec 001 evidence 09 shape): the three built-ins report
+    // MaxWorkers/MaxTotalWorkers = 0 ("unbounded"); SENTAI.NIGHT is the canonical fixture's.
+    Do ##class(sentai.unittest.AdminApiDouble).Script("/api/admin/v2/wqm-categories", "GET", 200, "", ..CategoriesJSON())
     Quit $$$OK
+}
+
+ClassMethod CategoriesJSON() As %String
+{
+    Set result = []
+    For name = "Default", "SQL", "Utility" {
+        Do result.%Push({"Name": (name), "DefaultWorkers": 1, "MaxActiveWorkers": 2, "MaxWorkers": 0, "MaxTotalWorkers": 0, "AlwaysQueue": true})
+    }
+    Do result.%Push({"Name": "SENTAI.NIGHT", "DefaultWorkers": 1, "MaxActiveWorkers": 2, "MaxWorkers": 4, "MaxTotalWorkers": 8, "AlwaysQueue": true})
+    Quit {"status": {"errors": [], "summary": ""}, "console": [], "result": (result)}.%ToJSON()
 }
 
 Method OnAfterOneTest() As %Status
@@ -92,6 +105,44 @@ ClassMethod NativeTaskCount() As %Integer
 ClassMethod DatabaseDirectoryOf(namespace As %String) As %String
 {
     Quit $PIECE(##class(%SYS.Namespace).GetGlobalDest(namespace), "^", 2)
+}
+
+/// The v1 acceptance shape (spec 004 D-1: integrity-check only): 01 and 02 run in parallel and
+/// fan in to 03 under ALL_MUST_SUCCEED, every step on the built-in `Default` category.
+Method SupportedGraphPayload(namePrefix As %String = "Supported") As %DynamicObject
+{
+    Set payload = {
+        "schemaVersion": 1,
+        "name": (namePrefix_"-"_$TR($H, ",", "-")_"-"_$I(^sentaiTestSeq)),
+        "defaultCategory": "Default",
+        "steps": [
+            {"id": "01", "type": "integrity-check", "taskName": "IC USER", "namespace": "USER", "databaseDirectory": (..DatabaseDirectoryOf("USER")), "runAsUser": "irisadm", "timeoutMinutes": 90, "wqmCategory": "Default"},
+            {"id": "02", "type": "integrity-check", "taskName": "IC APP", "namespace": ($NAMESPACE), "databaseDirectory": (..DatabaseDirectoryOf($NAMESPACE)), "runAsUser": "irisadm", "timeoutMinutes": 45, "wqmCategory": "Default"},
+            {"id": "03", "type": "integrity-check", "taskName": "IC IRISSYS", "namespace": "%SYS", "databaseDirectory": (..DatabaseDirectoryOf("%SYS")), "runAsUser": "irisadm", "timeoutMinutes": 45, "wqmCategory": "Default"}
+        ],
+        "edges": [ {"source": "01", "target": "03"}, {"source": "02", "target": "03"} ],
+        "joins": [ {"target": "03", "policy": "ALL_MUST_SUCCEED"} ]
+    }
+    Quit payload
+}
+
+/// Persists the supported flow and returns its id.
+Method CreateSupportedFlow(namePrefix As %String = "Supported") As %String
+{
+    Set sc = ##class(sentai.model.Flow).SaveGraph(..SupportedGraphPayload(namePrefix), "", 0, "testuser", .id)
+    Do $$$AssertStatusOK(sc)
+    Quit id
+}
+
+/// Run-mechanics fixture: creates the Run and its StepRuns for `flowId` directly, bypassing the
+/// validation and confirmation gates on purpose, so tests of cancel/pause/rerun/join/SSE keep
+/// using the canonical flow (whose purge and journal steps are not available in v1, spec 004).
+Method DispatchUngated(flowId As %String) As sentai.model.Run
+{
+    Set ec = "", ed = ""
+    Set run = ##class(sentai.dispatch.WaveDispatcher).CreateRun(flowId, ..CanonicalConfirmations(), "tester", .ec, .ed)
+    Do $$$AssertEquals(ec, "")
+    Quit run
 }
 
 /// Persists the canonical flow and returns its id.

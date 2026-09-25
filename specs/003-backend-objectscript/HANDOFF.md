@@ -148,3 +148,22 @@ and TD-06 pass. Decisions needed:
   is decided.
 
 Fixable follow-ups F-1…F-5 are tasks T074–T078.
+
+## Resolution by spec 004 (2026-09-23)
+
+Spec [`004-backend-hardening`](../004-backend-hardening/spec.md) reduced the backend to what T070
+proved:
+
+- **E-1** (60 s token, no refresh) — addressed by 004: documented as a known limitation (README
+  "Known limitations (v1)"), not fixed.
+- **E-2** (5 of 7 step types 404) — addressed by 004: the support set is `integrity-check` only;
+  the other 6 types (including `defragment-globals`, never proven) are `available: false` and
+  refused on validate, dispatch, schedule and rerun with `STEP_TYPE_NOT_SUPPORTED_ON_TARGET`.
+- **E-3** (scheduled runs carry no token) — addressed by 004: scheduling documented as
+  non-operational; `/schedule` kept for contract continuity, no code change.
+- **F-1** (WQM write endpoint) — fixed by 004: `PUT /api/admin/v2/wqm-category?name=`.
+- **F-3** (unknown category only caught at enqueue) — fixed by 004: `CATEGORY_NOT_FOUND` at
+  validation, against the platform's category list.
+- **F-4** (built-in categories fail the invariant) — fixed by 004: `0` in `maxWorkers` /
+  `maxTotalWorkers` means unbounded.
+- **F-2**, **F-5** — unchanged, still open.

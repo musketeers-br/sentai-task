@@ -37,7 +37,8 @@ Method TestReadOnlyDirectoryProducesWarningNotError()
 
 Method TestReadOnlyWarningDoesNotBlockValidation()
 {
-    Set payload = ..CanonicalFlowPayload("ReadOnlyDoesNotBlock")
+    // Spec 004: the integrity-check-only flow, so the warning is the report's only finding.
+    Set payload = ..SupportedGraphPayload("ReadOnlyDoesNotBlock")
     Set steps = []
     Set iter = payload."steps".%GetIterator()
     While iter.%GetNext(.k, .s) {

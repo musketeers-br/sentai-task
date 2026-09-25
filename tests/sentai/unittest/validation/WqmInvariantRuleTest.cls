@@ -49,4 +49,17 @@ Method TestCategorySatisfyingInvariantPassesThisRule()
     Do $$$AssertNotTrue(found)
 }
 
+/// Spec 004 FR-005: the platform's built-in categories report MaxWorkers = MaxTotalWorkers = 0;
+/// a flow on `Default` must not be flagged.
+Method TestBuiltInDefaultWithZeroLimitsPasses()
+{
+    Do ##class(sentai.model.Category).Mirror("Default", 1, 2, 0, 0, 1)
+    Set report = ##class(sentai.validation.FlowValidator).Validate(..CreateSupportedFlow("WqmInvariantDefault"))
+    Set iter = report."errors".%GetIterator()
+    While iter.%GetNext(.k, .e) {
+        Do $$$AssertNotEquals(e.code, "WQM_INVARIANT_VIOLATED")
+    }
+    Do $$$AssertEquals(report."errors".%Size(), 0)
+}
+
 }

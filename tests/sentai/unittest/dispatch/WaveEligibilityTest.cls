@@ -5,7 +5,7 @@ Method DispatchCanonical() As sentai.model.Run
 {
     Set id = ..CreateCanonicalFlow("EligibilityFixture")
     Set errorCode = "", errorDetail = "", report = ""
-    Set run = ##class(sentai.dispatch.WaveDispatcher).Dispatch(id, ..CanonicalConfirmations(), "tester", .errorCode, .errorDetail, .report)
+    Set run = ..DispatchUngated(id)
     Do $$$AssertEquals(errorCode, "")
     Quit run
 }

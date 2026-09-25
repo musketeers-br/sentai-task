@@ -27,15 +27,14 @@ Method DeleteNativeTasksFor(flowId As %String) As %Integer
 
 Method TestScheduleValidatedNonDestructiveFlowReturns201WithOneTaskIdPerStep()
 {
-    Set sc = ##class(sentai.model.Flow).SaveGraph(..NonDestructiveFlowPayload("ScheduleOk"), "", 0, "tester", .id)
-    Do $$$AssertStatusOK(sc)
+    Set id = ..CreateSupportedFlow("ScheduleOk")
 
-    Do ..NewRequest({"scheduleSpec": "WEEKLY SAT 03:00", "category": "SENTAI.NIGHT"})
+    Do ..NewRequest({"scheduleSpec": "WEEKLY SAT 03:00", "category": "Default"})
     Do ##class(sentai.rest.Dispatcher).ScheduleFlow(id)
     Do $$$AssertEquals(%response.Status, 201)
 
     // One native task per step (FR-031).
-    Do $$$AssertEquals(..DeleteNativeTasksFor(id), 5)
+    Do $$$AssertEquals(..DeleteNativeTasksFor(id), 3)
 }
 
 Method TestSchedulingFlowWithValidationErrorIsRefused()
@@ -56,9 +55,9 @@ Method TestSchedulingFlowWithValidationErrorIsRefused()
 /// creates no native %SYS.Task entry at all.
 Method TestSchedulingFlowWithDestructiveStepIsRefusedAndCreatesNoNativeTask()
 {
-    // The canonical flow is otherwise fully valid; its step 04 (purge-audit-records) is destructive.
+    // The canonical flow's step 04 (purge-audit-records) is destructive (and, since spec 004,
+    // also unavailable — both errors are reported; this test is about the destructive one).
     Set id = ..CreateCanonicalFlow("ScheduleDestructive")
-    Do $$$AssertTrue(##class(sentai.validation.FlowValidator).HasNoErrors(##class(sentai.validation.FlowValidator).Validate(id)))
     Set tasksBefore = ..NativeTaskCount()
 
     Do ..NewRequest({"scheduleSpec": "WEEKLY SAT 03:00", "category": "SENTAI.NIGHT"})

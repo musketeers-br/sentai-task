@@ -3,7 +3,7 @@ Class sentai.unittest.model.CategoryTest Extends sentai.unittest.SentaiTestCase
 
 Method TestWriteIsAlwaysAPassthroughToTheAdministrativeApi()
 {
-    Do ##class(sentai.unittest.AdminApiDouble).Script("/api/admin/v2/wqm-categories/SENTAI.MIRROR_TEST", "POST", 200, "", "{}")
+    Do ##class(sentai.unittest.AdminApiDouble).Script("/api/admin/v2/wqm-category", "PUT", 200, "", "{}")
 
     Set payload = {}
     Do payload.%Set("name", "SENTAI.MIRROR_TEST")
@@ -33,7 +33,8 @@ Method TestInvariantViolationNeverReachesTheAdminApiCall()
     Set sc = ##class(sentai.wqm.CategoryService).Write(payload, "fake-token")
     Do $$$AssertStatusNotOK(sc)
 
-    // No local mirror row should have been created for a rejected write.
+    // Nothing was sent to the platform, and no local mirror row was created for a rejected write.
+    Do $$$AssertEquals($D(^sentaiTestDouble("put")), 0)
     Do $$$AssertNotTrue(##class(sentai.model.Category).NameIndexExists("SENTAI.MIRROR_BAD"))
 }
 
