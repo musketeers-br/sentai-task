@@ -194,7 +194,10 @@ SentaiTask v1 only promises what was proven on IRIS 2026.2 (spec `004-backend-ha
   path. Use manual dispatch.
 - **60-second credential.** A dispatched run uses the operator's access token, which expires 60 s
   after it was issued. Platform calls made after that fail with 401, which is stored verbatim as
-  the step's failure reason. Keep runs short.
+  the step's failure reason. Keep runs short (one `integrity-check` takes ~50 s on the dev image).
+  Refreshing a token also revokes the previous one, so a run dispatched with a token its client
+  keeps refreshing dies at the next refresh; the canvas therefore asks for the password at
+  *Run now* and dispatches under a separate sign-in.
 - **Step parameters are not forwarded.** The platform start request carries no parameters, so
   `databaseDirectory` and similar fields do not choose what the platform operates on.
 - **Flows must name an existing WQM category.** Validation refuses an unknown category with

@@ -2,6 +2,7 @@
 // comes back as a value, and the platform's own words are kept verbatim (Constitution III, IV).
 import type { FlowDefinition, FlowDocument, StepTypeInfo } from '$lib/flow/document';
 import type { ValidationReport } from '$lib/flow/report';
+import { fromWireRun, type RunView } from '$lib/run/run';
 import { session } from './session.svelte';
 import {
 	fromWireFlow,
@@ -39,8 +40,13 @@ export function describeError(error: ApiError): string {
 	}
 }
 
-async function request<T>(method: string, path: string, body?: unknown): Promise<ApiResult<T>> {
-	const authorization = session.authorization();
+async function request<T>(
+	method: string,
+	path: string,
+	body?: unknown,
+	authorizationOverride?: string
+): Promise<ApiResult<T>> {
+	const authorization = authorizationOverride ?? session.authorization();
 	if (!authorization) return { ok: false, error: { kind: 'unauthorized' } };
 
 	let res: Response;
@@ -124,6 +130,38 @@ export const api = {
 				body
 			),
 			(r) => ({ taskIds: r.taskIds.map(Number), nextRun: r.nextRun })
+		);
+	},
+
+	/**
+	 * 202 → the run GUID; 422 → ValidationReport; 428 → Problem naming the step (FR-013).
+	 * `runAuthorization` is the dedicated token the run keeps (see session.dedicatedToken).
+	 */
+	async dispatch(flowId: string, runAuthorization: string): Promise<ApiResult<{ guid: string }>> {
+		return map(
+			await request<{ guid: string }>(
+				'POST',
+				`/flows/${encodeURIComponent(flowId)}/dispatch`,
+				{ confirmations: [] },
+				runAuthorization
+			),
+			(r) => ({ guid: String(r.guid) })
+		);
+	},
+
+	async getRun(guid: string): Promise<ApiResult<RunView>> {
+		return map(await request<Record<string, unknown>>('GET', `/runs/${encodeURIComponent(guid)}`), fromWireRun);
+	},
+
+	async runAction(guid: string, action: 'cancel' | 'pause'): Promise<ApiResult<unknown>> {
+		return request('POST', `/runs/${encodeURIComponent(guid)}/${action}`, {});
+	},
+
+	async stepAction(runGuid: string, stepGuid: string, action: 'cancel' | 'rerun'): Promise<ApiResult<unknown>> {
+		return request(
+			'POST',
+			`/runs/${encodeURIComponent(runGuid)}/steps/${encodeURIComponent(stepGuid)}/${action}`,
+			{}
 		);
 	},
 

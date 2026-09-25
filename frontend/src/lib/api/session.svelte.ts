@@ -77,6 +77,35 @@ class Session {
 		return this.#access ? `Bearer ${this.#access}` : null;
 	}
 
+	/**
+	 * A separate login whose token is handed to one dispatched run. The backend keeps the token a
+	 * run was dispatched with (spec 004 E-1), and `/refresh` revokes the previous access token —
+	 * so a run dispatched with this session's token died at this session's next proactive refresh
+	 * (≤ 45 s). An independent login is untouched by those refreshes and gives the run its full
+	 * 60 s. The password is used for this one request and never kept.
+	 */
+	async dedicatedToken(password: string): Promise<{ ok: true; authorization: string } | { ok: false; message: string }> {
+		if (!this.user) return { ok: false, message: 'Not signed in.' };
+		let res: Response;
+		try {
+			res = await fetch(`${ADMIN_BASE}/login`, {
+				method: 'POST',
+				headers: { Authorization: `Basic ${basicCredentials(this.user, password)}`, 'Content-Type': 'application/json' },
+				body: '{}'
+			});
+		} catch (e) {
+			return { ok: false, message: `Could not reach the IRIS instance: ${(e as Error).message}` };
+		}
+		if (!res.ok) {
+			return {
+				ok: false,
+				message: res.status === 401 ? 'The platform rejected this password.' : `Login failed: HTTP ${res.status}`
+			};
+		}
+		const pair = (await res.json()) as TokenPair;
+		return { ok: true, authorization: `Bearer ${pair.access_token}` };
+	}
+
 	#accept(pair: TokenPair): void {
 		this.#access = pair.access_token;
 		this.#refresh = pair.refresh_token;

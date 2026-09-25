@@ -1,5 +1,6 @@
 import type { Edge, Node } from '@xyflow/svelte';
 import { api, describeError, type ScheduleResult } from '$lib/api/client';
+import { session } from '$lib/api/session.svelte';
 import { checkConnection, type EdgeRef } from './graph';
 import {
 	createStep,
@@ -183,6 +184,23 @@ export class FlowEditor {
 				? { tone: 'info', text: 'Flow is valid — no errors, no warnings.' }
 				: null;
 		return result.value;
+	}
+
+	/**
+	 * Dispatch validates authoritatively server-side (FR-018); its 422 lands on the canvas.
+	 * The run is given its own login (session.dedicatedToken) so this session's token refreshes
+	 * cannot revoke the credential the run depends on.
+	 */
+	async dispatch(password: string): Promise<{ ok: true; guid: string } | { ok: false; message: string }> {
+		if ((this.dirty || !this.id) && !(await this.save())) {
+			return { ok: false, message: this.notice?.text ?? 'Save failed.' };
+		}
+		const credential = await session.dedicatedToken(password);
+		if (!credential.ok) return credential;
+		const result = await api.dispatch(this.id!, credential.authorization);
+		if (result.ok) return { ok: true, guid: result.value.guid };
+		if (result.error.kind === 'validation') this.report = result.error.report;
+		return { ok: false, message: `Not dispatched: ${describeError(result.error)}` };
 	}
 
 	async schedule(scheduleSpec: string, category: string): Promise<ScheduleOutcome> {

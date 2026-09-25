@@ -1,8 +1,20 @@
 <script lang="ts">
 	import { BaseEdge, getBezierPath, useEdges, type EdgeProps } from '@xyflow/svelte';
+	import { getRunContext } from '$lib/run/monitor.svelte';
 
 	let { id, source, target, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition }: EdgeProps =
 		$props();
+
+	// In the live-run view, an edge takes the state of the step it leaves (UI-002 / FR-027).
+	const monitor = getRunContext();
+	const sourceState = $derived(monitor?.stepFor(source)?.state);
+	const tone = $derived(
+		sourceState === 'failed' || sourceState === 'cancelled'
+			? 'tone-failed'
+			: sourceState === 'completed'
+				? 'tone-completed'
+				: ''
+	);
 
 	// UI-001 §Edges: ≥2 incoming edges converge into ONE diamond per target, drawn once, then a
 	// single arrow into the target. Derived from the live edge set, so it never goes stale.
@@ -32,7 +44,7 @@
 </script>
 
 {#if isJoin}
-	<BaseEdge {id} {path} class="edge-join" />
+	<BaseEdge {id} {path} class={`edge-join ${tone}`} />
 	{#if isLead}
 		<g class="junction" data-junction-for={target}>
 			<path class="join-tail" d={`M${junctionX + HALF_DIAMOND},${targetY} L${targetX - 6},${targetY}`} />
@@ -48,8 +60,8 @@
 		</g>
 	{/if}
 {:else}
-	<BaseEdge {id} {path} class="edge-sequence" />
-	<path class="sequence-arrow" d={arrowhead(targetX - 1, targetY)} data-edge-from={source} />
+	<BaseEdge {id} {path} class={`edge-sequence ${tone}`} />
+	<path class={`sequence-arrow ${tone}`} d={arrowhead(targetX - 1, targetY)} data-edge-from={source} />
 {/if}
 
 <style>
@@ -77,6 +89,26 @@
 		fill: var(--color-ground);
 		stroke: var(--edge-join-color);
 		stroke-width: var(--junction-marker-stroke);
+	}
+
+	/* Live run: failed = dashed failure token (visible at zoom-out), completed = completed token. */
+	:global(.svelte-flow__edge-path.tone-failed) {
+		stroke: var(--edge-failed-color);
+		stroke-width: var(--edge-failed-width);
+		stroke-dasharray: var(--edge-failed-dasharray);
+	}
+
+	:global(.svelte-flow__edge-path.tone-completed) {
+		stroke: var(--edge-completed-color);
+		stroke-width: var(--edge-completed-width);
+	}
+
+	.sequence-arrow.tone-failed {
+		fill: var(--edge-failed-color);
+	}
+
+	.sequence-arrow.tone-completed {
+		fill: var(--edge-completed-color);
 	}
 
 	:global(.svelte-flow__edge.selected .svelte-flow__edge-path) {

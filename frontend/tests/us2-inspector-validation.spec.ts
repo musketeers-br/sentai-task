@@ -9,7 +9,7 @@ test('Q3 — the inspector shows the bound sections and edits the step', async (
 	await signIn(page, `?flow=${id}`);
 
 	await page.locator('.svelte-flow__node[data-id="04"] h3').click();
-	const inspector = page.getByLabel('Inspector');
+	const inspector = page.getByLabel('Inspector', { exact: true });
 
 	// FR-014: sections in this exact order.
 	await expect(inspector.locator('h2')).toHaveText([
@@ -88,7 +88,7 @@ test('Q4 — validation reports errors and warnings; only errors block schedulin
 
 	// Fixing the error re-enables scheduling; the remaining warning does not block it (FR-010).
 	await page.locator('.svelte-flow__node[data-id="02"] h3').click();
-	await page.getByLabel('Inspector').getByLabel('Namespace').fill('USER');
+	await page.getByLabel('Inspector', { exact: true }).getByLabel('Namespace').fill('USER');
 	await page.getByRole('button', { name: 'Validate flow' }).click();
 	await expect(page.getByTestId('status-errors')).toHaveCount(0);
 	await expect(page.getByTestId('status-warnings')).toHaveText('1 precondition not met (#03)');

@@ -5,9 +5,12 @@
 	import { api, describeError } from '$lib/api/client';
 	import { session } from '$lib/api/session.svelte';
 	import FlowCanvas from '$lib/canvas/FlowCanvas.svelte';
+	import type { FlowDocument } from '$lib/flow/document';
 	import { FlowEditor } from '$lib/flow/editor.svelte';
 	import Inspector from '$lib/inspector/Inspector.svelte';
 	import Palette from '$lib/palette/Palette.svelte';
+	import RunScreen from '$lib/run/RunScreen.svelte';
+	import DispatchDialog from '$lib/shell/DispatchDialog.svelte';
 	import ScheduleDialog from '$lib/shell/ScheduleDialog.svelte';
 	import SignIn from '$lib/shell/SignIn.svelte';
 	import StatusBar from '$lib/shell/StatusBar.svelte';
@@ -19,6 +22,8 @@
 	type Phase = { name: 'idle' } | { name: 'loading' } | { name: 'ready' } | { name: 'failed'; message: string };
 	let phase = $state<Phase>({ name: 'idle' });
 	let scheduling = $state(false);
+	/** The live-run view (UI-002): the run GUID plus the flow snapshot it draws. */
+	let watching = $state<{ guid: string; flow: FlowDocument } | null>(null);
 
 	onMount(() => theme.init());
 
@@ -41,7 +46,8 @@
 		const categories = await api.wqmCategoryNames();
 		if (categories.ok) editor.wqmCategories = categories.value;
 
-		const flowId = new URLSearchParams(location.search).get('flow');
+		const params = new URLSearchParams(location.search);
+		const flowId = params.get('flow');
 		if (flowId) {
 			const flow = await api.getFlow(flowId);
 			if (!flow.ok) {
@@ -49,15 +55,30 @@
 				return;
 			}
 			editor.load(flow.value);
+			const runGuid = params.get('run');
+			if (runGuid) watching = { guid: runGuid, flow: flow.value };
 		}
 		phase = { name: 'ready' };
 	}
 
 	function syncUrl() {
-		if (!editor.id || new URLSearchParams(location.search).get('flow') === editor.id) return;
 		const url = new URL(location.href);
-		url.searchParams.set('flow', editor.id);
-		replaceState(url, {});
+		if (editor.id) url.searchParams.set('flow', editor.id);
+		if (watching) url.searchParams.set('run', watching.guid);
+		else url.searchParams.delete('run');
+		if (url.search !== location.search) replaceState(url, {});
+	}
+
+	let dispatchOpen = $state(false);
+
+	function onDispatched(guid: string) {
+		watching = { guid, flow: editor.toDocument() };
+		syncUrl();
+	}
+
+	function backToFlow() {
+		watching = null;
+		syncUrl();
 	}
 
 	async function save() {
@@ -90,13 +111,21 @@
 <svelte:window {onkeydown} />
 <svelte:head><title>{editor.name} — SentaiTask</title></svelte:head>
 
-{#if phase.name === 'ready'}
+{#if phase.name === 'ready' && watching}
+	{#key watching.guid}
+		<RunScreen guid={watching.guid} flow={watching.flow} registry={editor.registry} onback={backToFlow} />
+	{/key}
+	{#if session.status === 'expired'}
+		<div class="overlay"><SignIn expired /></div>
+	{/if}
+{:else if phase.name === 'ready'}
 	<div class="app">
 		<TopBar
 			{editor}
 			user={session.user}
 			onsave={save}
 			onvalidate={validate}
+			onrun={() => (dispatchOpen = true)}
 			onschedule={() => (scheduling = true)}
 			onsignout={signOut}
 		/>
@@ -112,6 +141,7 @@
 		<StatusBar {editor} />
 	</div>
 	<ScheduleDialog {editor} bind:open={scheduling} />
+	<DispatchDialog {editor} bind:open={dispatchOpen} ondispatched={onDispatched} />
 	<datalist id="wqm-categories">
 		{#each editor.wqmCategories as name (name)}<option value={name}></option>{/each}
 	</datalist>

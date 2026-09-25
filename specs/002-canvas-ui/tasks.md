@@ -409,5 +409,30 @@ non-operational (D-2) and left palette treatment to the frontend. Changes:
   Q2 now also asserting its "not in v1" chip; new Q4 (spec 004) asserts unsupported steps are
   refused at validation, named, with the platform's wording. 7/7 against the container built from
   the merged code.
-- The dossiê's demo flow (checks → purge → switch journal) no longer runs in v1; the demo needs a
-  wave of `integrity-check` steps (decision pending with the team).
+- The dossiê's demo flow (checks → purge → switch journal) no longer runs in v1; the demo uses a
+  wave of `integrity-check` steps (3 in parallel → join → 2 in sequence, agreed 2026-09-25).
+
+## Follow-on: User Story 4 — Live Run (2026-09-25)
+
+Plan: [`plan-us4-live-run.md`](plan-us4-live-run.md). Verified by `frontend/tests/us4-live-run.spec.ts`
+against real runs on the deployed container (Q6/Q7: live states, per-step cancel isolated from its
+siblings within 2 s, ≥ 4 states at once, six-state key; Cancel wave with confirmation naming the
+run; dispatch refused for unsupported steps), 10/10 e2e overall, 44 vitest unit tests. Evidence:
+`evidence/q6-live-run.png`, `evidence/q7-step-control.json`.
+
+Delivered: *Run now* with a dedicated-login dispatch dialog; live-run view at
+`index.html?flow=<id>&run=<guid>` with the UI-002 regions — state pill, *Pause wave*, *Cancel wave*
+(confirmation naming the run), wave progress strip (hazard-striped failed segment, progress-filled
+running segment), count line in the bound format, `ELAPSED`/`START`; read-only canvas with per-node
+state chips, running elapsed, verbatim `FAILURE REASON` + *Re-run step*, per-step *Cancel*, queued
+`waits for #NN`, dashed failure edges and completed edges, `JOIN POLICY` panel; rail with `RUN GUIDS`,
+per-step list, permanent state key and `RUN LOG`.
+
+Deviations, each deliberate (details in the plan): polling instead of SSE (gzipped stream breaks in
+browsers); no typed-confirmation dialog or per-step *Pause* (unreachable in v1 per spec 004 D-1 —
+a 428/409 would still be shown verbatim); *Cancel* labelled as stopping SentaiTask's tracking
+(spec 004 F-2); `RUN LOG` shows an honest empty state because the backend records no entries yet;
+the password prompt at dispatch (not in the design export) is what makes E-1's 60 s usable at all.
+
+Backend defects fixed with tests: step stuck `running` on a 4xx status check (`0d26a2a`); cancelled
+run finalized as `completed` (`FinalizeRun`, failed > cancelled > completed).

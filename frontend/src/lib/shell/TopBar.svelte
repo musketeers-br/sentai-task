@@ -8,6 +8,7 @@
 		user,
 		onsave,
 		onvalidate,
+		onrun,
 		onschedule,
 		onsignout
 	}: {
@@ -15,9 +16,11 @@
 		user: string | null;
 		onsave: () => void;
 		onvalidate: () => void;
+		onrun: () => void;
 		onschedule: () => void;
 		onsignout: () => void;
 	} = $props();
+
 
 	// Kept exactly as the platform reports it ("YYYY-MM-DD HH:MM:SS"); only the time is shown.
 	const savedTime = $derived(editor.savedAt ? editor.savedAt.slice(11, 16) : null);
@@ -66,6 +69,15 @@
 	<button
 		type="button"
 		class="primary"
+		disabled={editor.scheduleBlocked || editor.steps.length === 0}
+		title={editor.scheduleBlocked ? 'Fix the validation errors listed in the status bar first' : 'Dispatch this flow now'}
+		onclick={onrun}
+	>
+		Run now
+	</button>
+	<button
+		type="button"
+		class="secondary"
 		disabled={editor.scheduleBlocked || editor.steps.length === 0}
 		title={editor.scheduleBlocked ? 'Fix the validation errors listed in the status bar first' : undefined}
 		onclick={onschedule}
