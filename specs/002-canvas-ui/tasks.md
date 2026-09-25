@@ -475,3 +475,34 @@ Changes the test forced:
 
 Release notes: README gained the canvas usage section, install URL (`index.html`), test commands
 and roadmap update; `demo-script.md` replaces the dossiê's video script for v1.
+
+## Follow-on: static app authentication (2026-09-25)
+
+Closes the deferred item from Phase 2: `/csp/sentai` no longer serves anything unauthenticated
+(HANDOFF constraint "no unauthenticated web app", dossiê prohibition).
+
+- The app is declared in `module.xml` (password authentication, `UnauthenticatedEnabled="0"`)
+  and served by `sentai.web.StaticFiles` (`%CSP.REST`) instead of the `ServeFiles` option.
+  `iris.script` no longer creates it with `AutheEnabled=64`.
+- Why a class and not `ServeFiles`: with `ServeFiles=3` ("Use CSP Security") an anonymous
+  request gets **404** and no login page (static files go through `%CSP.StreamServer`), so a
+  browser has no way to sign in. A `%CSP.REST` class answers **401 + `WWW-Authenticate: Basic`**
+  and the browser shows its sign-in prompt.
+- Why the `SENTAIWEB` database: IRIS builds that 401 by running the dispatch class *before*
+  login, as a user with no roles. With the class in `IRISAPP_CODE` that ends in `<PROTECT>`
+  (logged in `^ISCLOG`) and a bare 401 — no challenge. Only the `sentai.web` package is mapped
+  to its own database, resource `%DB_SENTAIWEB` public **R**; `IRISAPP_CODE`/`IRISAPP_DATA`
+  keep no public access.
+- `Resolve` never serves anything outside `/opt/sentai-web` (`..`, absolute paths, backslashes,
+  a missing root); hashed `_app/immutable/*` assets are cached for a year, everything else
+  `no-cache`; `nosniff` and `X-Frame-Options: DENY` on every file; bytes are served unchanged
+  (md5 of `index.html` identical to the file in the image).
+- The URL is now `/csp/sentai/` (the explicit `index.html` still works).
+- Deviation (UX): two prompts — the browser's Basic prompt for the page, then the canvas
+  sign-in for the API tokens (the password is never stored by the page, per the "tokens in
+  memory only" decision).
+
+Verified: `sentai.unittest.web.StaticFilesTest` (resolution, traversal, missing root, content
+types, cache policy) — backend 122/122; e2e `static-app-auth.spec.ts` (anonymous → 401 + Basic
+challenge with no app code, wrong password → 401); the whole acceptance suite runs through the
+prompt via Playwright `httpCredentials`.

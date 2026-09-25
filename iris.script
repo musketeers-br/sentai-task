@@ -19,20 +19,23 @@
     //do $SYSTEM.OBJ.Load("/home/irisowner/dev/App.Installer.cls", "ck")
     //set sc = ##class(App.Installer).setup()
 
-    // Static frontend (tracer bullet, specs/002-canvas-ui): serve the SvelteKit build
-    // output baked into /opt/sentai-web at build time. AutheEnabled=64 (Unauthenticated) —
-    // this app only ever serves static files; real API calls go through the SysAdmin API
-    // and (later) SENTAI.REST.Dispatcher, each with their own auth.
-    set webName = "/csp/sentai"
-    kill webProperties
-    set webProperties("NameSpace") = "IRISAPP"
-    set webProperties("Enabled") = 1
-    set webProperties("Path") = "/opt/sentai-web"
-    set webProperties("ServeFiles") = 1
-    set webProperties("Recurse") = 1
-    set webProperties("AutheEnabled") = 64
-    set webProperties("CSPZENEnabled") = 0
-    set sc = ##class(Security.Applications).Create(webName, .webProperties)
+    // The canvas app /csp/sentai (static build baked into /opt/sentai-web) is declared in
+    // module.xml and served by sentai.web.StaticFiles with password authentication.
+    // To answer an anonymous request with 401 + WWW-Authenticate: Basic (so the browser asks
+    // for the IRIS user), IRIS runs that class before login, as a user with no roles. Only
+    // the sentai.web package is therefore mapped to its own small database whose resource is
+    // publicly readable: it holds that file server's code and nothing else — no data, no
+    // other sentai code (IRISAPP_CODE and IRISAPP_DATA keep no public access).
+    set webDbDir = "/usr/irissys/mgr/sentaiweb/"
+    do ##class(%File).CreateDirectoryChain(webDbDir)
+    set sc = ##class(SYS.Database).CreateDatabase(webDbDir)
+    set sc = ##class(Security.Resources).Create("%DB_SENTAIWEB", "sentai.web static file server code", "R")
+    set db = ##class(SYS.Database).%OpenId(webDbDir), db.ResourceName = "%DB_SENTAIWEB"
+    set sc = db.%Save()
+    kill dbProps set dbProps("Directory") = webDbDir
+    set sc = ##class(Config.Databases).Create("SENTAIWEB", .dbProps)
+    kill mapProps set mapProps("Database") = "SENTAIWEB"
+    set sc = ##class(Config.MapPackages).Create("IRISAPP", "sentai.web", .mapProps)
 
     zn "IRISAPP"
 

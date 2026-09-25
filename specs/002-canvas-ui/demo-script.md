@@ -5,7 +5,7 @@ Replaces the dossiê §10 script, whose flow (checks → purge → switch journa
 container on 2026-09-25; times are what the platform actually takes there.
 
 **Before recording**: `docker-compose up -d --build`, open
-`http://localhost:52773/csp/sentai/index.html`, sign in, window at 1440×900, dark theme. Have a
+`http://localhost:52773/csp/sentai/`, answer the browser's IRIS prompt, sign in, window at 1440×900, dark theme. Have a
 second, pre-saved flow containing a *Purge audit records* step for beat 3.
 
 | Time | Beat | On screen |

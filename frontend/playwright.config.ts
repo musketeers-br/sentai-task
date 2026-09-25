@@ -10,6 +10,12 @@ export default defineConfig({
 	workers: 1,
 	use: {
 		baseURL,
+		// The /csp/sentai app is password-protected: IRIS answers 401 + WWW-Authenticate: Basic,
+		// which a person answers in the browser's sign-in prompt and the tests answer here.
+		httpCredentials: {
+			username: process.env.IRIS_USER ?? '_SYSTEM',
+			password: process.env.IRIS_PASSWORD ?? 'SYS'
+		},
 		// Evidence contract (spec.md): canvas captures at 1440×900, deviceScaleFactor 2.
 		viewport: { width: 1440, height: 900 },
 		deviceScaleFactor: 2,

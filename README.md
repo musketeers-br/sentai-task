@@ -58,7 +58,8 @@ Authorization*).
 5. **REST API + SSE** (`sentai.rest.Dispatcher`): `/csp/sentai/api/v1`, with password + JWT
    authentication and no unauthenticated access.
 6. **Canvas UI** (`frontend/`): SvelteKit + Svelte Flow, compiled to static files in a Node stage
-   of the `Dockerfile` and served by IRIS's own web server at `/csp/sentai/index.html`. No Node
+   of the `Dockerfile` and served by IRIS's own web server at `/csp/sentai/` through
+   `sentai.web.StaticFiles`, behind the IRIS password (no unauthenticated web app). No Node
    process runs in the shipped container; the page talks only to the two APIs above.
 
 ### Architecture overview
@@ -113,10 +114,17 @@ docker-compose up -d --build
 The build compiles the canvas, loads the `sentai-task` module and registers the REST application
 `/csp/sentai/api/v1` on **http://localhost:52773**. When the container is up, open
 
-**http://localhost:52773/csp/sentai/index.html**
+**http://localhost:52773/csp/sentai/**
 
-and sign in with your IRIS credentials (`_SYSTEM` / `SYS` on this dev image). Keep the explicit
-`index.html`: IRIS static file serving has no directory index, so `/csp/sentai/` alone is a 404.
+The browser first asks for your IRIS user and password: the canvas itself is never served
+without them. Then sign in to the canvas with the same credentials (`_SYSTEM` / `SYS` on this
+dev image); that second sign-in gets the short-lived API tokens, which stay in memory only.
+
+> **Why two prompts:** the browser prompt protects the page (HTTP Basic, remembered by the
+> browser until it closes); the canvas sign-in exchanges the password for 60-second API tokens
+> and never stores it. For IRIS to challenge an anonymous browser at all, the `sentai.web`
+> package (the file server, no data) lives in its own small database `SENTAIWEB` whose code is
+> publicly readable; every other database keeps no public access.
 
 ### IPM
 
