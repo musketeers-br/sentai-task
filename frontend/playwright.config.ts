@@ -1,3 +1,5 @@
+/// <reference types="node" />
+// This file sits outside tsconfig's include (src/, tests/), so it names Node's types itself.
 import { defineConfig } from '@playwright/test';
 
 // Targets the container-served app by default (the deployed artifact). For quick iteration
