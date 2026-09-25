@@ -107,7 +107,7 @@
 		font-size: var(--size-caption);
 		font-weight: 600;
 		letter-spacing: 0.12em;
-		color: var(--color-text-faint);
+		color: var(--color-text-muted);
 	}
 
 	input {
@@ -210,7 +210,7 @@
 	.entry-class {
 		font-family: var(--font-mono);
 		font-size: var(--size-micro);
-		color: var(--color-text-faint);
+		color: var(--color-text-muted);
 	}
 
 	.hazard-swatch {

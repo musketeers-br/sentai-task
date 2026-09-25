@@ -453,3 +453,25 @@ refresh token, refused renewal, erasure) — backend 115/115; the agreed demo wa
 dispatched from the UI ran to `completed` in 2 m 33 s with no failure, credentials erased
 afterwards; e2e `E-1 — the demo wave … runs past 60 s to completed`. Evidence:
 `evidence/e1-demo-wave-completed.png`.
+
+## Follow-on: User Story 6 — Theming parity (2026-09-25)
+
+Verified by `frontend/tests/us6-theming.spec.ts` (differential, per UI-007 "How this is tested"):
+identical structure and strings in both themes (region sizes, counts, inspector sections, every
+visible text line), WCAG contrast ≥ 4.5:1 (≥ 3:1 at ≥ 24 px) for **every** visible text node in both
+themes, canvas darkest-in-dark / white-in-light, and the token audit — plus unit tests on the audit
+(`src/lib/design/audit.test.ts`: all 51 themed pairs covered, none derived). Evidence:
+`evidence/q10-theming-dark.png`, `q10-theming-light.png`, `q10-token-audit.json`.
+
+Changes the test forced:
+
+- `--canvas-ground` per theme (ground in dark, white in light), used by the canvas, junction
+  diamonds and handles — UI-007 §1 (elevation inverts). Each value chosen per theme, not computed.
+- Light selection is a 2 px solid accent (border + 1 px ring) over the card shadow — UI-007 §2.
+- **Deviation**: `--color-text-faint` (dark `#6F7E93`) measures 4.22:1 on cards and 4.46:1 on the
+  top bar — below the UI-006 accessibility floor, even though `design/Main.dc.html` uses it for
+  small text. Small text now uses `--color-text-muted` in both themes; `tokens.json` is unchanged.
+  The contract's own floor ("≥ 4.5:1 in both themes") wins over the mockup's grey.
+
+Release notes: README gained the canvas usage section, install URL (`index.html`), test commands
+and roadmap update; `demo-script.md` replaces the dossiê's video script for v1.

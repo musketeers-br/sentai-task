@@ -1,0 +1,366 @@
+{
+  "evidence_id": "q10-token-audit",
+  "captured_at": "2026-09-25T13:37:36.709Z",
+  "rule": "UI-007 step 5 — a light value must never equal the channel-wise inverse of its dark value",
+  "pairs": 51,
+  "derived": 0,
+  "rows": [
+    {
+      "token": "theme.ground",
+      "dark": "#0A0D13",
+      "light": "#EFEDE7",
+      "invertedDark": "#F5F2EC",
+      "derived": false
+    },
+    {
+      "token": "theme.groundRail",
+      "dark": "#0E121A",
+      "light": "#F7F5F1",
+      "invertedDark": "#F1EDE5",
+      "derived": false
+    },
+    {
+      "token": "theme.surface",
+      "dark": "#10141D",
+      "light": "#FFFFFF",
+      "invertedDark": "#EFEBE2",
+      "derived": false
+    },
+    {
+      "token": "theme.card",
+      "dark": "#141A26",
+      "light": "#FFFFFF",
+      "invertedDark": "#EBE5D9",
+      "derived": false
+    },
+    {
+      "token": "theme.cardRaised",
+      "dark": "#161C29",
+      "light": "#FFFFFF",
+      "invertedDark": "#E9E3D6",
+      "derived": false
+    },
+    {
+      "token": "theme.border",
+      "dark": "#2B3648",
+      "light": "#C9C3B6",
+      "invertedDark": "#D4C9B7",
+      "derived": false
+    },
+    {
+      "token": "theme.borderFaint",
+      "dark": "#232C3D",
+      "light": "#E7E3DA",
+      "invertedDark": "#DCD3C2",
+      "derived": false
+    },
+    {
+      "token": "theme.borderStrong",
+      "dark": "#3A465C",
+      "light": "#D2CDC2",
+      "invertedDark": "#C5B9A3",
+      "derived": false
+    },
+    {
+      "token": "theme.text",
+      "dark": "#E6EBF2",
+      "light": "#16181D",
+      "invertedDark": "#19140D",
+      "derived": false
+    },
+    {
+      "token": "theme.textStrong",
+      "dark": "#F2F5FA",
+      "light": "#16181D",
+      "invertedDark": "#0D0A05",
+      "derived": false
+    },
+    {
+      "token": "theme.textMuted",
+      "dark": "#94A3B8",
+      "light": "#5C6473",
+      "invertedDark": "#6B5C47",
+      "derived": false
+    },
+    {
+      "token": "theme.textFaint",
+      "dark": "#6F7E93",
+      "light": "#7A8296",
+      "invertedDark": "#90816C",
+      "derived": false
+    },
+    {
+      "token": "theme.gridDot",
+      "dark": "#1C2433",
+      "light": "#DAD6CC",
+      "invertedDark": "#E3DBCC",
+      "derived": false
+    },
+    {
+      "token": "theme.link",
+      "dark": "#7FC4FF",
+      "light": "#1F5FA8",
+      "invertedDark": "#803B00",
+      "derived": false
+    },
+    {
+      "token": "theme.linkHover",
+      "dark": "#B7DEFF",
+      "light": "#123E70",
+      "invertedDark": "#482100",
+      "derived": false
+    },
+    {
+      "token": "theme.focusRing",
+      "dark": "#7FC4FF",
+      "light": "#1F5FA8",
+      "invertedDark": "#803B00",
+      "derived": false
+    },
+    {
+      "token": "state.queued",
+      "dark": "#A6B2C4",
+      "light": "#6B7280",
+      "invertedDark": "#594D3B",
+      "derived": false
+    },
+    {
+      "token": "state.running",
+      "dark": "#2FD0E8",
+      "light": "#0E7C96",
+      "invertedDark": "#D02F17",
+      "derived": false
+    },
+    {
+      "token": "state.paused",
+      "dark": "#E8A33D",
+      "light": "#9A6A00",
+      "invertedDark": "#175CC2",
+      "derived": false
+    },
+    {
+      "token": "state.completed",
+      "dark": "#3FBF6F",
+      "light": "#1F8E52",
+      "invertedDark": "#C04090",
+      "derived": false
+    },
+    {
+      "token": "state.failed",
+      "dark": "#F2495C",
+      "light": "#C0212F",
+      "invertedDark": "#0DB6A3",
+      "derived": false
+    },
+    {
+      "token": "state.cancelled",
+      "dark": "#98A3B4",
+      "light": "#6B7280",
+      "invertedDark": "#675C4B",
+      "derived": false
+    },
+    {
+      "token": "stateText.queued",
+      "dark": "#A6B2C4",
+      "light": "#4D5567",
+      "invertedDark": "#594D3B",
+      "derived": false
+    },
+    {
+      "token": "stateText.running",
+      "dark": "#9BE9F5",
+      "light": "#0B5F73",
+      "invertedDark": "#64160A",
+      "derived": false
+    },
+    {
+      "token": "stateText.paused",
+      "dark": "#F2D9A0",
+      "light": "#7A5200",
+      "invertedDark": "#0D265F",
+      "derived": false
+    },
+    {
+      "token": "stateText.completed",
+      "dark": "#86E3AA",
+      "light": "#1B6E43",
+      "invertedDark": "#791C55",
+      "derived": false
+    },
+    {
+      "token": "stateText.failed",
+      "dark": "#FFB3B9",
+      "light": "#A5192A",
+      "invertedDark": "#004C46",
+      "derived": false
+    },
+    {
+      "token": "stateText.cancelled",
+      "dark": "#98A3B4",
+      "light": "#4D5567",
+      "invertedDark": "#675C4B",
+      "derived": false
+    },
+    {
+      "token": "category.verification",
+      "dark": "#FF3B4A",
+      "light": "#D91F2E",
+      "invertedDark": "#00C4B5",
+      "derived": false
+    },
+    {
+      "token": "category.storage",
+      "dark": "#3B8DFF",
+      "light": "#1F6FD6",
+      "invertedDark": "#C47200",
+      "derived": false
+    },
+    {
+      "token": "category.journal",
+      "dark": "#FFC93B",
+      "light": "#C68A00",
+      "invertedDark": "#0036C4",
+      "derived": false
+    },
+    {
+      "token": "category.purge",
+      "dark": "#35D07F",
+      "light": "#1F8E52",
+      "invertedDark": "#CA2F80",
+      "derived": false
+    },
+    {
+      "token": "category.backup",
+      "dark": "#FF6FB5",
+      "light": "#C4468C",
+      "invertedDark": "#00904A",
+      "derived": false
+    },
+    {
+      "token": "category.custom",
+      "dark": "#9AA7BC",
+      "light": "#7A8296",
+      "invertedDark": "#655843",
+      "derived": false
+    },
+    {
+      "token": "destructive.accent",
+      "dark": "#FF3B4A",
+      "light": "#C0212F",
+      "invertedDark": "#00C4B5",
+      "derived": false
+    },
+    {
+      "token": "destructive.surface",
+      "dark": "#1A0E11",
+      "light": "#FBEFF0",
+      "invertedDark": "#E5F1EE",
+      "derived": false
+    },
+    {
+      "token": "destructive.border",
+      "dark": "#5A2027",
+      "light": "#E3A8AE",
+      "invertedDark": "#A5DFD8",
+      "derived": false
+    },
+    {
+      "token": "destructive.text",
+      "dark": "#FF9BA3",
+      "light": "#8C1420",
+      "invertedDark": "#00645C",
+      "derived": false
+    },
+    {
+      "token": "destructive.bodyText",
+      "dark": "#D6AEB3",
+      "light": "#6E2027",
+      "invertedDark": "#29514C",
+      "derived": false
+    },
+    {
+      "token": "warning.accent",
+      "dark": "#FFC93B",
+      "light": "#9A6A00",
+      "invertedDark": "#0036C4",
+      "derived": false
+    },
+    {
+      "token": "warning.surface",
+      "dark": "#241C08",
+      "light": "#FBF4E4",
+      "invertedDark": "#DBE3F7",
+      "derived": false
+    },
+    {
+      "token": "warning.border",
+      "dark": "#6B5320",
+      "light": "#E0CB93",
+      "invertedDark": "#94ACDF",
+      "derived": false
+    },
+    {
+      "token": "warning.title",
+      "dark": "#FFD97A",
+      "light": "#6B4E06",
+      "invertedDark": "#002685",
+      "derived": false
+    },
+    {
+      "token": "warning.body",
+      "dark": "#D9BE7C",
+      "light": "#6B4E06",
+      "invertedDark": "#264183",
+      "derived": false
+    },
+    {
+      "token": "edge.sequence",
+      "dark": "#5E6E85",
+      "light": "#8A93A3",
+      "invertedDark": "#A1917A",
+      "derived": false
+    },
+    {
+      "token": "edge.join",
+      "dark": "#C6D2E2",
+      "light": "#16181D",
+      "invertedDark": "#392D1D",
+      "derived": false
+    },
+    {
+      "token": "edge.failed",
+      "dark": "#F2495C",
+      "light": "#C0212F",
+      "invertedDark": "#0DB6A3",
+      "derived": false
+    },
+    {
+      "token": "edge.completed",
+      "dark": "#3FBF6F",
+      "light": "#1F8E52",
+      "invertedDark": "#C04090",
+      "derived": false
+    },
+    {
+      "token": "timeline.queueSegment.a",
+      "dark": "#232C3D",
+      "light": "#E3DFD4",
+      "invertedDark": "#DCD3C2",
+      "derived": false
+    },
+    {
+      "token": "timeline.queueSegment.b",
+      "dark": "#161C28",
+      "light": "#F2EFE9",
+      "invertedDark": "#E9E3D7",
+      "derived": false
+    },
+    {
+      "token": "timeline.queueSegment.border",
+      "dark": "#3A465C",
+      "light": "#C9C3B6",
+      "invertedDark": "#C5B9A3",
+      "derived": false
+    }
+  ]
+}

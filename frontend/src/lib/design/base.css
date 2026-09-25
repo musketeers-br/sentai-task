@@ -13,6 +13,16 @@ body {
 	font-variant-numeric: tabular-nums;
 }
 
+/* UI-007 §1 — elevation inverts: the canvas is the darkest surface in dark and the lightest
+   (pure white, rails stay on paper) in light. Each value is chosen per theme, not computed. */
+:root[data-theme='dark'] {
+	--canvas-ground: var(--color-ground);
+}
+
+:root[data-theme='light'] {
+	--canvas-ground: var(--color-card);
+}
+
 :focus-visible {
 	outline: var(--a11y-focus-ring-width) solid var(--color-focus-ring);
 	outline-offset: 2px;

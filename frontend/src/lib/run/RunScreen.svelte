@@ -137,7 +137,7 @@
 				fitViewOptions={{ padding: 0.15, maxZoom: 1 }}
 				proOptions={{ hideAttribution: true }}
 			>
-				<Background variant={BackgroundVariant.Dots} gap={16} size={1} bgColor="var(--color-ground)" patternColor="var(--color-grid-dot)" />
+				<Background variant={BackgroundVariant.Dots} gap={16} size={1} bgColor="var(--canvas-ground)" patternColor="var(--color-grid-dot)" />
 				<Controls position="bottom-left" orientation="vertical" showLock={false} />
 				<MiniMap
 					position="bottom-right"
@@ -289,7 +289,7 @@
 	}
 
 	.faint {
-		color: var(--color-text-faint);
+		color: var(--color-text-muted);
 		font-size: var(--size-caption);
 	}
 
@@ -353,7 +353,7 @@
 		font-size: var(--size-micro);
 		font-weight: 600;
 		letter-spacing: 0.08em;
-		color: var(--color-text-faint);
+		color: var(--color-text-muted);
 	}
 
 	.segments {

@@ -269,7 +269,7 @@
 		align-items: center;
 		justify-content: space-between;
 		gap: 8px;
-		color: var(--color-text-faint);
+		color: var(--color-text-muted);
 	}
 
 	.action {
@@ -300,7 +300,7 @@
 		height: var(--handle-plain-size);
 		min-width: 0;
 		min-height: 0;
-		background: var(--color-ground);
+		background: var(--canvas-ground);
 		border: var(--handle-plain-stroke) solid var(--color-border-strong);
 		border-radius: var(--handle-plain-radius);
 	}

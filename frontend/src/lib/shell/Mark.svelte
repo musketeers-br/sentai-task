@@ -42,6 +42,6 @@
 
 	.task {
 		font-weight: 500;
-		color: var(--color-text-faint);
+		color: var(--color-text-muted);
 	}
 </style>

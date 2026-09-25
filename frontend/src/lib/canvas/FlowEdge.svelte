@@ -86,7 +86,7 @@
 	}
 
 	.junction-diamond {
-		fill: var(--color-ground);
+		fill: var(--canvas-ground);
 		stroke: var(--edge-join-color);
 		stroke-width: var(--junction-marker-stroke);
 	}

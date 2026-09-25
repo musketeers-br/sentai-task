@@ -141,7 +141,7 @@
 	.user {
 		font-family: var(--font-mono);
 		font-size: var(--size-caption);
-		color: var(--color-text-faint);
+		color: var(--color-text-muted);
 	}
 
 	.spacer {

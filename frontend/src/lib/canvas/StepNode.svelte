@@ -154,8 +154,12 @@
 		box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-focus-ring) 22%, transparent);
 	}
 
+	/* UI-007 §2 — selection is a shadow, not a glow: a 2 px solid accent border (1 px border +
+	   1 px ring) over the card's 1 px drop shadow. The halo above is a dark-theme device. */
 	:global([data-theme='light']) .node.selected {
-		box-shadow: 0 1px 3px rgba(22, 24, 29, 0.18);
+		box-shadow:
+			0 0 0 1px var(--color-focus-ring),
+			var(--color-card-shadow);
 	}
 
 	/* FR-008: a precondition warning switches the node border to the warning token. */
@@ -262,7 +266,7 @@
 
 	.step-id,
 	.footer {
-		color: var(--color-text-faint);
+		color: var(--color-text-muted);
 	}
 
 	.chips {
@@ -277,6 +281,11 @@
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius-chip);
 		padding: 1px 5px;
+	}
+
+	.chip,
+	.seal {
+		white-space: nowrap;
 	}
 
 	.chip.unavailable {
@@ -331,7 +340,7 @@
 
 	/* Handles (UI-006): plain = 8px square, 1.5px border, 2px radius; join = 10px diamond, 2px. */
 	.node :global(.handle) {
-		background: var(--color-ground);
+		background: var(--canvas-ground);
 		border-radius: var(--handle-plain-radius);
 	}
 

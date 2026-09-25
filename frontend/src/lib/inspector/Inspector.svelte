@@ -206,7 +206,7 @@
 		font-size: var(--size-micro);
 		font-weight: 600;
 		letter-spacing: 0.1em;
-		color: var(--color-text-faint);
+		color: var(--color-text-muted);
 	}
 
 	.label.display {
@@ -227,7 +227,7 @@
 
 	.faint {
 		font-size: var(--size-micro);
-		color: var(--color-text-faint);
+		color: var(--color-text-muted);
 	}
 
 	.muted {

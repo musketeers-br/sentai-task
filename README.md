@@ -27,7 +27,8 @@ happens if one fails" are kept in someone's head or in a runbook.
 - ✅ **Validate before running**: cycles, unknown or unsupported step types, missing parameters,
   missing namespaces, unknown WQM categories, read-only databases.
 - ✅ **Dispatch and track**: every step becomes a platform job with its own GUID, state and
-  verbatim failure reason, streamed live over Server-Sent Events.
+  verbatim failure reason, followed live on the canvas (the API also streams it over
+  Server-Sent Events).
 - ✅ **Stay honest**: the product only offers what the target IRIS instance was proven to do (see
   [Known limitations](#%EF%B8%8F-known-limitations-v1)).
 
@@ -37,9 +38,10 @@ Like a *sentai* squad, each step has its own role, and the flow decides when the
 
 ## 🛠️ How It Works
 
-SentaiTask is a pure ObjectScript backend on top of the IRIS management API (`/api/admin`). It
-does not reimplement the platform's permissions: every platform call is made with the operator's
-own credential (Constitution III, *Delegated Authorization*).
+SentaiTask is an ObjectScript backend on top of the IRIS management API (`/api/admin`), plus a
+canvas UI that IRIS serves itself. It does not reimplement the platform's permissions: every
+platform call is made with the operator's own credential (Constitution III, *Delegated
+Authorization*).
 
 ### Core pieces
 
@@ -55,6 +57,9 @@ own credential (Constitution III, *Delegated Authorization*).
    platform job and follows it to a terminal state.
 5. **REST API + SSE** (`sentai.rest.Dispatcher`): `/csp/sentai/api/v1`, with password + JWT
    authentication and no unauthenticated access.
+6. **Canvas UI** (`frontend/`): SvelteKit + Svelte Flow, compiled to static files in a Node stage
+   of the `Dockerfile` and served by IRIS's own web server at `/csp/sentai/index.html`. No Node
+   process runs in the shipped container; the page talks only to the two APIs above.
 
 ### Architecture overview
 
@@ -105,8 +110,13 @@ cd sentai-task
 docker-compose up -d --build
 ```
 
-The build loads the `sentai-task` module and registers the REST application
-`/csp/sentai/api/v1` on **http://localhost:52773**.
+The build compiles the canvas, loads the `sentai-task` module and registers the REST application
+`/csp/sentai/api/v1` on **http://localhost:52773**. When the container is up, open
+
+**http://localhost:52773/csp/sentai/index.html**
+
+and sign in with your IRIS credentials (`_SYSTEM` / `SYS` on this dev image). Keep the explicit
+`index.html`: IRIS static file serving has no directory index, so `/csp/sentai/` alone is a 404.
 
 ### IPM
 
@@ -120,7 +130,31 @@ USER>zpm "install sentai-task"
 
 ## 💡 How to Use
 
-### 1. Get a token
+### On the canvas
+
+1. **Compose.** Drag *Integrity check* from the palette onto the canvas (the other step types are
+   listed but marked *not supported in v1*, see [Known limitations](#%EF%B8%8F-known-limitations-v1)).
+   Drag from a step's right handle to another step's left handle to connect them; edges that would
+   create a cycle are refused as you draw. Several edges into one step meet at a single diamond:
+   that step waits for all of them. Click a step to edit it in the inspector, then **Save flow**.
+2. **Validate flow.** Errors (unknown namespace or category, unsupported type, missing parameter)
+   appear on the affected node and block running; warnings, such as a read-only database, are
+   shown but do not block.
+3. **Run now.** You are asked for your password once: the run gets its own sign-in and renews its
+   credential by itself for as long as it runs. The password is not kept.
+4. **Watch.** The live-run view shows each step's state, elapsed time and, if it fails, the
+   platform's own failure message. Cancel one step without touching the others, or *Cancel wave*
+   for the whole run.
+
+The **Dark / Light** switch in the top bar changes theme on every screen.
+
+![Composing a flow: three integrity checks fan in to a fourth, then a fifth](specs/002-canvas-ui/evidence/q1-flow-composition.png)
+
+![A live run: completed, cancelled, running and queued steps at once](specs/002-canvas-ui/evidence/q6-live-run.png)
+
+### With the API
+
+#### 1. Get a token
 
 The API uses the same 60-second JWT as the IRIS management API:
 
@@ -128,7 +162,7 @@ The API uses the same 60-second JWT as the IRIS management API:
 TOKEN=$(curl -s -X POST -u _SYSTEM:SYS http://localhost:52773/api/admin/login | jq -r .access_token)
 ```
 
-### 2. Compose a flow
+#### 2. Compose a flow
 
 Two integrity checks run in parallel and fan in to a third:
 
@@ -149,7 +183,7 @@ curl -s -X POST http://localhost:52773/csp/sentai/api/v1/flows \
   }'
 ```
 
-### 3. Validate, dispatch and watch
+#### 3. Validate, dispatch and watch
 
 ```sh
 curl -s -X POST http://localhost:52773/csp/sentai/api/v1/flows/<flowId>/validate  -H "Authorization: Bearer $TOKEN"
@@ -165,7 +199,12 @@ curl -N http://localhost:52773/csp/sentai/api/v1/runs/<runGuid>/events -H "Autho
 
 Steps 01 and 02 start together. Step 03 stays `queued` until both complete.
 
-### API at a glance
+A run dispatched like this keeps the 60-second token it was given. To let it run longer, sign in
+separately for the run and add that sign-in's refresh token to the body,
+`"runCredential": {"refreshToken": "…"}`, while sending its access token in `Authorization`. The
+run then renews its own credential and erases it when it ends. The canvas does this for you.
+
+#### API at a glance
 
 | Area | Endpoints |
 |---|---|
@@ -219,8 +258,22 @@ IRISAPP>zpm "load /home/irisowner/dev"
 IRISAPP>zpm "test sentai-task -only"
 ```
 
-The suite (`sentai.unittest.*`, 105 methods) runs against a test double of the management API, so
+The suite (`sentai.unittest.*`, 115 methods) runs against a test double of the management API, so
 it never starts real platform jobs through the admin API.
+
+The canvas has unit tests and end-to-end acceptance tests (these need Node 20+ on your machine and
+the container running):
+
+```sh
+cd frontend
+npm ci
+npm test                    # unit tests (vitest)
+npx playwright install chromium
+npm run test:e2e            # acceptance tests against http://localhost:52773
+```
+
+The acceptance tests drive real runs, so they take about six minutes; screenshots and captures
+land in [`specs/002-canvas-ui/evidence/`](specs/002-canvas-ui/evidence/).
 
 ---
 
@@ -237,6 +290,7 @@ sentai-task/
 │   ├── catalog/        # TaskService: native Task Manager catalog
 │   └── rest/           # Dispatcher: REST API + SSE
 ├── tests/sentai/unittest/   # %UnitTest suites + AdminApiDouble
+├── frontend/           # Canvas UI: SvelteKit + Svelte Flow, built to static files
 ├── design/             # Canvas UI prototypes (spec 002)
 ├── specs/              # Spec-driven history: 001 contract spike → 004 hardening
 ├── scripts/sanitation/ # Reviewed cleanup of historical test residue
@@ -253,11 +307,12 @@ sentai-task/
 * [x] **001**: Contract spike against the real IRIS management API ([compatibility statement](specs/001-validate-async-job-contract/compatibility.md))
 * [x] **003**: ObjectScript backend: persistence, validation, wave dispatch, SSE tracking
 * [x] **004**: Hardening. The product only promises what IRIS 2026.2 proved.
+* [x] **002**: Canvas UI: compose, validate, schedule, run and watch flows, in dark and light
+* [x] Runs renew their own credential when dispatched with `runCredential` (runs > 60 s work)
 
 ### 🚧 Next
 
-* [ ] **002**: Canvas UI for composing and watching flows (prototypes in [`design/`](design/))
-* [x] Runs renew their own credential when dispatched with `runCredential` (runs > 60 s work)
+* [ ] WQM category screen, task catalog and run history in the canvas (the API already has them)
 * [ ] A credential for scheduled runs (unblocks scheduling)
 * [ ] Prove and enable the remaining step types, one at a time
 

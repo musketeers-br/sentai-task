@@ -79,7 +79,7 @@
 			variant={BackgroundVariant.Dots}
 			gap={16}
 			size={1}
-			bgColor="var(--color-ground)"
+			bgColor="var(--canvas-ground)"
 			patternColor="var(--color-grid-dot)"
 		/>
 
@@ -156,7 +156,7 @@
 	}
 
 	.legend-diamond {
-		fill: var(--color-ground);
+		fill: var(--canvas-ground);
 		stroke: var(--edge-join-color);
 		stroke-width: 1.6;
 	}
