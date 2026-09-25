@@ -344,6 +344,14 @@ ClassMethod PollInFlightSteps(run As sentai.model.Run, bearerToken As %String) A
 
         Set httpStatus = 0, location = ""
         Set body = ##class(sentai.dispatch.AdminApiClient).Get(stepRun.adminJobId, bearerToken, .httpStatus, .location)
+        // A 4xx is permanent for this run (e.g. 401 once the 60 s credential expired, E-1):
+        // fail the step with the status recorded instead of polling a job we can no longer
+        // read, which left the step — and the run — "running" forever. 5xx/network: retry.
+        If (httpStatus >= 400) && (httpStatus < 500) {
+            Set summary = $S($IsObject(body) && $IsObject(body."status"):body."status"."summary", 1:"")
+            Do stepRun.TransitionTo("failed", "Administrative endpoint "_stepRun.adminJobId_" returned HTTP "_httpStatus_$S(summary '= "":": "_summary, 1:""))
+            Continue
+        }
         Continue:'$IsObject(body)
 
         Set state = $S($IsObject(body."result"):body."result"."State", 1:"")
