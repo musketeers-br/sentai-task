@@ -184,3 +184,28 @@ Still open for the backend owner: the SSE response is gzipped by the web gateway
 mid-stream in browsers (the canvas polls instead); the run log is never written; per the code,
 rerun of a step in an already-terminal run is not picked up — `RerunStep` queues a new StepRun
 but no loop is running any more (the canvas only offers *Re-run step* while the run is live).
+
+## Open for the backend owner — consolidated (2026-09-25)
+
+Everything still open after spec 004, the E-1 fix and the static-app hardening, in one list.
+None blocks the v1 demo (manual dispatch of `integrity-check` flows, canvas polling). Ordered
+by what an evaluator or operator would hit first.
+
+| # | Item | Where | Effect today | Suggested fix |
+|---|------|-------|--------------|---------------|
+| 1 | **F-2** — cancel is local only | `WaveDispatcher.CancelStep` / `CancelRun` (T075) | The step/run shows `cancelled`, but the platform job keeps running to its end. | `POST /api/admin/v2/async-result/cancel?id=<id>` (spec 001 evidence 08c), with the run credential. |
+| 2 | **Rerun after the run ended** is never picked up | `Dispatcher.RerunStep` → `WaveDispatcher` | A new StepRun is queued but no run loop exists any more; it stays `queued`. The canvas offers *Re-run step* only while the run is live. | Refuse with 409 on a terminal run, or restart the loop (and its credential) for that run. |
+| 3 | **Run log never written** | `WaveDispatcher` (no writer for the `RUN LOG` data) | The live-run rail's `RUN LOG` has nothing to show. | Append one entry per state transition (time, step, from → to, failureReason). |
+| 4 | **SSE broken in browsers** | `GET /runs/{guid}/events` | The web gateway gzips the stream; browsers cut it mid-stream. The canvas polls `GET /runs/{guid}` every second instead, so nothing depends on it. | Disable gateway compression for that response (or drop SSE from the contract). |
+| 5 | **E-3** — scheduled runs carry no credential | scheduling path | Every platform call from a scheduled run gets 401. Documented as non-operational in v1 (spec 004 D-2). | Needs a design decision (a stored, renewable credential per schedule — same mechanism as E-1). |
+| 6 | **`scheduleSpec` not converted** to `%SYS.Task` timing | `/schedule` | Native tasks are created but their timing is not taken from the flow. | Map `scheduleSpec` to `TimePeriod` / time fields once E-3 is decided. |
+| 7 | **F-5** — test hygiene | `DispatchEndpointTest` (T078) | Per T070 evidence, real background jobs start from the suite and may leave `running` runs. Not re-checked since. | Use the admin-API double for the loop; assert no `running` run after the suite. |
+
+Changed on the backend side by the frontend work, for awareness (all with tests; suite 122/122):
+
+- E-1 for manual dispatch (`runCredential.refreshToken`, single renewer, erased at finalize).
+- A 4xx on a status check fails the step; a cancelled run finalizes as `cancelled`.
+- `/csp/sentai` (the canvas) is now password-protected, served by `sentai.web.StaticFiles`, whose
+  package is mapped to database `SENTAIWEB` (resource public R, that code only). Declared in
+  `module.xml`; `iris.script` creates the database and the mapping. Details:
+  `specs/002-canvas-ui/tasks.md` §"static app authentication".
