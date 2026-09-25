@@ -21,9 +21,11 @@ Index NameIndex On name [ Unique ];
 
 /// The nesting invariant every write MUST satisfy (FR-034):
 /// defaultWorkers <= maxActiveWorkers <= maxWorkers <= maxTotalWorkers.
+/// Per Config.WorkQueues, MaxTotalWorkers applies only "if non-zero": 0 means no ceiling,
+/// as on the platform's built-in categories, so the last clause is skipped for 0.
 ClassMethod SatisfiesInvariant(defaultWorkers As %Integer, maxActiveWorkers As %Integer, maxWorkers As %Integer, maxTotalWorkers As %Integer) As %Boolean
 {
-    Quit (defaultWorkers <= maxActiveWorkers) && (maxActiveWorkers <= maxWorkers) && (maxWorkers <= maxTotalWorkers)
+    Quit (defaultWorkers <= maxActiveWorkers) && (maxActiveWorkers <= maxWorkers) && ((+maxTotalWorkers = 0) || (maxWorkers <= maxTotalWorkers))
 }
 
 /// Refreshes (or creates) the local mirror row after a confirmed passthrough write to the

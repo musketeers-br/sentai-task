@@ -1,8 +1,12 @@
 <script lang="ts">
 	import { Handle, Position, useNodeConnections, type NodeProps } from '@xyflow/svelte';
 	import type { StepFlowNode } from '$lib/flow/editor.svelte';
+	import { getEditorContext } from '$lib/flow/context';
 
 	let { id, data, selected }: NodeProps<StepFlowNode> = $props();
+
+	const editor = getEditorContext();
+	const findings = $derived(editor.findingsFor(id));
 
 	const incoming = useNodeConnections({ handleType: 'target' });
 	const outgoing = useNodeConnections({ handleType: 'source' });
@@ -24,6 +28,8 @@
 	class="node"
 	class:destructive
 	class:selected
+	class:has-warning={findings.warnings.length > 0}
+	class:has-error={findings.errors.length > 0}
 	style:--node-category={`var(--category-${category})`}
 	data-step-id={id}
 	data-category={category}
@@ -57,6 +63,36 @@
 		{/if}
 		{#if parameterText}
 			<div class="muted mono">{parameterText}{destructive ? ' · irreversible' : ''}</div>
+		{/if}
+
+		{#each findings.warnings as warning (warning.code)}
+			<div class="finding warning" data-testid="precondition-warning">
+				<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+					<path d="M7 1.4 L13 12.2 L1 12.2 Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" />
+					<path d="M7 5.2 L7 8.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+					<circle cx="7" cy="10.4" r="0.8" fill="currentColor" />
+				</svg>
+				<div>
+					<div class="finding-title">Precondition not met</div>
+					<div class="finding-body">{warning.message}</div>
+				</div>
+			</div>
+		{/each}
+
+		{#if findings.errors.length > 0}
+			<div class="finding error" data-testid="validation-error">
+				<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+					<circle cx="7" cy="7" r="5.8" fill="none" stroke="currentColor" stroke-width="1.4" />
+					<path d="M7 3.8 L7 7.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+					<circle cx="7" cy="9.9" r="0.8" fill="currentColor" />
+				</svg>
+				<div>
+					<div class="finding-title">Blocks scheduling</div>
+					{#each findings.errors as error (error.code)}
+						<div class="finding-body">{error.message}</div>
+					{/each}
+				</div>
+			</div>
 		{/if}
 
 		<div class="divider"></div>
@@ -116,6 +152,68 @@
 
 	:global([data-theme='light']) .node.selected {
 		box-shadow: 0 1px 3px rgba(22, 24, 29, 0.18);
+	}
+
+	/* FR-008: a precondition warning switches the node border to the warning token. */
+	.node.has-warning {
+		border-color: var(--warning-border);
+		border-left-color: var(--node-category);
+	}
+
+	.node.has-error {
+		border-color: var(--destructive-accent);
+		border-left-color: var(--node-category);
+	}
+
+	.finding {
+		display: flex;
+		align-items: flex-start;
+		gap: 7px;
+		padding: 7px 8px;
+		border-radius: var(--radius-control);
+	}
+
+	.finding svg {
+		flex-shrink: 0;
+		margin-top: 1px;
+	}
+
+	.finding.warning {
+		color: var(--warning-accent);
+		background: var(--warning-surface);
+		border: 1px solid var(--warning-border);
+	}
+
+	.finding.warning .finding-title {
+		color: var(--warning-title);
+	}
+
+	.finding.warning .finding-body {
+		color: var(--warning-body);
+	}
+
+	.finding.error {
+		color: var(--destructive-accent);
+		background: var(--destructive-surface);
+		border: 1px solid var(--destructive-border);
+	}
+
+	.finding.error .finding-title {
+		color: var(--destructive-text);
+	}
+
+	.finding.error .finding-body {
+		color: var(--destructive-body-text);
+	}
+
+	.finding-title {
+		font-size: var(--size-caption);
+		font-weight: 600;
+	}
+
+	.finding-body {
+		font-size: var(--size-micro);
+		line-height: 1.45;
 	}
 
 	.hazard-band {

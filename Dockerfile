@@ -55,6 +55,10 @@ USER root
 RUN mkdir -p /data/IRISAPP_DATA/ /data/IRISAPP_DATA/irisapp_dataenstemp /data/IRISAPP_DATA/irisapp_datasecondary && \
     chown irisowner:irisowner /data/ -R
 
+# Demo/acceptance fixture for the FR-008 precondition: a directory IRIS cannot write to, so
+# validation reports "Database mounted read-only" against a real instance, not a mock.
+RUN mkdir -p /data/READONLY_DEMO && chmod 555 /data/READONLY_DEMO
+
 # Static frontend assets, served by IRIS's own private web server as a CSP
 # application with "Serve files" enabled (research.md R-001) — no Nginx, no
 # second container. Placed OUTSIDE /home/irisowner/dev on purpose: that

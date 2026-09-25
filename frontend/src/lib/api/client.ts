@@ -1,6 +1,7 @@
 // Typed calls to SENTAI.REST.Dispatcher (contracts/openapi.yaml). Every predictable failure
 // comes back as a value, and the platform's own words are kept verbatim (Constitution III, IV).
 import type { FlowDefinition, FlowDocument, StepTypeInfo } from '$lib/flow/document';
+import type { ValidationReport } from '$lib/flow/report';
 import { session } from './session.svelte';
 import {
 	fromWireFlow,
@@ -12,15 +13,9 @@ import {
 
 const API_BASE = '/csp/sentai/api/v1';
 
-export interface Finding {
-	stepId: string | null;
-	code: string;
-	message: string;
-}
-
-export interface ValidationReport {
-	errors: Finding[];
-	warnings: Finding[];
+export interface ScheduleResult {
+	taskIds: number[];
+	nextRun: string;
 }
 
 export type ApiError =
@@ -110,6 +105,31 @@ export const api = {
 		return map(
 			await request<WireFlow>('PUT', `/flows/${encodeURIComponent(id)}?revision=${revision}`, def),
 			fromWireFlow
+		);
+	},
+
+	/** Advisory: evaluated against the live instance; dispatch re-evaluates authoritatively. */
+	async validate(id: string): Promise<ApiResult<ValidationReport>> {
+		return request<ValidationReport>('POST', `/flows/${encodeURIComponent(id)}/validate`, {});
+	},
+
+	async schedule(
+		id: string,
+		body: { scheduleSpec: string; category?: string }
+	): Promise<ApiResult<ScheduleResult>> {
+		return map(
+			await request<{ taskIds: Array<number | string>; nextRun: string }>(
+				'POST',
+				`/flows/${encodeURIComponent(id)}/schedule`,
+				body
+			),
+			(r) => ({ taskIds: r.taskIds.map(Number), nextRun: r.nextRun })
+		);
+	},
+
+	async wqmCategoryNames(): Promise<ApiResult<string[]>> {
+		return map(await request<Array<{ name: string }>>('GET', '/wqm/categories'), (list) =>
+			list.map((c) => c.name)
 		);
 	}
 };

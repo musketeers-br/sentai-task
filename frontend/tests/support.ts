@@ -14,7 +14,7 @@ export async function signIn(page: Page, query = ''): Promise<void> {
 	await expect(page.getByRole('heading', { name: 'STEP TYPES' })).toBeVisible();
 }
 
-async function token(request: APIRequestContext): Promise<string> {
+export async function token(request: APIRequestContext): Promise<string> {
 	const res = await request.post('/api/admin/login', {
 		headers: { Authorization: `Basic ${Buffer.from(`${USER}:${PASSWORD}`).toString('base64')}` },
 		data: {}
@@ -30,6 +30,34 @@ export async function seedFlow(request: APIRequestContext, definition: object): 
 	});
 	expect(res.status(), await res.text()).toBe(201);
 	return String((await res.json()).id);
+}
+
+/** Native %SYS.Task entries the backend created for a flow ("SentaiTask: <flowId>#<stepId>"). */
+export async function nativeTaskIds(request: APIRequestContext, flowId: string): Promise<number[]> {
+	const res = await request.get(`/api/admin/v2/tasks?filter=${encodeURIComponent(`SentaiTask: ${flowId}#`)}`, {
+		headers: { Authorization: `Bearer ${await token(request)}` }
+	});
+	expect(res.status()).toBe(200);
+	const rows: Array<Record<string, unknown>> = (await res.json()).result ?? [];
+	return rows
+		.filter((r) => String(r.Name ?? r.name ?? '').startsWith(`SentaiTask: ${flowId}#`))
+		.map((r) => Number(r.ID ?? r.Id ?? r.id));
+}
+
+export async function deleteNativeTask(request: APIRequestContext, taskId: number): Promise<void> {
+	const res = await request.delete(`/api/admin/v2/task?id=${taskId}`, {
+		headers: { Authorization: `Bearer ${await token(request)}` }
+	});
+	expect(res.ok(), `DELETE task ${taskId}: ${res.status()} ${await res.text()}`).toBe(true);
+}
+
+/** Spec 001's evidence envelope, trimmed to what a UI-driven capture can observe. */
+export function envelope(evidenceId: string, request: object, response: object, notes: string[] = []) {
+	return JSON.stringify(
+		{ evidence_id: evidenceId, captured_at: new Date().toISOString(), request, response, notes },
+		null,
+		2
+	);
 }
 
 /** Drags from one step's output handle to another step's input handle. */
@@ -53,9 +81,21 @@ export function hexToRgb(hex: string): string {
 	return `rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`;
 }
 
+interface SeedStep {
+	id: string;
+	type: string;
+	taskName: string;
+	namespace: string;
+	runAsUser: string;
+	wqmCategory: string;
+	databaseDirectory?: string;
+	timeoutMinutes?: number;
+	parameters?: Record<string, unknown>;
+}
+
 /** The canonical UI-001 graph, on namespaces that exist in the dev image. */
 export function canonicalFlow(name: string) {
-	const step = (id: string, type: string, taskName: string, extra: object = {}) => ({
+	const step = (id: string, type: string, taskName: string, extra: Partial<SeedStep> = {}): SeedStep => ({
 		id,
 		type,
 		taskName,

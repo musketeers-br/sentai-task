@@ -9,6 +9,14 @@ Method TestViolatingInvariantIsRejectedAsErrorNeverWarning()
     Do $$$AssertEquals(##class(sentai.model.Category).SatisfiesInvariant(5, 25, 20, 30), 0)
 }
 
+/// Config.WorkQueues: "MaxTotalWorkers — if non-zero, specifies the maximum number of workers".
+/// 0 is "no ceiling", so the platform's built-in Default (20/40/40/0) must satisfy the invariant.
+Method TestZeroMaxTotalWorkersMeansNoCeiling()
+{
+    Do $$$AssertEquals(##class(sentai.model.Category).SatisfiesInvariant(20, 40, 40, 0), 1)
+    Do $$$AssertEquals(##class(sentai.model.Category).SatisfiesInvariant(50, 40, 40, 0), 0)
+}
+
 Method TestWriteServiceBlocksBeforeAnyAdminApiCall()
 {
     Set payload = {}

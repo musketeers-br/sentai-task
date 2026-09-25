@@ -9,12 +9,13 @@ test('Q1 — composes the canonical graph from the palette, with one shared fan-
 
 	// Scenario 1: dragging a step type onto the canvas creates a node.
 	const pane = page.locator('.svelte-flow__pane');
+	// Laid out for the 872 px canvas left between the palette and the inspector at 1440 px.
 	const drops: Array<[string, number, number]> = [
-		['integrity-check', 60, 60],
-		['integrity-check', 60, 260],
-		['integrity-check', 60, 460],
-		['purge-audit-records', 420, 260],
-		['switch-journal', 800, 290]
+		['integrity-check', 24, 60],
+		['integrity-check', 24, 260],
+		['integrity-check', 24, 460],
+		['purge-audit-records', 320, 260],
+		['switch-journal', 608, 290]
 	];
 	for (const [type, x, y] of drops) {
 		await page.locator(`[data-step-type="${type}"]`).dragTo(pane, { targetPosition: { x, y } });

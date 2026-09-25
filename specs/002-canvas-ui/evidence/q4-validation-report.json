@@ -1,0 +1,31 @@
+{
+  "evidence_id": "q4-validation-report",
+  "captured_at": "2026-09-24T19:23:02.062Z",
+  "request": {
+    "method": "POST",
+    "url_path": "/csp/sentai/api/v1/flows/4/validate"
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "errors": [
+        {
+          "stepId": "02",
+          "code": "NAMESPACE_NOT_FOUND",
+          "message": "Namespace 'DOCBOOK' does not exist on this instance"
+        }
+      ],
+      "warnings": [
+        {
+          "stepId": "03",
+          "code": "PRECONDITION_READ_ONLY",
+          "message": "Database mounted read-only. This step type requires write access to the directory."
+        }
+      ]
+    }
+  },
+  "notes": [
+    "#02 namespace DOCBOOK does not exist on the dev image → error",
+    "#03 points at the read-only fixture /data/READONLY_DEMO/ → warning"
+  ]
+}

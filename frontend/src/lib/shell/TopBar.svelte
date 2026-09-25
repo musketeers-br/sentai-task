@@ -7,8 +7,17 @@
 		editor,
 		user,
 		onsave,
+		onvalidate,
+		onschedule,
 		onsignout
-	}: { editor: FlowEditor; user: string | null; onsave: () => void; onsignout: () => void } = $props();
+	}: {
+		editor: FlowEditor;
+		user: string | null;
+		onsave: () => void;
+		onvalidate: () => void;
+		onschedule: () => void;
+		onsignout: () => void;
+	} = $props();
 
 	// Kept exactly as the platform reports it ("YYYY-MM-DD HH:MM:SS"); only the time is shown.
 	const savedTime = $derived(editor.savedAt ? editor.savedAt.slice(11, 16) : null);
@@ -25,7 +34,7 @@
 		id="flow-name"
 		class="flow-name"
 		bind:value={editor.name}
-		oninput={() => editor.touch()}
+		oninput={() => editor.touch('cosmetic')}
 		spellcheck="false"
 	/>
 	<span class="meta" data-testid="flow-meta">
@@ -43,8 +52,25 @@
 		<button type="button" aria-pressed={theme.current === 'light'} onclick={() => theme.set('light')}>Light</button>
 	</div>
 
-	<button type="button" class="primary" disabled={!canSave} onclick={onsave}>
+	<button type="button" class="secondary" disabled={!canSave} onclick={onsave}>
 		{editor.saving ? 'Saving…' : 'Save flow'}
+	</button>
+	<button
+		type="button"
+		class="secondary"
+		disabled={editor.validating || editor.steps.length === 0}
+		onclick={onvalidate}
+	>
+		{editor.validating ? 'Validating…' : 'Validate flow'}
+	</button>
+	<button
+		type="button"
+		class="primary"
+		disabled={editor.scheduleBlocked || editor.steps.length === 0}
+		title={editor.scheduleBlocked ? 'Fix the validation errors listed in the status bar first' : undefined}
+		onclick={onschedule}
+	>
+		Schedule in Task Manager
 	</button>
 
 	<span class="user">{user}</span>
@@ -147,7 +173,17 @@
 		padding: 7px 14px;
 	}
 
-	.primary:disabled {
+	.secondary {
+		font-weight: 500;
+		color: var(--color-text);
+		background: var(--color-card);
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-control);
+		padding: 7px 12px;
+	}
+
+	.primary:disabled,
+	.secondary:disabled {
 		opacity: 0.45;
 		cursor: default;
 	}

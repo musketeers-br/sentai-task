@@ -6,7 +6,9 @@
 	import { session } from '$lib/api/session.svelte';
 	import FlowCanvas from '$lib/canvas/FlowCanvas.svelte';
 	import { FlowEditor } from '$lib/flow/editor.svelte';
+	import Inspector from '$lib/inspector/Inspector.svelte';
 	import Palette from '$lib/palette/Palette.svelte';
+	import ScheduleDialog from '$lib/shell/ScheduleDialog.svelte';
 	import SignIn from '$lib/shell/SignIn.svelte';
 	import StatusBar from '$lib/shell/StatusBar.svelte';
 	import TopBar from '$lib/shell/TopBar.svelte';
@@ -16,6 +18,7 @@
 
 	type Phase = { name: 'idle' } | { name: 'loading' } | { name: 'ready' } | { name: 'failed'; message: string };
 	let phase = $state<Phase>({ name: 'idle' });
+	let scheduling = $state(false);
 
 	onMount(() => theme.init());
 
@@ -34,6 +37,10 @@
 		}
 		editor.registry = types.value;
 
+		// Suggestions only — typing any category name is still allowed and validated server-side.
+		const categories = await api.wqmCategoryNames();
+		if (categories.ok) editor.wqmCategories = categories.value;
+
 		const flowId = new URLSearchParams(location.search).get('flow');
 		if (flowId) {
 			const flow = await api.getFlow(flowId);
@@ -46,11 +53,20 @@
 		phase = { name: 'ready' };
 	}
 
-	async function save() {
-		if (!(await editor.save()) || !editor.id) return;
+	function syncUrl() {
+		if (!editor.id || new URLSearchParams(location.search).get('flow') === editor.id) return;
 		const url = new URL(location.href);
 		url.searchParams.set('flow', editor.id);
 		replaceState(url, {});
+	}
+
+	async function save() {
+		if (await editor.save()) syncUrl();
+	}
+
+	async function validate() {
+		await editor.validate();
+		syncUrl();
 	}
 
 	function addFromPalette(type: string) {
@@ -76,7 +92,14 @@
 
 {#if phase.name === 'ready'}
 	<div class="app">
-		<TopBar {editor} user={session.user} onsave={save} onsignout={signOut} />
+		<TopBar
+			{editor}
+			user={session.user}
+			onsave={save}
+			onvalidate={validate}
+			onschedule={() => (scheduling = true)}
+			onsignout={signOut}
+		/>
 		<div class="workspace">
 			<Palette registry={editor.registry} onadd={addFromPalette} />
 			<div class="canvas-area">
@@ -84,9 +107,14 @@
 					<FlowCanvas {editor} />
 				</SvelteFlowProvider>
 			</div>
+			<Inspector {editor} />
 		</div>
 		<StatusBar {editor} />
 	</div>
+	<ScheduleDialog {editor} bind:open={scheduling} />
+	<datalist id="wqm-categories">
+		{#each editor.wqmCategories as name (name)}<option value={name}></option>{/each}
+	</datalist>
 	{#if session.status === 'expired'}
 		<div class="overlay"><SignIn expired /></div>
 	{/if}

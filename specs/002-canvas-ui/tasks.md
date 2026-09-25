@@ -353,3 +353,39 @@ Backend defects found by these tests and fixed in `src/sentai/rest/Dispatcher.cl
   `sentai.unittest.rest.FlowsTest:TestReadReturnsStepParameters`.
 - No `CHARSET`/`CONVERTINPUTSTREAM`: UTF-8 request bodies were read as Latin-1, persisting any
   non-ASCII name as mojibake ("—" → "â€""). Covered over real HTTP by Q2.
+
+## Follow-on: User Stories 2 and 3 — Inspector, Validation, Schedule (2026-09-24)
+
+Verified by `frontend/tests/us2-inspector-validation.spec.ts` (Q3, Q4) and
+`frontend/tests/us3-schedule.spec.ts` (Q5, both outcomes) against the deployed container; 33 vitest
+unit tests. Evidence: `evidence/q3-inspector.png`, `q4-validation-report.json`,
+`q4-status-bar.png`, `q5-schedule.json`.
+
+Delivered: inspector with the five bound sections and real labelled inputs (FR-014–FR-016),
+type-specific parameters for what the validator checks (`daysToKeep`; `customClass` for custom),
+WQM category suggestions from `GET /wqm/categories`; destructive block with consequence text and the
+typed-confirmation control (FR-011); *Validate flow* (saves first, since validation reads the
+persisted flow — FR-019) with the precondition panel on the node (FR-008), per-step error panel, and
+status-bar counts in the bound format (FR-009); *Schedule in Task Manager* dialog posting to
+`/schedule`, blocked while known errors exist and not by warnings (FR-010, US3 scenario 2).
+
+Deviations, each deliberate:
+
+- **OUTPUT** reads `step04.guid → ^sentaiRun(runGuid,"04")` — the global the backend really writes
+  (`sentai.dispatch.WaveDispatcher`), not the contract's `^SentaiRun(runId,"04")`; global names are
+  case-sensitive, so the contract spelling would send an operator to an empty global.
+- **Typed-confirmation checkbox** is shown checked *and disabled*: dispatch always requires it for
+  destructive steps (SC-006), so it is a statement, not a setting.
+- **Error panel on nodes** is an addition to UI-001 (which only draws the warning panel) so an error
+  can be located without leaving the canvas (SC-002).
+- **Only graph changes clear the report**; moving a node or renaming the flow keeps it.
+- **`nextRun`** is shown as the backend returns it. The backend does not yet turn `scheduleSpec` into
+  native `%SYS.Task` timing (spec 003 HANDOFF, open follow-up), so the value is currently "now".
+- **`/data/READONLY_DEMO/`** is a root-owned, read-only directory baked into the image (`Dockerfile`)
+  as the acceptance/demo fixture for the precondition warning on a real instance.
+
+Backend defect found and fixed: `sentai.model.Category.SatisfiesInvariant` compared
+`maxWorkers <= maxTotalWorkers` even when `maxTotalWorkers = 0`, which `Config.WorkQueues` defines as
+"no limit" ("if non-zero, specifies the maximum"). Every step on the built-in `Default` category
+therefore failed validation — and dispatch — once `GET /wqm/categories` had mirrored it. Regression
+test: `sentai.unittest.validation.CategoryInvariantTest:TestZeroMaxTotalWorkersMeansNoCeiling`.

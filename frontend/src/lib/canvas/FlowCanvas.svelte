@@ -17,8 +17,11 @@
 	import FlowEdge from './FlowEdge.svelte';
 	import type { FlowEditor, StepFlowNode } from '$lib/flow/editor.svelte';
 	import { STEP_TYPE_MIME } from './dnd';
+	import { setEditorContext } from '$lib/flow/context';
 
 	let { editor }: { editor: FlowEditor } = $props();
+	// svelte-ignore state_referenced_locally
+	setEditorContext(editor);
 
 	const nodeTypes: NodeTypes = { step: StepNode };
 	const edgeTypes: EdgeTypes = { flow: FlowEdge };
@@ -64,7 +67,7 @@
 			}
 		}}
 		ondelete={() => editor.touch()}
-		onnodedragstop={() => editor.touch()}
+		onnodedragstop={() => editor.touch('cosmetic')}
 		onmove={(_, viewport) => (editor.zoom = viewport.zoom)}
 		deleteKey={['Backspace', 'Delete']}
 		snapGrid={[SNAP, SNAP]}

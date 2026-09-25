@@ -1,0 +1,28 @@
+{
+  "evidence_id": "q5-schedule",
+  "captured_at": "2026-09-24T19:23:03.303Z",
+  "request": {
+    "method": "POST",
+    "url_path": "/csp/sentai/api/v1/flows/5/schedule",
+    "body": {
+      "scheduleSpec": "WEEKLY SAT 03:00",
+      "category": "Default"
+    }
+  },
+  "response": {
+    "status": 201,
+    "body": {
+      "taskIds": [
+        "1000",
+        "1001",
+        "1002",
+        "1003"
+      ],
+      "nextRun": "2026-09-24 19:23:03"
+    }
+  },
+  "notes": [
+    "Native tasks were deleted after capture so the dev instance keeps no schedule.",
+    "nextRun is the value the backend returns; converting scheduleSpec into %SYS.Task timing is an open backend item (spec 003 HANDOFF)."
+  ]
+}
