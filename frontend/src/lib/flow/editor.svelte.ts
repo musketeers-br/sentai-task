@@ -197,7 +197,7 @@ export class FlowEditor {
 		}
 		const credential = await session.dedicatedToken(password);
 		if (!credential.ok) return credential;
-		const result = await api.dispatch(this.id!, credential.authorization);
+		const result = await api.dispatch(this.id!, credential);
 		if (result.ok) return { ok: true, guid: result.value.guid };
 		if (result.error.kind === 'validation') this.report = result.error.report;
 		return { ok: false, message: `Not dispatched: ${describeError(result.error)}` };

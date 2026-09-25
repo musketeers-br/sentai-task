@@ -78,13 +78,15 @@ class Session {
 	}
 
 	/**
-	 * A separate login whose token is handed to one dispatched run. The backend keeps the token a
-	 * run was dispatched with (spec 004 E-1), and `/refresh` revokes the previous access token —
-	 * so a run dispatched with this session's token died at this session's next proactive refresh
-	 * (≤ 45 s). An independent login is untouched by those refreshes and gives the run its full
-	 * 60 s. The password is used for this one request and never kept.
+	 * A separate login handed to one dispatched run. `/refresh` revokes the previous access token,
+	 * so a run sharing this session's pair died at this session's next proactive refresh (≤ 45 s).
+	 * The run gets its own pair instead: the access token authorizes the dispatch and the refresh
+	 * token lets the backend renew the run's credential itself (E-1). The password is used for this
+	 * one request and never kept.
 	 */
-	async dedicatedToken(password: string): Promise<{ ok: true; authorization: string } | { ok: false; message: string }> {
+	async dedicatedToken(
+		password: string
+	): Promise<{ ok: true; authorization: string; refreshToken: string } | { ok: false; message: string }> {
 		if (!this.user) return { ok: false, message: 'Not signed in.' };
 		let res: Response;
 		try {
@@ -103,7 +105,7 @@ class Session {
 			};
 		}
 		const pair = (await res.json()) as TokenPair;
-		return { ok: true, authorization: `Bearer ${pair.access_token}` };
+		return { ok: true, authorization: `Bearer ${pair.access_token}`, refreshToken: pair.refresh_token };
 	}
 
 	#accept(pair: TokenPair): void {

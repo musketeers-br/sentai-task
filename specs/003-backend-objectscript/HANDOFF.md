@@ -167,3 +167,20 @@ proved:
 - **F-4** (built-in categories fail the invariant) — fixed by 004: `0` in `maxWorkers` /
   `maxTotalWorkers` means unbounded.
 - **F-2**, **F-5** — unchanged, still open.
+
+## E-1 fixed for manual dispatch (2026-09-25)
+
+Found while building the live-run screen: `/api/admin/refresh` revokes the previous access
+token, so a run dispatched with a client's own token died at that client's next refresh (~45 s),
+earlier than the documented 60 s. Fix: dispatch accepts an optional `runCredential.refreshToken`
+from a sign-in dedicated to the run; the run loop renews that pair itself (single renewer) and
+`FinalizeRun` erases it. Runs longer than 60 s now complete (demo wave, 2 m 33 s). Without
+`runCredential` nothing changes. **E-3** (scheduled runs) is still open: a scheduled run has no
+sign-in to renew. Details: `specs/002-canvas-ui/tasks.md` §E-1.
+
+Also fixed while there, with tests: a 4xx on a status check left the step `running` forever
+(`PollInFlightSteps`), and a cancelled run finalized as `completed` (`FinalizeRun`).
+Still open for the backend owner: the SSE response is gzipped by the web gateway and breaks
+mid-stream in browsers (the canvas polls instead); the run log is never written; per the code,
+rerun of a step in an already-terminal run is not picked up — `RerunStep` queues a new StepRun
+but no loop is running any more (the canvas only offers *Re-run step* while the run is live).

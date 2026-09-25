@@ -436,3 +436,20 @@ the password prompt at dispatch (not in the design export) is what makes E-1's 6
 
 Backend defects fixed with tests: step stuck `running` on a 4xx status check (`0d26a2a`); cancelled
 run finalized as `completed` (`FinalizeRun`, failed > cancelled > completed).
+
+## Follow-on: E-1 fixed for manual dispatch (2026-09-25)
+
+`POST /flows/{id}/dispatch` accepts an optional `runCredential: { refreshToken }` (additive,
+documented in `contracts/openapi.yaml`). The dispatch dialog signs in separately for the run and
+sends that sign-in's access token (Authorization) and refresh token. `WaveDispatcher` stores the
+pair, and only the run loop renews it after 40 s (`RenewRunCredentialIfDue`) — renewal revokes the
+previous token, so a single renewer avoids runs invalidating themselves; step starts, polls and
+pause read the current token (`RunToken`). A refused renewal keeps the old token, so the platform's
+401 is recorded as before. `FinalizeRun` erases the pair. Without `runCredential` behaviour is
+unchanged (60 s). Scheduled runs still carry no credential (D-2).
+
+Verified: `sentai.unittest.dispatch.RunCredentialTest` (renew when aged, not when fresh, v1 without
+refresh token, refused renewal, erasure) — backend 115/115; the agreed demo wave (3 → join → 2)
+dispatched from the UI ran to `completed` in 2 m 33 s with no failure, credentials erased
+afterwards; e2e `E-1 — the demo wave … runs past 60 s to completed`. Evidence:
+`evidence/e1-demo-wave-completed.png`.

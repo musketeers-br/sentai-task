@@ -302,7 +302,9 @@ ClassMethod DispatchFlow(flowId As %String) As %Status
     If (errorCode = "CONFIRMATION_REQUIRED") Quit ..WriteProblem(428, "Confirmation Required", "Step '"_errorDetail_"' requires a matching typed confirmation before dispatch")
     If (errorCode = "INTERNAL_ERROR") Quit ..WriteProblem(500, "Internal Error", errorDetail)
 
-    Set ^sentaiRun(run.guid, "%token") = ..CurrentToken()
+    // E-1: an optional refresh token (runCredential) lets the run renew its own credential.
+    Set refreshToken = $S($IsObject(payload) && $IsObject(payload.runCredential):payload.runCredential.refreshToken, 1:"")
+    Do ##class(sentai.dispatch.WaveDispatcher).StoreRunCredential(run.guid, ..CurrentToken(), refreshToken)
     Do ##class(sentai.dispatch.WaveDispatcher).StartBackgroundLoop(run.guid, ..CurrentToken())
 
     Quit ..WriteJSON(202, ..ShapeRun(run, 0))

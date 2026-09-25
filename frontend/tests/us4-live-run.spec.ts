@@ -28,7 +28,8 @@ const chip = (page: Page, stepId: string) =>
 	page.locator(`.svelte-flow__node[data-id="${stepId}"]`).getByTestId('state-chip');
 
 test('Q6/Q7 — live states per step; cancelling one step leaves its siblings running', async ({ page, request }) => {
-	test.setTimeout(150_000);
+	// #01 → #05 → #06 run back to back (~50 s each) now that runs outlive 60 s (E-1).
+	test.setTimeout(300_000);
 	// 01–04 in parallel; 05 after 01; 06 after 05 — so one run can show 4+ states at once.
 	const id = await seedFlow(request, {
 		name: `Q6 live run ${Date.now()}`,
@@ -89,7 +90,9 @@ test('Q6/Q7 — live states per step; cancelling one step leaves its siblings ru
 	await page.screenshot({ path: `${EVIDENCE_DIR}/q6-live-run.png` });
 
 	// The run ends; any failure reason is shown verbatim, and the six-state key is always there.
-	await expect(page.getByTestId('run-state')).not.toContainText('IN PROGRESS', { timeout: 60_000 });
+	await expect(page.getByTestId('run-state')).not.toContainText('IN PROGRESS', { timeout: 180_000 });
+	// Nothing failed and #04 was cancelled: the run must not claim success (Constitution IV).
+	await expect(page.getByTestId('run-state')).toContainText('RUN CANCELLED');
 	record('run terminal', { state: await page.getByTestId('run-state').textContent() });
 	for (const reason of await page.getByTestId('failure-reason').locator('pre').allTextContents()) {
 		expect(reason.trim().length).toBeGreaterThan(0);
@@ -107,6 +110,47 @@ test('Q6/Q7 — live states per step; cancelling one step leaves its siblings ru
 		`${EVIDENCE_DIR}/q7-step-control.json`,
 		JSON.stringify({ evidence_id: 'q7-step-control', captured_at: new Date().toISOString(), entries: log }, null, 2)
 	);
+});
+
+test('E-1 — the demo wave (3 in parallel → join → 2 in sequence) runs past 60 s to completed', async ({ page, request }) => {
+	test.setTimeout(300_000);
+	const id = await seedFlow(request, {
+		name: `E-1 demo wave ${Date.now()}`,
+		defaultCategory: 'Default',
+		steps: [
+			ic('01', 'Integrity check — USER', 'USER', '/usr/irissys/mgr/user/'),
+			ic('02', 'Integrity check — IRISAPP', 'IRISAPP', '/data/IRISAPP_DATA/'),
+			ic('03', 'Integrity check — USER (2)', 'USER', '/usr/irissys/mgr/user/'),
+			ic('04', 'Integrity check — after the join', 'IRISAPP', '/data/IRISAPP_DATA/'),
+			ic('05', 'Integrity check — final', 'USER', '/usr/irissys/mgr/user/')
+		],
+		edges: [
+			{ source: '01', target: '04' },
+			{ source: '02', target: '04' },
+			{ source: '03', target: '04' },
+			{ source: '04', target: '05' }
+		],
+		joins: [{ target: '04', policy: 'ALL_MUST_SUCCEED' }],
+		canvasGeometry: {
+			nodes: {
+				'01': { x: 0, y: 0 },
+				'02': { x: 0, y: 200 },
+				'03': { x: 0, y: 400 },
+				'04': { x: 340, y: 200 },
+				'05': { x: 680, y: 200 }
+			}
+		}
+	});
+	await signIn(page, `?flow=${id}`);
+	await dispatchFromUi(page);
+
+	// Before the fix, every step still being polled after the run's first 60 s failed with 401.
+	await expect(page.getByTestId('run-state')).toContainText('RUN COMPLETED', { timeout: 280_000 });
+	await expect(page.getByTestId('count-line')).toHaveText('5 completed · 0 failed · 0 running · 0 queued');
+	await expect(page.getByTestId('failure-reason')).toHaveCount(0);
+	const [minutes, seconds] = (await page.getByTestId('elapsed-clock').textContent())!.split(':').slice(1).map(Number);
+	expect(minutes * 60 + seconds, 'the run outlived the 60 s access token').toBeGreaterThan(60);
+	await page.screenshot({ path: `${EVIDENCE_DIR}/e1-demo-wave-completed.png` });
 });
 
 test('Q7 — Cancel wave asks for confirmation naming the run, then stops it', async ({ page, request }) => {

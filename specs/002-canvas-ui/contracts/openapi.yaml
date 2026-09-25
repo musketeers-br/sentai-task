@@ -131,6 +131,17 @@ paths:
                     properties:
                       stepId: { type: string }
                       typedName: { type: string }
+                runCredential:
+                  description: >
+                    Optional (added 2026-09-25, E-1). The refresh token of a sign-in dedicated to
+                    this run — the Authorization header must carry that same sign-in's access
+                    token. The background loop uses it to renew the run's own credential before
+                    the 60 s access token expires, and erases both when the run ends. Without it
+                    the run keeps the v1 behaviour: platform calls after 60 s fail with 401.
+                  type: object
+                  required: [refreshToken]
+                  properties:
+                    refreshToken: { type: string }
       responses:
         "202":
           description: Dispatched

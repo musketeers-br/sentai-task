@@ -135,15 +135,19 @@ export const api = {
 
 	/**
 	 * 202 → the run GUID; 422 → ValidationReport; 428 → Problem naming the step (FR-013).
-	 * `runAuthorization` is the dedicated token the run keeps (see session.dedicatedToken).
+	 * The run's dedicated sign-in (session.dedicatedToken): its access token authorizes the call,
+	 * its refresh token (`runCredential`, E-1) lets the backend keep the run's credential alive.
 	 */
-	async dispatch(flowId: string, runAuthorization: string): Promise<ApiResult<{ guid: string }>> {
+	async dispatch(
+		flowId: string,
+		run: { authorization: string; refreshToken: string }
+	): Promise<ApiResult<{ guid: string }>> {
 		return map(
 			await request<{ guid: string }>(
 				'POST',
 				`/flows/${encodeURIComponent(flowId)}/dispatch`,
-				{ confirmations: [] },
-				runAuthorization
+				{ confirmations: [], runCredential: { refreshToken: run.refreshToken } },
+				run.authorization
 			),
 			(r) => ({ guid: String(r.guid) })
 		);

@@ -1,6 +1,6 @@
 {
   "evidence_id": "q5-schedule",
-  "captured_at": "2026-09-25T12:46:32.038Z",
+  "captured_at": "2026-09-25T13:17:48.490Z",
   "request": {
     "method": "POST",
     "url_path": "/csp/sentai/api/v1/flows/6/schedule",
@@ -19,7 +19,7 @@
         "1003",
         "1004"
       ],
-      "nextRun": "2026-09-25 12:46:32"
+      "nextRun": "2026-09-25 13:17:48"
     }
   },
   "notes": [

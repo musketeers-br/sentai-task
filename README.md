@@ -192,12 +192,12 @@ SentaiTask v1 only promises what was proven on IRIS 2026.2 (spec `004-backend-ha
 - **Scheduling is not operational.** `/schedule` validates the flow and registers a native task,
   but scheduled runs cannot authenticate to the platform in v1 and are not a supported execution
   path. Use manual dispatch.
-- **60-second credential.** A dispatched run uses the operator's access token, which expires 60 s
-  after it was issued. Platform calls made after that fail with 401, which is stored verbatim as
-  the step's failure reason. Keep runs short (one `integrity-check` takes ~50 s on the dev image).
-  Refreshing a token also revokes the previous one, so a run dispatched with a token its client
-  keeps refreshing dies at the next refresh; the canvas therefore asks for the password at
-  *Run now* and dispatches under a separate sign-in.
+- **Run credential.** A dispatched run calls the platform with an access token that expires 60 s
+  after it was issued, and refreshing a token revokes the previous one. The canvas therefore asks
+  for the password at *Run now*, dispatches under a separate sign-in, and passes that sign-in's
+  refresh token (`runCredential`), with which the run renews its own credential until it ends —
+  then both are erased. A dispatch **without** `runCredential` (e.g. plain `curl`) keeps the 60 s
+  limit: later platform calls fail with 401, stored verbatim as the step's failure reason.
 - **Step parameters are not forwarded.** The platform start request carries no parameters, so
   `databaseDirectory` and similar fields do not choose what the platform operates on.
 - **Flows must name an existing WQM category.** Validation refuses an unknown category with
@@ -257,7 +257,8 @@ sentai-task/
 ### 🚧 Next
 
 * [ ] **002**: Canvas UI for composing and watching flows (prototypes in [`design/`](design/))
-* [ ] Long-lived credential for background and scheduled runs (unblocks scheduling and runs > 60 s)
+* [x] Runs renew their own credential when dispatched with `runCredential` (runs > 60 s work)
+* [ ] A credential for scheduled runs (unblocks scheduling)
 * [ ] Prove and enable the remaining step types, one at a time
 
 ---

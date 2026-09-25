@@ -41,12 +41,9 @@
 	<form {onsubmit}>
 		<h2 id="dispatch-title">Run {editor.name} now</h2>
 		<p class="lead">
-			The run is dispatched under its own sign-in, so it gets the full credential lifetime whatever
-			this screen does meanwhile.
-		</p>
-		<p class="limitation">
-			v1 limitation: a run's credential lasts 60 seconds. Platform calls made later fail with HTTP 401,
-			recorded as the step's failure reason — keep runs short.
+			The run is dispatched under its own sign-in and renews that credential itself for as long as
+			it runs, whatever this screen does meanwhile. Your password is used for this sign-in only and
+			is not kept.
 		</p>
 
 		<label for="dispatch-password">Password for {session.user}</label>
@@ -90,7 +87,6 @@
 	}
 
 	.lead,
-	.limitation,
 	.error {
 		margin: 0;
 		font-size: var(--size-body);
@@ -98,17 +94,8 @@
 	}
 
 	.lead {
-		color: var(--color-text-muted);
-	}
-
-	.limitation {
 		margin-bottom: 8px;
-		padding: 9px 10px;
-		font-size: var(--size-caption);
-		color: var(--warning-body);
-		background: var(--warning-surface);
-		border: 1px solid var(--warning-border);
-		border-radius: var(--radius-control);
+		color: var(--color-text-muted);
 	}
 
 	.error {

@@ -181,6 +181,55 @@ ClassMethod CreateRun(flowId As %String, confirmationsArray As %DynamicArray, di
     Quit result
 }
 
+/// --- Run credential (E-1) ---
+/// A run calls the administrative API with a 60 s access token. When dispatch supplies the
+/// refresh token of a sign-in dedicated to the run, the loop renews that pair before it expires.
+/// Only the loop renews: /api/admin/refresh revokes the previous access token and rotates the
+/// refresh token, so concurrent renewals would invalidate each other. Everyone else reads the
+/// current token with RunToken(). Both are erased when the run ends.
+Parameter RENEWAFTERSECONDS = 40;
+
+/// Seconds since the POSIX epoch — comparable across processes, unlike $ZH.
+ClassMethod NowSeconds() As %Integer
+{
+    Quit +$ZDATETIME($ZTIMESTAMP, -2)
+}
+
+ClassMethod StoreRunCredential(runGuid As %String, accessToken As %String, refreshToken As %String = "") As %Status
+{
+    Set ^sentaiRun(runGuid, "%token") = accessToken
+    Set ^sentaiRun(runGuid, "%tokenAt") = ..NowSeconds()
+    If (refreshToken '= "") Set ^sentaiRun(runGuid, "%refresh") = refreshToken
+    Quit $$$OK
+}
+
+ClassMethod RunToken(runGuid As %String) As %String
+{
+    Quit $G(^sentaiRun(runGuid, "%token"))
+}
+
+/// Renews the run's pair when it is older than RENEWAFTERSECONDS and a refresh token exists;
+/// returns the token to use now. A refused renewal keeps the current token: the platform's later
+/// 401 is then recorded as the step's failure reason, exactly the documented v1 behaviour.
+ClassMethod RenewRunCredentialIfDue(runGuid As %String) As %String
+{
+    Set token = ..RunToken(runGuid)
+    Set refresh = $G(^sentaiRun(runGuid, "%refresh"))
+    Quit:(refresh = "") token
+    Quit:((..NowSeconds() - $G(^sentaiRun(runGuid, "%tokenAt"), 0)) < ..#RENEWAFTERSECONDS) token
+
+    Set httpStatus = 0, location = ""
+    Set body = ##class(sentai.dispatch.AdminApiClient).Post("/api/admin/refresh", token, {"refresh_token": (refresh)}, .httpStatus, .location)
+    If (httpStatus '= 200) || '$IsObject(body) || (body."access_token" = "") Quit token
+    Do ..StoreRunCredential(runGuid, body."access_token", body."refresh_token")
+    Quit body."access_token"
+}
+
+ClassMethod EraseRunCredential(runGuid As %String)
+{
+    Kill ^sentaiRun(runGuid, "%token"), ^sentaiRun(runGuid, "%refresh"), ^sentaiRun(runGuid, "%tokenAt")
+}
+
 /// Starts the background execution loop for `runGuid` as an IRIS job, right after the
 /// dispatch transaction commits (research.md R-005). `bearerToken` is forwarded so the
 /// background job can call the administrative API on the operator's behalf.
@@ -200,6 +249,10 @@ ClassMethod RunLoop(runGuid As %String, bearerToken As %String) As %Status
     If '$IsObject(run) Quit sc
 
     For {
+        // E-1: keep the run's own credential alive (no-op without a refresh token).
+        Set current = ..RenewRunCredentialIfDue(runGuid)
+        Set:(current '= "") bearerToken = current
+
         Kill eligible
         Set n = ..ComputeEligibleSteps(runGuid, .anyFailed, .eligible)
 
@@ -389,6 +442,8 @@ ClassMethod FinalizeRun(run As sentai.model.Run) As %Status
     Set run.finishedAt = $ZDATETIME($HOROLOG, 3)
     Set sc = run.%Save()
     If $$$ISERR(sc) Return sc
+    // Credentials never outlive the run they were issued for.
+    Do ..EraseRunCredential(run.guid)
     Return ##class(sentai.model.Run).BumpEventVersionFor(run.%Id())
 }
 

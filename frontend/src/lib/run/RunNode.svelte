@@ -9,7 +9,7 @@
 	import { Handle, Position, useNodeConnections, type NodeProps } from '@xyflow/svelte';
 	import StateShape from '$lib/design/StateShape.svelte';
 	import { getRunContext } from './monitor.svelte';
-	import { formatDuration, stepDurationMs, timeOfDay } from './run';
+	import { formatDuration, isTerminal, stepDurationMs, timeOfDay } from './run';
 
 	let { id, data }: NodeProps<RunFlowNode> = $props();
 
@@ -33,6 +33,8 @@
 	// IRIS GUIDs are time-based: steps created together share the tail (node id) and the first
 	// few characters, so the distinguishing part is the first group.
 	const shortGuid = $derived(sr ? `${sr.guid.split('-')[0]}…` : '');
+	// The backend only picks a re-run up while the run's loop is alive (HANDOFF 003, 2026-09-25).
+	const runLive = $derived(!!monitor.run && !isTerminal(monitor.run.state));
 </script>
 
 <article
@@ -94,7 +96,9 @@
 					title="Stops SentaiTask tracking this step; in v1 the platform job is not cancelled">Cancel</button>
 			{:else if state === 'failed'}
 				<span class="mono">failed at {duration === null ? '—' : formatDuration(duration)}</span>
-				<button type="button" class="action" disabled={monitor.busy} onclick={() => sr && monitor.rerunStep(sr.guid)}>Re-run step</button>
+				{#if runLive}
+					<button type="button" class="action" disabled={monitor.busy} onclick={() => sr && monitor.rerunStep(sr.guid)}>Re-run step</button>
+				{/if}
 			{:else}
 				<span class="mono">{duration === null ? '—' : formatDuration(duration)}</span>
 				<span class="mono" title={sr?.guid}>GUID {shortGuid}</span>
