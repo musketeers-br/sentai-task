@@ -9,13 +9,20 @@ test('Q1 — composes the canonical graph from the palette, with one shared fan-
 
 	// Scenario 1: dragging a step type onto the canvas creates a node.
 	const pane = page.locator('.svelte-flow__pane');
+	// Spec 004 D-1: only integrity-check can be placed in v1; the others are listed but disabled.
+	for (const type of ['purge-audit-records', 'switch-journal', 'compact-globals', 'custom']) {
+		const entry = page.locator(`[data-step-type="${type}"]`);
+		await expect(entry).toBeDisabled();
+		await expect(entry).toContainText('not supported in v1');
+	}
+
 	// Laid out for the 872 px canvas left between the palette and the inspector at 1440 px.
 	const drops: Array<[string, number, number]> = [
 		['integrity-check', 24, 60],
 		['integrity-check', 24, 260],
 		['integrity-check', 24, 460],
-		['purge-audit-records', 320, 260],
-		['switch-journal', 608, 290]
+		['integrity-check', 320, 260],
+		['integrity-check', 608, 290]
 	];
 	for (const [type, x, y] of drops) {
 		await page.locator(`[data-step-type="${type}"]`).dragTo(pane, { targetPosition: { x, y } });
@@ -41,7 +48,7 @@ test('Q1 — composes the canonical graph from the palette, with one shared fan-
 	expect(widths.filter((w) => w.join).map((w) => w.width)).toEqual(['2.5px', '2.5px', '2.5px']);
 	expect(widths.filter((w) => !w.join).map((w) => w.width)).toEqual(['1.5px']);
 
-	await expect(page.getByTestId('flow-summary')).toHaveText('5 steps · 1 join · 1 destructive');
+	await expect(page.getByTestId('flow-summary')).toHaveText('5 steps · 1 join · 0 destructive');
 
 	// FR-002: an edge that would close a cycle is refused at the moment it is drawn.
 	await connect(page, '05', '01');
@@ -84,6 +91,8 @@ test('Q2 — a destructive join node carries its full anatomy', async ({ page, r
 	await expect(purge).toContainText('wqm: Default');
 	await expect(purge).toContainText('join: waits for #01 #02 #03');
 	await expect(purge.locator('.svelte-flow__handle.target')).toHaveClass(/handle-join/);
+	// Spec 004 US1-6: a saved flow using an unavailable type still loads, marked as such.
+	await expect(purge.getByTestId('unavailable-chip')).toHaveText('not in v1');
 
 	const user = page.locator('.svelte-flow__node[data-id="01"]');
 	// Non-ASCII survives the HTTP round trip (the API must read request bodies as UTF-8).

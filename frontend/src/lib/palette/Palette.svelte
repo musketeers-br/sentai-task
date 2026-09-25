@@ -49,19 +49,26 @@
 					{group.category.toUpperCase()}
 				</h3>
 				{#each group.types as t (t.type)}
+					<!-- Spec 004 D-1: unavailable types stay listed (saved flows still use them) but
+					     cannot be placed, because the target platform cannot run them in v1. -->
 					<button
 						type="button"
 						class="entry"
-						draggable="true"
+						class:unavailable={!t.available}
+						disabled={!t.available}
+						draggable={t.available ? 'true' : 'false'}
 						style:--entry-category={`var(--category-${t.category})`}
 						data-step-type={t.type}
-						title="Drag onto the canvas, or press Enter to add"
+						title={t.available
+							? 'Drag onto the canvas, or press Enter to add'
+							: 'Not supported on the target platform in v1'}
 						ondragstart={(e) => ondragstart(e, t.type)}
 						onclick={() => onadd(t.type)}
 					>
 						<span class="entry-text">
 							<span class="entry-name">{stepLabel(t.type)}</span>
 							<span class="entry-class">{t.className || 'subclass of %SYS.Task.Definition'}</span>
+							{#if !t.available}<span class="entry-unavailable">not supported in v1</span>{/if}
 						</span>
 						{#if t.destructive}
 							<span class="hazard-swatch" title="Destructive step" aria-label="Destructive step"></span>
@@ -168,6 +175,24 @@
 		background: var(--color-card-raised);
 		border-color: var(--color-border-strong);
 		border-left-color: var(--entry-category);
+	}
+
+	.entry.unavailable {
+		cursor: not-allowed;
+		opacity: 0.6;
+		box-shadow: none;
+	}
+
+	.entry.unavailable:hover {
+		background: var(--color-card);
+		border-color: var(--color-border);
+		border-left-color: var(--entry-category);
+	}
+
+	.entry-unavailable {
+		font-family: var(--font-mono);
+		font-size: var(--size-micro);
+		color: var(--color-text-muted);
 	}
 
 	.entry-text {

@@ -384,8 +384,30 @@ Deviations, each deliberate:
 - **`/data/READONLY_DEMO/`** is a root-owned, read-only directory baked into the image (`Dockerfile`)
   as the acceptance/demo fixture for the precondition warning on a real instance.
 
-Backend defect found and fixed: `sentai.model.Category.SatisfiesInvariant` compared
+Backend defect found and fixed (since superseded by spec 004 D-3 on merge, which also treats
+`maxWorkers = 0` as unbounded): `sentai.model.Category.SatisfiesInvariant` compared
 `maxWorkers <= maxTotalWorkers` even when `maxTotalWorkers = 0`, which `Config.WorkQueues` defines as
 "no limit" ("if non-zero, specifies the maximum"). Every step on the built-in `Default` category
 therefore failed validation — and dispatch — once `GET /wqm/categories` had mirrored it. Regression
 test: `sentai.unittest.validation.CategoryInvariantTest:TestZeroMaxTotalWorkersMeansNoCeiling`.
+
+## Alignment with spec 004 — v1 support set (2026-09-25)
+
+Spec 004 (backend hardening) restricted execution to `integrity-check` (D-1), declared scheduling
+non-operational (D-2) and left palette treatment to the frontend. Changes:
+
+- The step-type adapter carries `available` (absent ⇒ unavailable, fail closed). The palette keeps
+  all 7 types — saved flows still use them — but unavailable ones are disabled, not draggable, and
+  read "not supported in v1"; the editor refuses to add them on any path. Nodes of unavailable types
+  loaded from saved flows carry a dashed "not in v1" chip.
+- The schedule dialog states D-2 before the operator relies on it, and a successful registration
+  says the entries will not run in v1 instead of reporting a next run.
+- Acceptance tests re-baselined per spec 004 FR-008 (only tests encoding a now-false promise, none
+  deleted): Q1 composes the canonical *shape* from `integrity-check` (`0 destructive`) and asserts
+  the disabled entries; Q4 and Q5's success path use `v1Flow`, the canonical shape in
+  `integrity-check`; Q2/Q3 keep the seeded canonical flow (loading and editing it is still valid),
+  Q2 now also asserting its "not in v1" chip; new Q4 (spec 004) asserts unsupported steps are
+  refused at validation, named, with the platform's wording. 7/7 against the container built from
+  the merged code.
+- The dossiê's demo flow (checks → purge → switch journal) no longer runs in v1; the demo needs a
+  wave of `integrity-check` steps (decision pending with the team).

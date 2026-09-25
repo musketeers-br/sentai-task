@@ -97,6 +97,10 @@ export class FlowEditor {
 	addStep(type: string, position: Position): StepFlowNode | null {
 		const info = this.info(type);
 		if (!info) return null;
+		if (!info.available) {
+			this.notice = { tone: 'error', text: `${info.type} is not supported on the target platform in v1.` };
+			return null;
+		}
 		const step = createStep(info, nextStepId(this.steps), this.defaultCategory);
 		const node = this.#node(step, position);
 		this.nodes = [...this.nodes, node];

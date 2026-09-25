@@ -1,9 +1,9 @@
 {
   "evidence_id": "q5-schedule",
-  "captured_at": "2026-09-24T19:23:03.303Z",
+  "captured_at": "2026-09-25T12:19:21.449Z",
   "request": {
     "method": "POST",
-    "url_path": "/csp/sentai/api/v1/flows/5/schedule",
+    "url_path": "/csp/sentai/api/v1/flows/6/schedule",
     "body": {
       "scheduleSpec": "WEEKLY SAT 03:00",
       "category": "Default"
@@ -16,13 +16,15 @@
         "1000",
         "1001",
         "1002",
-        "1003"
+        "1003",
+        "1004"
       ],
-      "nextRun": "2026-09-24 19:23:03"
+      "nextRun": "2026-09-25 12:19:21"
     }
   },
   "notes": [
     "Native tasks were deleted after capture so the dev instance keeps no schedule.",
+    "Spec 004 D-2: registration succeeds, but scheduled runs cannot authenticate in v1 and are not a supported execution path.",
     "nextRun is the value the backend returns; converting scheduleSpec into %SYS.Task timing is an open backend item (spec 003 HANDOFF)."
   ]
 }

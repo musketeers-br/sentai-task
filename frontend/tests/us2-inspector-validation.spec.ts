@@ -1,6 +1,6 @@
 import { writeFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
-import { canonicalFlow, envelope, EVIDENCE_DIR, seedFlow, signIn } from './support';
+import { canonicalFlow, envelope, EVIDENCE_DIR, seedFlow, signIn, v1Flow } from './support';
 
 // spec.md User Story 2 — Inspector and Validation (Q3 + Q4).
 
@@ -50,7 +50,8 @@ test('Q3 — the inspector shows the bound sections and edits the step', async (
 });
 
 test('Q4 — validation reports errors and warnings; only errors block scheduling', async ({ page, request }) => {
-	const flow = canonicalFlow(`Q4 validation ${Date.now()}`);
+	// A v1-runnable flow, so the only findings are the two this test plants.
+	const flow = v1Flow(`Q4 validation ${Date.now()}`);
 	flow.steps[1] = { ...flow.steps[1], namespace: 'DOCBOOK', taskName: 'Integrity check — DOCBOOK' };
 	flow.steps[2] = { ...flow.steps[2], databaseDirectory: '/data/READONLY_DEMO/' };
 	const id = await seedFlow(request, flow);
@@ -92,4 +93,19 @@ test('Q4 — validation reports errors and warnings; only errors block schedulin
 	await expect(page.getByTestId('status-errors')).toHaveCount(0);
 	await expect(page.getByTestId('status-warnings')).toHaveText('1 precondition not met (#03)');
 	await expect(schedule).toBeEnabled();
+});
+
+test('Q4 (spec 004) — steps of types unsupported in v1 are refused at validation, named', async ({ page, request }) => {
+	const id = await seedFlow(request, canonicalFlow(`Q4 unsupported ${Date.now()}`));
+	await signIn(page, `?flow=${id}`);
+
+	await page.getByRole('button', { name: 'Validate flow' }).click();
+	await expect(page.getByTestId('status-errors')).toHaveText('2 errors block scheduling (#04, #05)');
+	await expect(page.locator('.svelte-flow__node[data-id="04"]').getByTestId('validation-error')).toContainText(
+		"Step type 'purge-audit-records' is not supported on the target platform in v1"
+	);
+	await expect(page.locator('.svelte-flow__node[data-id="05"]').getByTestId('validation-error')).toContainText(
+		"Step type 'switch-journal' is not supported on the target platform in v1"
+	);
+	await expect(page.getByRole('button', { name: 'Schedule in Task Manager' })).toBeDisabled();
 });

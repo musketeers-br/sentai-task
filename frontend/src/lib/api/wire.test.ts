@@ -75,8 +75,19 @@ describe('fromWireStepTypes', () => {
 	it('maps the registry entry, renaming class to className', () => {
 		expect(
 			fromWireStepTypes([
-				{ type: 'custom', class: '', category: 'custom', destructive: false, pausable: false }
+				{ type: 'custom', class: '', category: 'custom', destructive: false, pausable: false, available: false }
 			])
-		).toEqual([{ type: 'custom', className: '', category: 'custom', destructive: false, pausable: false }]);
+		).toEqual([
+			{ type: 'custom', className: '', category: 'custom', destructive: false, pausable: false, available: false }
+		]);
+	});
+
+	it('carries spec 004 availability, and only an explicit true counts as available', () => {
+		const [ic, legacy] = fromWireStepTypes([
+			{ type: 'integrity-check', class: '%SYS.Task.IntegrityCheck', category: 'verification', destructive: false, pausable: false, available: true },
+			{ type: 'switch-journal', class: '%SYS.Task.SwitchJournal', category: 'journal', destructive: false, pausable: false }
+		]);
+		expect(ic.available).toBe(true);
+		expect(legacy.available).toBe(false);
 	});
 });

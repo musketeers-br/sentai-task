@@ -1,26 +1,12 @@
 import { writeFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
-import { canonicalFlow, deleteNativeTask, envelope, EVIDENCE_DIR, nativeTaskIds, seedFlow, signIn } from './support';
+import { canonicalFlow, deleteNativeTask, envelope, EVIDENCE_DIR, nativeTaskIds, seedFlow, signIn, v1Flow } from './support';
 
-// spec.md User Story 3 — Schedule (Q5).
-
-/** The canonical graph without the destructive purge: three checks fanning into a journal switch. */
-function nonDestructiveFlow(name: string) {
-	const flow = canonicalFlow(name);
-	return {
-		...flow,
-		steps: flow.steps.filter((s) => s.id !== '04'),
-		edges: [
-			{ source: '01', target: '05' },
-			{ source: '02', target: '05' },
-			{ source: '03', target: '05' }
-		],
-		joins: [{ target: '05', policy: 'ALL_MUST_SUCCEED' }]
-	};
-}
+// spec.md User Story 3 — Schedule (Q5). Spec 004 D-2: the API still registers native tasks, but
+// scheduled runs cannot authenticate in v1 — the UI must say so before the operator relies on it.
 
 test('Q5 — a valid flow compiles into one native Task Manager entry per step', async ({ page, request }) => {
-	const id = await seedFlow(request, nonDestructiveFlow(`Q5 schedule ${Date.now()}`));
+	const id = await seedFlow(request, v1Flow(`Q5 schedule ${Date.now()}`));
 	try {
 		await signIn(page, `?flow=${id}`);
 
@@ -29,6 +15,9 @@ test('Q5 — a valid flow compiles into one native Task Manager entry per step',
 
 		await page.getByRole('button', { name: 'Schedule in Task Manager' }).click();
 		const dialog = page.getByRole('dialog', { name: 'Schedule in Task Manager' });
+		await expect(dialog.getByTestId('schedule-limitation')).toContainText(
+			'scheduled runs cannot authenticate to the platform in v1 and are not a supported execution path'
+		);
 		await dialog.getByLabel('Schedule').fill('WEEKLY SAT 03:00');
 		await dialog.getByLabel('WQM category').fill('Default');
 
@@ -48,15 +37,17 @@ test('Q5 — a valid flow compiles into one native Task Manager entry per step',
 				{ status: response.status(), body },
 				[
 					'Native tasks were deleted after capture so the dev instance keeps no schedule.',
+					'Spec 004 D-2: registration succeeds, but scheduled runs cannot authenticate in v1 and are not a supported execution path.',
 					'nextRun is the value the backend returns; converting scheduleSpec into %SYS.Task timing is an open backend item (spec 003 HANDOFF).'
 				]
 			)
 		);
 
 		expect(response.status()).toBe(201);
-		expect(body.taskIds).toHaveLength(4);
+		expect(body.taskIds).toHaveLength(5);
 		expect(body.nextRun).toBeTruthy();
-		await expect(dialog.getByTestId('schedule-result')).toContainText('Created 4 Task Manager entries');
+		await expect(dialog.getByTestId('schedule-result')).toContainText('Registered 5 Task Manager entries');
+		await expect(dialog.getByTestId('schedule-result')).toContainText('will not run successfully in v1');
 		expect((await nativeTaskIds(request, id)).sort()).toEqual(body.taskIds.map(Number).sort());
 		await dialog.getByRole('button', { name: 'Close' }).click();
 	} finally {

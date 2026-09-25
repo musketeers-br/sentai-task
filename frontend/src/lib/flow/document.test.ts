@@ -11,10 +11,10 @@ import {
 } from './document';
 
 const registry: StepTypeInfo[] = [
-	{ type: 'integrity-check', className: '%SYS.Task.IntegrityCheck', category: 'verification', destructive: false, pausable: false },
-	{ type: 'purge-audit-records', className: '%SYS.Task.PurgeAuditDatabase', category: 'purge', destructive: true, pausable: true },
-	{ type: 'switch-journal', className: '%SYS.Task.SwitchJournal', category: 'journal', destructive: false, pausable: false },
-	{ type: 'custom', className: '', category: 'custom', destructive: false, pausable: false }
+	{ type: 'integrity-check', className: '%SYS.Task.IntegrityCheck', category: 'verification', destructive: false, pausable: false, available: true },
+	{ type: 'purge-audit-records', className: '%SYS.Task.PurgeAuditDatabase', category: 'purge', destructive: true, pausable: true, available: false },
+	{ type: 'switch-journal', className: '%SYS.Task.SwitchJournal', category: 'journal', destructive: false, pausable: false, available: false },
+	{ type: 'custom', className: '', category: 'custom', destructive: false, pausable: false, available: false }
 ];
 const info = (type: string) => registry.find((r) => r.type === type)!;
 

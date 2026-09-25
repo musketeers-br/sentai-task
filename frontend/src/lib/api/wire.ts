@@ -10,6 +10,7 @@ export interface WireStepType {
 	category: string;
 	destructive: boolean;
 	pausable: boolean;
+	available?: boolean;
 }
 
 export interface WireStep {
@@ -88,6 +89,8 @@ export function fromWireStepTypes(list: WireStepType[]): StepTypeInfo[] {
 		className: t.class,
 		category: t.category as StepCategory,
 		destructive: t.destructive === true,
-		pausable: t.pausable === true
+		pausable: t.pausable === true,
+		// Fail closed: a catalog without the field is treated as "not proven executable".
+		available: t.available === true
 	}));
 }

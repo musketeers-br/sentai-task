@@ -34,6 +34,12 @@
 			Compiles each step of <strong>{editor.name}</strong> into a native IRIS Task Manager entry. No
 			private scheduler runs anywhere.
 		</p>
+		<!-- Spec 004 D-2, stated before the operator relies on it. -->
+		<p class="limitation" data-testid="schedule-limitation">
+			v1 limitation: scheduling validates the flow and registers native tasks, but scheduled runs
+			cannot authenticate to the platform in v1 and are not a supported execution path. Use manual
+			dispatch.
+		</p>
 
 		<label for="schedule-spec">Schedule</label>
 		<input id="schedule-spec" class="mono" required bind:value={scheduleSpec} placeholder="WEEKLY SAT 03:00" />
@@ -43,8 +49,8 @@
 
 		{#if outcome?.ok}
 			<div class="result ok" role="status" data-testid="schedule-result">
-				Created {outcome.result.taskIds.length} Task Manager entries (ids {outcome.result.taskIds.join(', ')}).
-				Next run reported by the platform: {outcome.result.nextRun}.
+				Registered {outcome.result.taskIds.length} Task Manager entries (ids {outcome.result.taskIds.join(', ')}).
+				They will not run successfully in v1 — see the limitation above.
 			</div>
 		{:else if outcome}
 			<div class="result error" role="alert" data-testid="schedule-result">
@@ -103,6 +109,17 @@
 		font-size: var(--size-body);
 		line-height: 1.5;
 		color: var(--color-text-muted);
+	}
+
+	.limitation {
+		margin: 0 0 8px;
+		padding: 9px 10px;
+		font-size: var(--size-caption);
+		line-height: 1.5;
+		color: var(--warning-body);
+		background: var(--warning-surface);
+		border: 1px solid var(--warning-border);
+		border-radius: var(--radius-control);
 	}
 
 	label {

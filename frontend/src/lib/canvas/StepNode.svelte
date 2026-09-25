@@ -55,7 +55,11 @@
 				</span>
 			{/if}
 			<span class="chip">{step.namespace || '—'}</span>
-			{#if !destructive}<span class="muted">namespace</span>{/if}
+			{#if data.info?.available === false}
+				<span class="chip unavailable" data-testid="unavailable-chip" title="Not supported on the target platform in v1">not in v1</span>
+			{:else if !destructive}
+				<span class="muted">namespace</span>
+			{/if}
 		</div>
 
 		{#if step.databaseDirectory}
@@ -273,6 +277,11 @@
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius-chip);
 		padding: 1px 5px;
+	}
+
+	.chip.unavailable {
+		color: var(--color-text-muted);
+		border-style: dashed;
 	}
 
 	.seal {

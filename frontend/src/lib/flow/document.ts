@@ -9,6 +9,8 @@ export interface StepTypeInfo {
 	category: StepCategory;
 	destructive: boolean;
 	pausable: boolean;
+	/** Spec 004 D-1: whether the target platform can execute this type in this release. */
+	available: boolean;
 }
 
 export interface FlowStep {

@@ -93,6 +93,34 @@ interface SeedStep {
 	parameters?: Record<string, unknown>;
 }
 
+/**
+ * The canonical UI-001 shape (3-into-1 fan-in, then a sequence step) built only from
+ * `integrity-check`, the one type spec 004 proved runnable in v1 — so it validates clean.
+ */
+export function v1Flow(name: string) {
+	const flow = canonicalFlow(name);
+	const ic = (id: string, taskName: string, namespace: string, databaseDirectory: string): SeedStep => ({
+		id,
+		type: 'integrity-check',
+		taskName,
+		namespace,
+		runAsUser: 'irisadm',
+		wqmCategory: 'Default',
+		databaseDirectory,
+		timeoutMinutes: 30
+	});
+	return {
+		...flow,
+		steps: [
+			flow.steps[0],
+			flow.steps[1],
+			flow.steps[2],
+			ic('04', 'Integrity check — IRISAPP (after the wave)', 'IRISAPP', '/data/IRISAPP_DATA/'),
+			ic('05', 'Integrity check — USER (final)', 'USER', '/usr/irissys/mgr/user/')
+		]
+	};
+}
+
 /** The canonical UI-001 graph, on namespaces that exist in the dev image. */
 export function canonicalFlow(name: string) {
 	const step = (id: string, type: string, taskName: string, extra: Partial<SeedStep> = {}): SeedStep => ({
