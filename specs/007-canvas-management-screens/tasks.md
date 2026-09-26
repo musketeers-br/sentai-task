@@ -108,7 +108,7 @@ Unit tests never wait for a gate.
 
 ## Phase 1: Setup (docs and design)
 
-- [ ] T000 Reconcile `specs/007-canvas-management-screens/spec.md`, `plan.md` and
+- [X] T000 Reconcile `specs/007-canvas-management-screens/spec.md`, `plan.md` and
   `specs/005-declared-custom-steps/tasks.md`. This is docs only, with no code.
 
   **1. `specs/007-canvas-management-screens/spec.md`:**

@@ -80,9 +80,9 @@ screen does not show one.
 ### Session 2026-09-26
 
 - **Q1 — Declared types that belong to an existing category** (`switch-journal` is `journal` and
-  `purge-task-history` is `purge`, but both run in-platform per spec 005): which palette group
+  `purge-task-history` is `purge`, but both run in-process per spec 005): which palette group
   lists them?
-  → **A**: the *Custom* group lists **every declared type** (executor "in-platform") and nothing
+  → **A**: the *Custom* group lists **every declared type** (executor "in-process") and nothing
   else. Such a node keeps its category's left-border colour on the canvas, so where it sits in the
   palette does not change what it looks like in a flow. The legacy `custom` type remains in the
   *Custom* group as not supported (FR-018). Types that call the platform's management API
@@ -90,6 +90,17 @@ screen does not show one.
 
   *Default applied by the spec author: grouping by execution kind matches the user's wording
   "tipos declarados". Revisit at `/speckit-clarify` if needed.*
+
+### Session 2026-09-26 (plan)
+
+- The plan's four deviations are applied below; see [plan.md §Spec deviations](plan.md#spec-deviations-to-reflect-at-speckit-tasks).
+- Parameter errors go on the field named by the finding's structured `parameter` (spec 005 T008,
+  BD-1); findings without it stay at step level, verbatim; message text is never parsed
+  ([research.md](research.md) R-4).
+- An unchanged parameter is not stored; its declared default is the field's placeholder (R-7).
+- The typed-confirmation input in the dispatch dialog is new (plan D-7).
+- Screens are addressable through the page's query string (R-1).
+- Local decisions found in the current code: [research.md §Other findings](research.md#other-findings-code-audit-against-fr-019-fr-013-and-fr-018) (FR-019 audit).
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -229,15 +240,17 @@ field.
 2. **Given** a declared type with a parameter schema, **When** its node is selected, **Then** the
    inspector shows a parameter form with one field per parameter, in declared order. Each field has
    a real label, an input suited to its type (text, whole number, number, on/off), a required mark
-   when required, the declared default pre-filled when the value is absent, and the declared
-   description as help text.
+   when required, the declared default shown as the field's placeholder when the value is absent,
+   and the declared description as help text.
 3. **Given** a declared type with no parameters, **Then** the form says the type takes no
    parameters.
 4. **Given** validation returns parameter errors (missing, wrong type, out of range, unknown), **Then**
-   each error is shown on its field with the API's message verbatim, and the status bar counts it
-   like any other validation error.
+   each error that carries a structured `parameter` is shown on that field with the API's message
+   verbatim; an error without `parameter` is shown at step level, verbatim. The message text is
+   never parsed. The status bar counts it like any other validation error.
 5. **Given** the operator changes a parameter, **Then** the value is saved with the flow as the
-   step's parameters. Unchanged defaults are sent as the schema's default.
+   step's parameters. An unchanged parameter is not stored: the key is omitted and the declared
+   default is shown as the field's placeholder; the backend applies the default.
 
 ---
 
@@ -292,7 +305,8 @@ with no editable class field.
 - **FR-001 — Top-bar navigation.** The top bar offers *Flows* and *Task catalog*. The current
   screen is indicated. Switching screens keeps the open flow and the theme.
 - **FR-002 — Addressable screens.** The catalog screen, and a task's detail, can be reached
-  directly by address, and the browser's back button returns to the previous screen.
+  directly by address, through the page's query string (`?view=catalog&task=<id>`), and the
+  browser's back button returns to the previous screen.
 
 **Task catalog (consumes spec 006)**
 
@@ -326,7 +340,7 @@ with no editable class field.
 
 **Declared custom steps (consumes spec 005)**
 
-- **FR-012 — Custom group.** The palette's *Custom* group lists every declared (in-platform) type
+- **FR-012 — Custom group.** The palette's *Custom* group lists every declared (in-process) type
   from the step-type catalog, plus the legacy `custom` entry as not supported. Other groups are
   unchanged.
 - **FR-013 — Parameter form from the schema.** The inspector builds the parameter form only from the
@@ -336,13 +350,17 @@ with no editable class field.
   input for `number` (with declared bounds shown), and an on/off control for `boolean`. Every field
   has a real label, matching spec 002 FR-016.
 - **FR-015 — Errors on the field.** Parameter errors from validation (missing, wrong type, out of
-  range, unknown) are shown on the field they name, with the API's message verbatim. The authority
-  is the API's validation; the form only prevents input its control cannot hold.
-- **FR-016 — Defaults.** An absent parameter shows the declared default, clearly marked as the
-  default. Saving the flow stores the step's parameters as the operator set them.
+  range, unknown) are shown on the field named by the finding's structured `parameter`, with the
+  API's message verbatim. A finding without `parameter` is shown at step level, verbatim; message
+  text is never parsed. The authority is the API's validation; the form only prevents input its
+  control cannot hold.
+- **FR-016 — Defaults.** An absent parameter shows the declared default as the field's
+  placeholder, clearly marked as the default. Saving the flow stores only the parameters the
+  operator set; an unchanged parameter's key is omitted and the backend applies the default.
 - **FR-017 — Destructive declared types.** A declared type marked destructive carries the three
   signals of spec 002 FR-011 (hazard band, DESTRUCTIVE seal, typed confirmation before dispatch)
-  at every zoom level.
+  at every zoom level. Dispatch collects one typed value per destructive step in the dispatch
+  dialog and shows a 428 `detail` verbatim.
 - **FR-018 — Legacy `custom`.** A legacy `custom` step is shown as not supported. Its stored class
   name is displayed read-only with the reason, and no control edits it. The palette entry cannot be
   dragged.
@@ -387,8 +405,9 @@ visual system of `design/System.dc.html`, **before the plan** for this part. It 
    - the "no parameters" variant.
 4. **Legacy `custom` in the inspector**: not supported, with the stored class name read-only and
    the reason.
-5. **Typed confirmation dialog** for a flow containing the destructive declared type (the existing
-   dialog, showing the declared step).
+5. **Typed confirmation dialog** for a flow containing the destructive declared type. The
+   typed-confirmation input is **new** (the current dialog has none): one field per destructive
+   step, and a 428 error state.
 6. **Status bar** counting a parameter error.
 
 Part A follows the existing prototype `design/Catalog.dc.html`, with these differences from the
@@ -417,7 +436,7 @@ prototype:
   refusals.
 - **SC-005**: For every declared type with parameters, the inspector shows **exactly** the
   declared fields: **0** missing and **0** extra. **100%** of parameter errors in the test matrix
-  appear on their field.
+  that carry `parameter` appear on their field; the rest appear at step level, verbatim.
 - **SC-006**: A destructive declared type shows all **3** destructive signals in both themes.
 - **SC-007**: Existing frontend tests stay green (unit **48/48**, end-to-end **13/13**), and each
   user story adds at least one end-to-end test against the container.
@@ -431,7 +450,7 @@ prototype:
   depend on `recentRuns`.
 - Spec 005 is implemented: the step-type catalog carries `label`, `executor`, `parameters[]` and
   `available`, and validation returns the `PARAM_*` codes with the step and parameter they concern.
-- "Declared type" means a catalog entry whose executor is in-platform (spec 005). Grouping follows
+- "Declared type" means a catalog entry whose executor is in-process (spec 005). Grouping follows
   Clarifications Q1.
 - Sorting by next run is presentation only and uses the API's text value. Its timestamp format
   (`YYYY-MM-DD HH:MM:SS`) orders correctly as text.

@@ -38,7 +38,7 @@
   fields (`matched`/`total`, `recentRuns`, `unavailable`, the `PARAM_*` codes). The same practice is
   used in specs 004–006. No framework, language or component structure is named.
 - **Q1 (palette grouping of declared types)** was resolved with a documented default: the *Custom*
-  group holds every in-platform declared type. That leaves no open marker. It can be revisited at
+  group holds every in-process declared type. That leaves no open marker. It can be revisited at
   `/speckit-clarify`.
 - **Prerequisite**: the Part B prototype (§Design brief) must exist before `/speckit-plan` for
   Part B. Part A can be planned against `design/Catalog.dc.html` now.

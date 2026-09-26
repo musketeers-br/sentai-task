@@ -58,7 +58,7 @@ destructiveness and availability. Nothing the operator types ever selects code t
 4. The catalog read exposes each type's parameter schema (additive).
 5. At least two declared types shipped with the product, useful and safe for evaluators — one of
    them implemented with the platform's **embedded Python** capability.
-6. Re-enabling `switch-journal` and `purge-task-history` through the in-platform path, gated by
+6. Re-enabling `switch-journal` and `purge-task-history` through the in-process path, gated by
    D-1 and by proof on the real instance (D-2).
 7. Proof of each newly available type on the real instance (IRIS 2026.2 container), as in 004.
 
@@ -91,7 +91,7 @@ limitations; types that change the instance stay `available: false`.
 ### D-2: Re-enable native maintenance types through the same path *(resolved: Q2 → B)*
 
 `switch-journal` and `purge-task-history` (refused since 004 because their assumed management-API
-endpoints return 404) move to the in-platform path, each re-enabled only when **both** hold:
+endpoints return 404) move to the in-process path, each re-enabled only when **both** hold:
 it ran end to end on the real instance with evidence recorded, and D-1 proved the operator's
 identity (both change the instance). `purge-task-history` is destructive: typed confirmation and
 the not-schedulable rule apply unchanged. The other refused native types (`compact-globals`,
@@ -230,14 +230,14 @@ runs to `completed`, and the platform shows a new journal file and a trimmed tas
 ### User Story 6 — A run acts as one operator (Priority: P1)
 
 Whoever dispatches a run is the only authority behind every step of it: nobody else's credential
-rides along, nobody else re-runs its steps, and no in-platform step runs later without an operator.
+rides along, nobody else re-runs its steps, and no in-process step runs later without an operator.
 
-**Why this priority**: Constitution III on the new in-platform path; without it a run could mix
+**Why this priority**: Constitution III on the new in-process path; without it a run could mix
 identities or run unattended under someone else's authority.
 
 **Independent Test**: With two users, a dispatch whose run credential belongs to the other user is
-refused; a re-run requested by the other user is refused; scheduling a flow with an in-platform
-step is refused; every in-platform step's outcome names the dispatcher.
+refused; a re-run requested by the other user is refused; scheduling a flow with an in-process
+step is refused; every in-process step's outcome names the dispatcher.
 
 **Acceptance Scenarios**:
 
@@ -246,7 +246,7 @@ step is refused; every in-platform step's outcome names the dispatcher.
 2. **Given** a live run dispatched by A with a failed step, **When** B requests its re-run,
    **Then** it is refused with `RERUN_NOT_BY_DISPATCHER`; **When** A requests it, **Then** it is
    accepted.
-3. **Given** a flow with an in-platform step, **When** it is scheduled, **Then** it is refused with
+3. **Given** a flow with an in-process step, **When** it is scheduled, **Then** it is refused with
    `IN_PROCESS_NOT_SCHEDULABLE` for that step and no native task is created.
 4. **Given** an operator without administrative privilege dispatches `switch-journal` and
    `purge-task-history`, **Then** both steps fail with the platform's denial verbatim and each
@@ -266,7 +266,7 @@ step is refused; every in-platform step's outcome names the dispatcher.
 - **Mixed flows**: declared steps, integrity checks and joins in one flow follow the existing wave
   and join rules unchanged.
 - **Destructive declared type on /schedule**: refused with `DESTRUCTIVE_NOT_SCHEDULABLE`, and with
-  `IN_PROCESS_NOT_SCHEDULABLE` as every in-platform type (both reported).
+  `IN_PROCESS_NOT_SCHEDULABLE` as every in-process type (both reported).
 - **Timeout while waiting for a worker**: the timeout counts from when the step starts waiting for
   a worker, so a step that never gets one still ends as `failed` (timed out).
 - **Headroom check on a location that cannot be read**: the step fails naming the location and the
@@ -284,7 +284,7 @@ step is refused; every in-platform step's outcome names the dispatcher.
 - **FR-002 — No input selects code.** No execution path derives what to run from any value in a
   flow other than the step's type. The legacy `custom` type stays unavailable and never executes;
   its saved flows keep loading.
-- **FR-003 — In-platform execution.** A step of a declared type runs inside the platform as a unit
+- **FR-003 — In-process execution.** A step of a declared type runs inside the platform as a unit
   of work under the step's WQM category, invoking the declared class's task entry point with the
   step's validated parameters (declared defaults filling the gaps). It makes no management-API
   call.
@@ -292,8 +292,9 @@ step is refused; every in-platform step's outcome names the dispatcher.
   the reason is the platform's message verbatim. An unexpected error is caught at the execution
   edge and recorded the same way. Timeout ⇒ `failed` with a timed-out reason.
 - **FR-005 — Parameter validation.** The single validation gate checks every declared step's
-  parameters against its schema (required present, type matches, no unknown keys) and reports one
-  error per violation naming step and parameter. Dispatch and schedule are refused accordingly.
+  parameters against its schema (required present, type matches, within declared bounds, no unknown
+  keys) and reports one error per violation naming step and parameter — the parameter also as a
+  structured field, so clients never parse the message (spec 007 BD-1). Dispatch and schedule are refused accordingly.
 - **FR-006 — Catalog exposes schemas.** The step-type catalog read includes each type's parameter
   schema, additively; existing fields unchanged.
 - **FR-007 — Availability is proven.** A declared type is `available: true` only after it ran end
@@ -305,8 +306,8 @@ step is refused; every in-platform step's outcome names the dispatcher.
 - **FR-009 — Destructive declared types** follow the existing typed-confirmation and
   not-schedulable rules with no new mechanism.
 - **FR-010 — No regressions.** No flow-document schema change; all existing tests (backend
-  122/122, e2e 13/13) pass, adjusted only where they encoded a now-false promise; no test deleted.
-- **FR-011 — Native types via the in-platform path.** `switch-journal` and `purge-task-history`
+  at the start of implementation — 169/169 after spec 006 — e2e 13/13) pass, adjusted only where they encoded a now-false promise; no test deleted.
+- **FR-011 — Native types via the in-process path.** `switch-journal` and `purge-task-history`
   run through FR-003 instead of their unproven management-API endpoints, each with a declared
   parameter schema, and each `available: true` only under FR-007 **and** D-1 proving the
   operator's identity. `purge-task-history` stays destructive (FR-009).
@@ -317,15 +318,15 @@ step is refused; every in-platform step's outcome names the dispatcher.
 - **FR-013 — One identity per run.** When a dispatch carries a separate run credential, it is
   checked before the run is created; if it belongs to a user other than the one dispatching, the
   dispatch is refused (`RUN_CREDENTIAL_USER_MISMATCH`) and no run exists. Every step of a run —
-  management-API or in-platform — therefore acts as the dispatching operator.
+  management-API or in-process — therefore acts as the dispatching operator.
 - **FR-014 — Only the dispatcher re-runs.** A re-run of a step is refused
   (`RERUN_NOT_BY_DISPATCHER`) when requested by anyone other than the operator who dispatched the
   run, because a re-run executes with the dispatcher's identity.
-- **FR-015 — In-platform steps are not schedulable.** Scheduling a flow that contains an
-  in-platform step is refused (`IN_PROCESS_NOT_SCHEDULABLE`, one per such step, no native task
+- **FR-015 — In-process steps are not schedulable.** Scheduling a flow that contains an
+  in-process step is refused (`IN_PROCESS_NOT_SCHEDULABLE`, one per such step, no native task
   created): at fire time no operator is present, so the step would run under an identity nobody
   chose at use time. Spec 004 D-2 (scheduling is not a supported execution path) stays true.
-- **FR-016 — Who ran it is recorded.** Each in-platform step records the user it ran as, visible
+- **FR-016 — Who ran it is recorded.** Each in-process step records the user it ran as, visible
   with the step's outcome (evidence for SC-006).
 
 ### Key Entities
@@ -359,7 +360,7 @@ step is refused; every in-platform step's outcome names the dispatcher.
   are available and the README states the reason.
 - **SC-007**: Delivered within ~10 tasks, in time for the voting week.
 - **SC-009**: **0** runs whose steps act under more than one identity: 100% of mismatched run
-  credentials and third-party re-runs in the test matrix are refused, and every in-platform step
+  credentials and third-party re-runs in the test matrix are refused, and every in-process step
   outcome names the dispatcher.
 
 ## Assumptions

@@ -15,7 +15,7 @@ No change to the flow document schema. Additive changes only: catalog entries (c
 | `destructive` | boolean | unchanged semantics (typed confirmation, not schedulable) |
 | `pausable` | boolean | `false` for every in-process type |
 | `available` | boolean | spec 004 semantics; `true` only after real-instance proof |
-| `parameters` | array | **new**; present only for in-process types |
+| `parameters` | array | **new**; present for in-process types and for `purge-audit-records` (spec 007 BD-2, declaration only: that type stays `platform-api` and unavailable) |
 
 ### Parameter definition (`parameters[]`)
 
@@ -38,7 +38,8 @@ No change to the flow document schema. Additive changes only: catalog entries (c
 | db-size-report | in-process | sentai.steps.DatabaseSizeReport | false | true* | — |
 | switch-journal | in-process | %SYS.Task.SwitchJournal | false | true* | — |
 | purge-task-history | in-process | %SYS.Task.PurgeTaskHistory | **true** | true* | `keepDays` integer ≥ 0, default 30 → `KeepDays` |
-| compact-globals, defragment-globals, purge-audit-records | platform-api | unchanged | unchanged | false | — |
+| compact-globals, defragment-globals | platform-api | unchanged | unchanged | false | — |
+| purge-audit-records | platform-api | %SYS.Task.PurgeAudit (spec 006 D-4) | true | false | `daysToKeep` integer ≥ 1, required, no default → `KeepDays` (BD-2) |
 | custom (legacy) | — | "" | false | false | — (never executes) |
 
 \* `true` only after the quickstart evidence for that type is recorded (FR-007).
