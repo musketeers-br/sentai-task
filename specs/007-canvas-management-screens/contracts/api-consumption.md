@@ -84,11 +84,11 @@ other than legacy `custom`, and no generated form.
 `GET/POST/PUT /flows…`, `/runs…` and `/wqm/categories` are unchanged. The live-run screen ignores
 spec 005's `result` and `executedAs` (out of scope).
 
-## Backend dependencies found by this plan (register in 005/006, do not work around)
+## Backend dependencies found by this plan (BD-1/BD-2 included in 005 tasks; BD-3/BD-4 are deployment gates)
 
 | # | Spec | Need | Effect until provided |
 |---|---|---|---|
-| BD-1 | 005 | `parameter` field on `PARAM_REQUIRED`, `PARAM_TYPE_MISMATCH` and `PARAM_OUT_OF_RANGE` findings | Parameter errors are shown at step level, and SC-005's "on their field" part is unmet |
-| BD-2 | 005 | Declare `purge-audit-records`' parameters in the catalog (or keep it unavailable forever) | The inspector keeps its local 002 field for that one type |
+| BD-1 | 005 (**included in 005 tasks**: T008) | `parameter` field on `PARAM_REQUIRED`, `PARAM_TYPE_MISMATCH` and `PARAM_OUT_OF_RANGE` findings | Parameter errors are shown at step level, and SC-005's "on their field" part is unmet |
+| BD-2 | 005 (**included in 005 tasks**: T002) | Declare `purge-audit-records`' parameters in the catalog (or keep it unavailable forever) | The inspector keeps its local 002 field for that one type |
 | BD-3 | 006 | Tasks T001–T005 deployed on the container | Part A e2e cannot run; unit tests use the api-delta fixtures |
 | BD-4 | 005 | Tasks 1–5 deployed (catalog fields, validation codes) | Part B e2e cannot run |

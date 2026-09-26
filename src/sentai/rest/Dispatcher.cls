@@ -86,14 +86,18 @@ ClassMethod ExtractBearerToken() As %String
 }
 
 /// research.md R-002 fallback: an internal, same-instance call to the administrative
-/// API's own info endpoint. A 200 response is treated as proof the token is valid and
-/// unexpired — functionally correct, at the cost of one extra HTTP call per request,
-/// pending confirmation of a cheaper native mechanism against a real instance (OQ-01).
+/// API's own info endpoint — at the cost of one extra HTTP call per request, pending
+/// confirmation of a cheaper native mechanism against a real instance (OQ-01).
+/// 200 and 403 both prove the token authenticated: 403 is the platform refusing that operator
+/// the administrative read, not the token (an invalid or expired token is 401; spec 006
+/// evidence d). This is an authentication check only; what the operator may do is decided by
+/// the platform at each call, and the platform's refusal reaches the operator verbatim
+/// (Constitution III). Any other answer is not proof.
 ClassMethod IsTokenValid(token As %String) As %Boolean
 {
     Set httpStatus = 0, location = ""
     Do ##class(sentai.dispatch.AdminApiClient).Get("/api/admin/info", token, .httpStatus, .location)
-    Quit (httpStatus = 200)
+    Quit (httpStatus = 200) || (httpStatus = 403)
 }
 
 ClassMethod CurrentToken() As %String
@@ -104,6 +108,18 @@ ClassMethod CurrentToken() As %String
 ClassMethod CurrentUser() As %String
 {
     Quit $G(%session("Username"), $USERNAME)
+}
+
+/// The platform's own words for a refused call: its status summary, else its body, else the
+/// HTTP status (Constitution III: never paraphrased).
+ClassMethod PlatformText(body, httpStatus As %Integer) As %String
+{
+    If $IsObject(body) {
+        If $IsObject(body."status") && (body."status"."summary" '= "") Quit body."status"."summary"
+        Set text = body.%ToJSON()
+        Quit:(text '= "{}") text
+    }
+    Quit "The platform refused the run credential (HTTP "_httpStatus_")"
 }
 
 /// --- Response helpers (contracts/rest-mapping.md §Errors) ---
@@ -117,6 +133,14 @@ ClassMethod WriteJSON(status As %Integer, obj) As %Status
         Write "{}"
     }
     Quit $$$OK
+}
+
+/// Writes a service outcome as it is: `{httpStatus, body}` or `{httpStatus, problem}`, where the
+/// problem keeps the platform's `platformStatus`/`platformInfo` untouched (Constitution III, IV).
+ClassMethod WriteOutcome(outcome As %DynamicObject) As %Status
+{
+    If outcome.%IsDefined("problem") Quit ..WriteJSON(outcome.httpStatus, outcome.problem)
+    Quit ..WriteJSON(outcome.httpStatus, outcome.body)
 }
 
 ClassMethod WriteProblem(status As %Integer, title As %String, detail As %String) As %Status
@@ -296,16 +320,34 @@ ClassMethod DispatchFlow(flowId As %String) As %Status
     Set payload = ..ReadJSONBody()
     Set confirmations = $S($IsObject(payload) && payload.%IsDefined("confirmations"):payload."confirmations", 1:[])
 
-    Set run = ##class(sentai.dispatch.WaveDispatcher).Dispatch(flowId, confirmations, ..CurrentUser(), .errorCode, .errorDetail, .report, ..CurrentToken())
+    // Spec 005 ID-1: a run acts as one operator. An optional run credential (E-1) is redeemed
+    // before any run exists, and must belong to the requesting user (research.md R-8).
+    Set accessToken = ..CurrentToken(), refreshToken = ""
+    Set carried = $S($IsObject(payload) && $IsObject(payload.runCredential):payload.runCredential.refreshToken, 1:"")
+    If (carried '= "") {
+        Set httpStatus = 0, location = ""
+        Set pair = ##class(sentai.dispatch.AdminApiClient).Post("/api/admin/refresh", ..CurrentToken(), {"refresh_token": (carried)}, .httpStatus, .location)
+        If (httpStatus '= 200) || '$IsObject(pair) || (pair."access_token" = "") {
+            Quit ..WriteProblem(401, "Unauthorized", ..PlatformText(pair, httpStatus))
+        }
+        If ($ZCVT(pair.sub, "U") '= $ZCVT(..CurrentUser(), "U")) {
+            Quit ..WriteProblem(403, "Forbidden", "RUN_CREDENTIAL_USER_MISMATCH: the run credential belongs to '"_pair.sub_"', not to the dispatching user '"_..CurrentUser()_"'")
+        }
+        // Redeeming revoked the access token paired with that refresh token, which the canvas
+        // also sends as this request's bearer: the rest of the request uses the fresh one.
+        Set accessToken = pair."access_token", refreshToken = pair."refresh_token"
+    }
+
+    Set run = ##class(sentai.dispatch.WaveDispatcher).Dispatch(flowId, confirmations, ..CurrentUser(), .errorCode, .errorDetail, .report, accessToken)
 
     If (errorCode = "VALIDATION_FAILED") Quit ..WriteJSON(422, report)
     If (errorCode = "CONFIRMATION_REQUIRED") Quit ..WriteProblem(428, "Confirmation Required", "Step '"_errorDetail_"' requires a matching typed confirmation before dispatch")
     If (errorCode = "INTERNAL_ERROR") Quit ..WriteProblem(500, "Internal Error", errorDetail)
 
-    // E-1: an optional refresh token (runCredential) lets the run renew its own credential.
-    Set refreshToken = $S($IsObject(payload) && $IsObject(payload.runCredential):payload.runCredential.refreshToken, 1:"")
-    Do ##class(sentai.dispatch.WaveDispatcher).StoreRunCredential(run.guid, ..CurrentToken(), refreshToken)
-    Do ##class(sentai.dispatch.WaveDispatcher).StartBackgroundLoop(run.guid, ..CurrentToken())
+    // E-1: with a run credential the run holds its fresh pair and renews it; otherwise it uses
+    // the request's own token.
+    Do ##class(sentai.dispatch.WaveDispatcher).StoreRunCredential(run.guid, accessToken, refreshToken)
+    Do ##class(sentai.dispatch.WaveDispatcher).StartBackgroundLoop(run.guid, accessToken)
 
     Quit ..WriteJSON(202, ..ShapeRun(run, 0))
 }
@@ -392,6 +434,18 @@ ClassMethod ShapeStepRun(sr As sentai.model.StepRun) As %DynamicObject
     Do out.%Set("progressTotal", sr.progressTotal)
     Do out.%Set("confirmedBy", sr.confirmedBy)
     Do out.%Set("confirmedAt", sr.confirmedAt)
+    // Spec 005: who ran an in-process step, and the report it produced ({} when none).
+    Do out.%Set("executedAs", sr.executedAs)
+    Set result = {}
+    If (sr.result '= "") {
+        Try {
+            Set result = ##class(%DynamicAbstractObject).%FromJSON(sr.result)
+        }
+        Catch {
+            Set result = {}
+        }
+    }
+    Do out.%Set("result", result)
     Quit out
 }
 
@@ -510,6 +564,12 @@ ClassMethod PauseStep(runGuid As %String, stepGuid As %String) As %Status
 
 ClassMethod RerunStep(runGuid As %String, stepGuid As %String) As %Status
 {
+    // Spec 005 ID-2: a re-run executes under the dispatcher's identity and credential, so only
+    // the dispatcher may ask for one.
+    Set run = ##class(sentai.model.Run).GuidIndexOpen(runGuid, 0)
+    If $IsObject(run) && ($ZCVT(..CurrentUser(), "U") '= $ZCVT(run.dispatchedBy, "U")) {
+        Quit ..WriteProblem(403, "Forbidden", "RERUN_NOT_BY_DISPATCHER: only '"_run.dispatchedBy_"', who dispatched this run, may re-run its steps")
+    }
     Set sc = ##class(sentai.dispatch.WaveDispatcher).RerunStep(runGuid, stepGuid, .newGuid)
     If $$$ISERR(sc) Quit ..WriteProblem(409, "Conflict", $SYSTEM.Status.GetErrorText(sc))
 
@@ -523,35 +583,30 @@ ClassMethod ListStepTypes() As %Status
     Quit ..WriteJSON(200, ##class(sentai.registry.StepType).GetCatalog())
 }
 
-/// --- /catalog/tasks (FR-038, FR-039, User Story 6, P3 reducible) ---
+/// --- /catalog/tasks (spec 006: every value is the platform's own, read with the caller's token) ---
 ClassMethod ListCatalogTasks() As %Status
 {
     Set q = %request.Get("q")
     Set namespace = %request.Get("namespace")
     Set filter = $S(%request.Get("filter") '= "":%request.Get("filter"), 1:"all")
-    Set destructiveOnly = +%request.Get("destructiveOnly")
-    Quit ..WriteJSON(200, ##class(sentai.catalog.TaskService).List(..CurrentToken(), q, namespace, filter, destructiveOnly))
+    Set destructiveOnly = $S(%request.Get("destructiveOnly") '= "":%request.Get("destructiveOnly"), 1:"0")
+    Quit ..WriteOutcome(##class(sentai.catalog.TaskService).List(..CurrentToken(), q, namespace, filter, destructiveOnly))
 }
 
-ClassMethod ReadCatalogTask(taskId As %Integer) As %Status
+ClassMethod ReadCatalogTask(taskId As %String) As %Status
 {
-    Set catalog = ##class(sentai.catalog.TaskService).List(..CurrentToken())
-    Set iter = catalog.items.%GetIterator()
-    While iter.%GetNext(.k, .entry) {
-        If (entry.taskId = taskId) {
-            Return ..WriteJSON(200, entry)
-        }
-    }
-    Quit ..WriteProblem(404, "Not Found", "Task '"_taskId_"' does not exist")
+    Quit ..WriteOutcome(##class(sentai.catalog.TaskService).Read(taskId, ..CurrentToken()))
 }
 
-ClassMethod SuspendCatalogTask(taskId As %Integer) As %Status
+ClassMethod SuspendCatalogTask(taskId As %String) As %Status
 {
     Set payload = ..ReadJSONBody()
-    Set suspended = $S($IsObject(payload) && payload.%IsDefined("suspended"):payload.suspended, 1:1)
-    Set sc = ##class(sentai.catalog.TaskService).Suspend(taskId, suspended, ..CurrentToken())
-    If $$$ISERR(sc) Quit ..WriteProblem(500, "Internal Error", $SYSTEM.Status.GetErrorText(sc))
-    Quit ..WriteJSON(200, {})
+    Set suspended = 1
+    If $IsObject(payload) && payload.%IsDefined("suspended") {
+        If (payload.%GetTypeOf("suspended") '= "boolean") Quit ..WriteProblem(400, "Bad Request", "suspended must be a boolean")
+        Set suspended = payload.suspended
+    }
+    Quit ..WriteOutcome(##class(sentai.catalog.TaskService).SetSuspended(taskId, suspended, ..CurrentToken()))
 }
 
 /// --- /wqm/categories (FR-033–FR-036, User Story 5) ---
@@ -587,16 +642,10 @@ ClassMethod ScheduleFlow(flowId As %String) As %Status
         Quit ..WriteJSON(422, report)
     }
 
-    Set taskIds = []
-    Set rs = ##class(%SQL.Statement).%New()
-    Do rs.%Prepare("SELECT id FROM sentai_model.Step WHERE flow = ?")
-    Set result = rs.%Execute(flowId)
-    While result.%Next() {
-        Set stepId = result.%Get("id")
-        Set sc = ..CreateNativeTask(flowId, stepId, payload.scheduleSpec, $S(payload.%IsDefined("category"):payload.category, 1:""), .taskId)
-        If $$$ISERR(sc) Return ..WriteProblem(500, "Internal Error", $SYSTEM.Status.GetErrorText(sc))
-        Do taskIds.%Push(taskId)
-    }
+    // Each task is created by the platform with the operator's token; its refusal is the answer.
+    Set outcome = ##class(sentai.dispatch.NativeScheduler).Schedule(flowId, ..CurrentToken())
+    If (outcome.httpStatus '= 200) Quit ..WriteOutcome(outcome)
+    Set taskIds = outcome.body.taskIds
 
     Set flow = ##class(sentai.model.Flow).%OpenId(flowId, 4)
     Set flow.scheduleSpec = payload.scheduleSpec
@@ -608,33 +657,10 @@ ClassMethod ScheduleFlow(flowId As %String) As %Status
     Quit ..WriteJSON(201, out)
 }
 
-/// Compiles one step into a native %SYS.Task entry running sentai.dispatch.ScheduledFlowTask
-/// (never a private scheduler, FR-031). Per research.md R-007/OQ-1: only the step(s) with
-/// no incoming edges actually start a run when firing natively — they call back into
-/// POST /flows/{id}/dispatch on their OnTask(); tasks for downstream steps exist only to
-/// satisfy "one task id per scheduled step" and are suppressed at fire time by
-/// WaveDispatcher already having carried them to a terminal state via the earlier wave.
-ClassMethod CreateNativeTask(flowId As %String, stepId As %String, scheduleSpec As %String, category As %String, Output taskId As %Integer) As %Status
-{
-    Set taskId = ""
-    Set definition = ##class(sentai.dispatch.ScheduledFlowTask).%New()
-    Set definition.FlowId = flowId
-    Set definition.StepId = stepId
-    Set definition.IsRoot = '..StepHasIncomingEdge(flowId, stepId)
-
-    Set task = ##class(%SYS.Task).%New()
-    Set task.Name = "SentaiTask: "_flowId_"#"_stepId
-    Set task.NameSpace = $NAMESPACE
-    Set task.TaskClass = definition.%ClassName(1)
-    Set sc = task.AssignSettings(definition)
-    If $$$ISERR(sc) Quit sc
-    Set sc = task.%Save()
-    If $$$ISERR(sc) Quit sc
-
-    Set taskId = task.%Id()
-    Quit $$$OK
-}
-
+/// Root steps (no incoming edge) start a run when their native task fires — they call back into
+/// POST /flows/{id}/dispatch on OnTask(); tasks for downstream steps exist only to satisfy "one
+/// task id per scheduled step" (research.md R-007/OQ-1). Tasks are created by
+/// sentai.dispatch.NativeScheduler through the platform's management API.
 ClassMethod StepHasIncomingEdge(flowId As %String, stepId As %String) As %Boolean
 {
     Set rs = ##class(%SQL.Statement).%New()

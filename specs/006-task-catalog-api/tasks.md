@@ -67,7 +67,7 @@ has no frontend consumer. Check them with `cd frontend && npm run generate:token
 
 ## Phase 1: Setup (docs only)
 
-- [ ] T000 Apply the plan's "Spec deviations" table, plus the analysis items I1, I2 and I7, to
+- [X] T000 Apply the plan's "Spec deviations" table, plus the analysis items I1, I2 and I7, to
   `specs/006-task-catalog-api/spec.md`. This is docs only, about 10 minutes, with no code.
   1. Add a `## Clarifications` section after "Objective", with `### Session 2026-09-26` bullets
      pointing to [research.md](research.md) R-1…R-5: the read source (management API), the lossy
@@ -115,7 +115,7 @@ reads are visible, `state` and `className` are gone, and destructiveness comes f
 **Independent test**: with the double scripting list, single and info reads, every field equals its
 source key (see the data-model table). On the real instance this is quickstart (a).
 
-- [ ] T001 [US1] Implement the corrected read end to end, across four source files:
+- [X] T001 [US1] Implement the corrected read end to end, across four source files:
   `src/sentai/catalog/TaskShape.cls` (new, pure mapping), `src/sentai/catalog/TaskFilter.cls`
   (new skeleton), `src/sentai/catalog/TaskService.cls` (rewrite of the reads) and
   `src/sentai/rest/Dispatcher.cls` (outcome mapping). This is one task by Constitution V; see
@@ -182,7 +182,7 @@ source key (see the data-model table). On the real instance this is quickstart (
   Run the suite. **Checkpoint**: US1 fields are true over REST. Destructiveness is still
   "unknown".
 
-- [ ] T002 [US1] Derive destructiveness from the step-type catalog: `DestructiveByClass` and the
+- [X] T002 [US1] Derive destructiveness from the step-type catalog: `DestructiveByClass` and the
   D-4 fix in `src/sentai/registry/StepType.cls`, plus rules 1, 2 and 4 in
   `src/sentai/catalog/TaskShape.cls`. Depends on T001. This was plan row 2's catalog part, merged
   with its first use (analysis C2).
@@ -231,7 +231,7 @@ their destructiveness comes from the step they run.
 **Independent test**: scripted names `SentaiTask: 1#01..03` get an origin, near-misses do not, and
 a deleted flow gives `flowExists:false`. On the real instance this is quickstart (b).
 
-- [ ] T003 [US2] Create `src/sentai/catalog/TaskOrigin.cls` and attach origin plus destructiveness
+- [X] T003 [US2] Create `src/sentai/catalog/TaskOrigin.cls` and attach origin plus destructiveness
   rule 3 in `src/sentai/catalog/TaskShape.cls` (depends on T002).
 
   **Test first**: add eight tests to `tests/sentai/unittest/catalog/TaskOriginDestructiveTest.cls`.
@@ -275,7 +275,7 @@ invalid values → 400, and `total`/`matched` give "N of M".
 **Independent test**: each filter alone and combined returns exactly the matching items, with
 correct counts.
 
-- [ ] T004 [US4] Give `src/sentai/catalog/TaskFilter.cls` its data-model semantics. **Depends on
+- [X] T004 [US4] Give `src/sentai/catalog/TaskFilter.cls` its data-model semantics. **Depends on
   T003** (analysis I4: not parallel, because the combined case needs `destructiveUnknown` and
   `origin` in place). Only `TaskFilter.cls` changes; the 400 path is already wired by T001.
 
@@ -307,7 +307,7 @@ re-read, and refusals are verbatim.
 **Independent test**: the double records the exact platform call, and the re-read decides between
 200 and 502. On the real instance this is quickstart (c) and (d).
 
-- [ ] T005 [US3] Add `SetSuspended(taskId, suspended, bearerToken) As %DynamicObject` (an outcome)
+- [X] T005 [US3] Add `SetSuspended(taskId, suspended, bearerToken) As %DynamicObject` (an outcome)
   in `src/sentai/catalog/TaskService.cls`, and rewrite `SuspendCatalogTask` in
   `src/sentai/rest/Dispatcher.cls` (depends on T001; sequential after T001 for these two files).
 
@@ -346,7 +346,7 @@ reports them.
 **Independent test**: scripted history with mixed execution and `TASKMGR` rows → only the
 execution rows, at most 5. On the real instance this is quickstart (f).
 
-- [ ] T006 [US5] Add the history read to `Read` in `src/sentai/catalog/TaskService.cls`, and
+- [X] T006 [US5] Add the history read to `Read` in `src/sentai/catalog/TaskService.cls`, and
   `RecentRuns(historyRead, class)` in `src/sentai/catalog/TaskShape.cls` (depends on T005 for
   `TaskService.cls` ordering, and on T003).
 
@@ -370,7 +370,7 @@ execution rows, at most 5. On the real instance this is quickstart (f).
 
 ## Phase 8: Polish, docs and evidence
 
-- [ ] T007 [P] Update the docs: `README.md` (API section and "⚠️ Known limitations (v1)") and
+- [X] T007 [P] Update the docs: `README.md` (API section and "⚠️ Known limitations (v1)") and
   `specs/002-canvas-ui/contracts/openapi.yaml`. This touches no code, so it can run in parallel
   with T006.
 
@@ -400,7 +400,7 @@ execution rows, at most 5. On the real instance this is quickstart (f).
   No new path. Run the suite and the frontend unit and e2e checks (48/48, 13/13) to confirm
   nothing else changed.
 
-- [ ] T008 [P] Create `scripts/catalog-evidence/compare.sh`, reusing
+- [X] T008 [P] Create `scripts/catalog-evidence/compare.sh`, reusing
   `scripts/validate-async-job-contract/lib/common.sh` and `lib/auth.sh` for preflight and login.
   This implements quickstart (a).
   - Credentials come only from `IRIS_USER`/`IRIS_PASSWORD`. No token is echoed, and headers are
@@ -417,7 +417,7 @@ execution rows, at most 5. On the real instance this is quickstart (f).
   Check with `bash -n` and `shellcheck` if available. The script can run in parallel with T006
   and T007 because it touches different files.
 
-- [ ] T009 Run quickstart (a)–(f) on the real instance and record the evidence in
+- [X] T009 Run quickstart (a)–(f) on the real instance and record the evidence in
   `specs/006-task-catalog-api/evidence/` (depends on T001–T008).
   - The evidence files are `a-field-compare.json`, `b-origin.json`, `c-suspend-resume.json`,
     `d-refusal.json`, `e-timing.txt` and `f-recent-runs.json`.

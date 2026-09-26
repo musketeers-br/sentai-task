@@ -1,0 +1,100 @@
+{
+  "evidence": "POST /flows/{id}/schedule creates each task through POST /api/admin/v2/task with the operator token",
+  "captured_at": "2026-09-26T12:24:57Z",
+  "administrator": {
+    "http": 201,
+    "taskIds": [
+      1468,
+      1469
+    ],
+    "platform_reads": [
+      {
+        "Name": "SentaiTask: 1645#01",
+        "TaskClass": "sentai.dispatch.ScheduledFlowTask",
+        "NameSpace": "IRISAPP",
+        "RunAsUser": "_SYSTEM",
+        "Settings": {
+          "FlowId": "1645",
+          "IsRoot": 1,
+          "StepId": "01"
+        }
+      },
+      {
+        "Name": "SentaiTask: 1645#02",
+        "TaskClass": "sentai.dispatch.ScheduledFlowTask",
+        "NameSpace": "IRISAPP",
+        "RunAsUser": "_SYSTEM",
+        "Settings": {
+          "FlowId": "1645",
+          "IsRoot": 0,
+          "StepId": "02"
+        }
+      }
+    ],
+    "catalog_origin": [
+      {
+        "taskId": 1468,
+        "name": "SentaiTask: 1645#01",
+        "origin": {
+          "flowId": "1645",
+          "stepId": "01",
+          "flowExists": true
+        }
+      },
+      {
+        "taskId": 1469,
+        "name": "SentaiTask: 1645#02",
+        "origin": {
+          "flowId": "1645",
+          "stepId": "02",
+          "flowExists": true
+        }
+      }
+    ]
+  },
+  "unprivileged_operator": {
+    "role": "%DB_IRISAPP_CODE:R, %DB_IRISAPP_DATA:RW (no task privilege)",
+    "without_sql_select": {
+      "http": 403,
+      "body": {
+        "title": "Forbidden",
+        "detail": "SQLCODE -99: User q006user is not privileged for the operation",
+        "status": 403
+      }
+    },
+    "with_select_on_schema_sentai_model": {
+      "http": 422,
+      "body": {
+        "errors": [
+          {
+            "stepId": "01",
+            "code": "CATEGORY_NOT_FOUND",
+            "message": "WQM category 'Default' does not exist on the target platform"
+          },
+          {
+            "stepId": "02",
+            "code": "CATEGORY_NOT_FOUND",
+            "message": "WQM category 'Default' does not exist on the target platform"
+          }
+        ],
+        "warnings": []
+      }
+    },
+    "native_tasks_for_flow": 0,
+    "flow_scheduleSpec_recorded": ""
+  },
+  "checks": {
+    "admin_201_one_task_per_step": true,
+    "tasks_are_the_products": true,
+    "run_as_the_caller": true,
+    "root_flag_from_edges": true,
+    "origin_resolved": true,
+    "operator_sql_refusal_is_403_verbatim": true,
+    "operator_created_nothing": true,
+    "operator_with_select_stopped_before_create": true
+  },
+  "findings": [
+    "With SELECT on the product schema, the operator is stopped at schedule validation: the WQM category read is refused by the platform (no %Admin_Operate) and the validator reports it as CATEGORY_NOT_FOUND \"does not exist\" — a platform refusal mislabelled (pre-existing, spec 004 validator; not changed here).",
+    "The platform refusal of the create itself (403 with platformStatus, verbatim, rollback of earlier creates) is proven by ScheduleViaPlatformTest; on this instance an operator able to read WQM categories needs %Admin_Operate, which the platform also accepts for task creation."
+  ]
+}

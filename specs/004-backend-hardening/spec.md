@@ -4,7 +4,7 @@
 
 **Created**: 2026-09-23
 
-**Status**: Draft (refined 2026-09-23)
+**Status**: Implemented (v1; refined 2026-09-23)
 
 **Input**: Escalations E-1, E-2, E-3 and findings F-1, F-3, F-4 from the spec 003 real-instance
 verification ([quickstart-evidence.md](../003-backend-objectscript/quickstart-evidence.md),

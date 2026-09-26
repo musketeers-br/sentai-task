@@ -20,7 +20,17 @@ ClassMethod Post(urlPath As %String, bearerToken As %String, body As %DynamicObj
     Set basePath = $PIECE(urlPath, "?", 1)
     // Recorded so tests can assert the request shape the platform requires (spec 001 evidence).
     Set ^sentaiTestDouble("posted", basePath) = $LB(urlPath, $S($IsObject(body):body.%ToJSON(), 1:""))
+    // Every POST in order, with the credential used (spec 005 close-out: one create per step).
+    Set n = $I(^sentaiTestDouble("postlog"))
+    Set ^sentaiTestDouble("postlog", n) = $LB(urlPath, $S($IsObject(body):body.%ToJSON(), 1:""), bearerToken)
     Quit ..Respond(basePath, "POST", .httpStatus, .locationHeader)
+}
+
+ClassMethod Delete(urlPath As %String, bearerToken As %String, ByRef httpStatus As %Integer) As %DynamicObject
+{
+    // Recorded with the credential used, keyed by the full URL (the id is in the query string).
+    Set ^sentaiTestDouble("deleted", urlPath) = bearerToken
+    Quit ..Respond($PIECE(urlPath, "?", 1), "DELETE", .httpStatus, .location)
 }
 
 ClassMethod Put(urlPath As %String, bearerToken As %String, body As %DynamicObject, ByRef httpStatus As %Integer, ByRef locationHeader As %String) As %DynamicObject

@@ -265,6 +265,8 @@ ClassMethod RunLoop(runGuid As %String, bearerToken As %String) As %Status
 
         // Poll every in-flight (queued-with-job / running) step for completion.
         Do ..PollInFlightSteps(run, bearerToken)
+        // In-process steps are ended by their worker, or here once overdue (spec 005).
+        Do ..SweepTimeouts(run)
 
         If ..IsRunTerminal(run.%Id()) Quit
         Hang 0.5
@@ -336,6 +338,9 @@ ClassMethod StartStep(run As sentai.model.Run, stepId As %String) As %Status
     If '$IsObject(step) Return sc
 
     Set category = $S(step.wqmCategory '= "":step.wqmCategory, 1:run.flow.defaultCategory)
+    If (##class(sentai.registry.StepType).GetExecutor(step.type) = "in-process") {
+        Quit ..StartInProcessStep(stepRun.guid, category)
+    }
     // The Work Queue Manager API is %SYSTEM.WorkMgr; the category must already exist on the
     // platform. A refusal fails this step with the platform's own message (FR-023) instead of
     // killing the background loop.
@@ -354,6 +359,54 @@ ClassMethod StartStep(run As sentai.model.Run, stepId As %String) As %Status
     }
 
     Return $$$OK
+}
+
+/// Spec 005: an in-process step. `running` is set first (under the StepRun's lock), so the next
+/// pass never re-enqueues it and its timeout counts the wait for a worker. The work is queued on
+/// a new WorkMgr group of the step's category — its ceilings apply as for integrity checks — and
+/// detached, never Sync'd: InProcessExecutor.Run writes the terminal state from the worker.
+ClassMethod StartInProcessStep(stepRunGuid As %String, category As %String) As %Status
+{
+    Set sc = ##class(sentai.model.StepRun).TransitionLocked(stepRunGuid, "running")
+    Quit:$$$ISERR(sc) sc
+    Set queueMgr = $SYSTEM.WorkMgr.%New(, , category)
+    If '$IsObject(queueMgr) {
+        Quit ##class(sentai.model.StepRun).TransitionLocked(stepRunGuid, "failed", $SYSTEM.Status.GetErrorText($GET(%objlasterror)))
+    }
+    Set sc = queueMgr.Queue("##class(sentai.dispatch.InProcessExecutor).Run", stepRunGuid)
+    If $$$ISOK(sc) Set sc = queueMgr.Detach(.token, 86400)
+    If $$$ISERR(sc) {
+        Quit ##class(sentai.model.StepRun).TransitionLocked(stepRunGuid, "failed", $SYSTEM.Status.GetErrorText(sc))
+    }
+    Quit $$$OK
+}
+
+/// Default timeout, in minutes, of an in-process step whose timeoutMinutes is 0.
+Parameter DEFAULTTIMEOUTMINUTES = 60;
+
+/// Fails every `running` in-process step of `run` older than its timeout ("timed out after N
+/// min"). Goes through TransitionLocked, so a worker finishing at the same moment and this sweep
+/// cannot both win; a lock timeout is retried on the next pass. The underlying work may keep
+/// running after the timeout (as after a cancel, F-2); its late result is discarded.
+ClassMethod SweepTimeouts(run As sentai.model.Run) As %Status
+{
+    Set flowId = run.flowGetObjectId()
+    Set now = $H
+    Set rs = ##class(%SQL.Statement).%New()
+    Do rs.%Prepare("SELECT sr.guid, sr.stepId, sr.timeStarted, s.type, s.timeoutMinutes FROM sentai_model.StepRun sr, sentai_model.Step s WHERE sr.run = ? AND sr.state = 'running' AND s.flow = ? AND s.id = sr.stepId")
+    Set result = rs.%Execute(run.%Id(), flowId)
+    While result.%Next() {
+        Continue:(##class(sentai.registry.StepType).GetExecutor(result.%Get("type")) '= "in-process")
+        Set started = result.%Get("timeStarted")
+        Continue:(started = "")
+        Set minutes = +result.%Get("timeoutMinutes")
+        Set:(minutes <= 0) minutes = ..#DEFAULTTIMEOUTMINUTES
+        Set h = $ZDATETIMEH(started, 3)
+        Set elapsed = ((+now - +h) * 86400) + ($P(now, ",", 2) - $P(h, ",", 2))
+        Continue:(elapsed <= (minutes * 60))
+        Do ##class(sentai.model.StepRun).TransitionLocked(result.%Get("guid"), "failed", "timed out after "_minutes_" min")
+    }
+    Quit $$$OK
 }
 
 /// Runs on a %SYS.WorkQueueMgr worker: calls the mapped administrative endpoint to start
@@ -389,7 +442,8 @@ ClassMethod ExecuteStepAsync(stepRunGuid As %String) As %Status
 ClassMethod PollInFlightSteps(run As sentai.model.Run, bearerToken As %String) As %Status
 {
     Set rs = ##class(%SQL.Statement).%New()
-    Do rs.%Prepare("SELECT %ID AS rowId FROM sentai_model.StepRun WHERE run = ? AND state = 'running'")
+    // In-process steps (spec 005) have no job to poll: their worker ends them.
+    Do rs.%Prepare("SELECT %ID AS rowId FROM sentai_model.StepRun WHERE run = ? AND state = 'running' AND adminJobId IS NOT NULL")
     Set result = rs.%Execute(run.%Id())
     While result.%Next() {
         Set stepRun = ##class(sentai.model.StepRun).%OpenId(result.%Get("rowId"), 4)

@@ -9,8 +9,9 @@ test('Q1 — composes the canonical graph from the palette, with one shared fan-
 
 	// Scenario 1: dragging a step type onto the canvas creates a node.
 	const pane = page.locator('.svelte-flow__pane');
-	// Spec 004 D-1: only integrity-check can be placed in v1; the others are listed but disabled.
-	for (const type of ['purge-audit-records', 'switch-journal', 'compact-globals', 'custom']) {
+	// Spec 004 D-1: types not proven on the platform are listed but disabled (spec 005 made
+	// switch-journal available).
+	for (const type of ['purge-audit-records', 'compact-globals', 'custom']) {
 		const entry = page.locator(`[data-step-type="${type}"]`);
 		await expect(entry).toBeDisabled();
 		await expect(entry).toContainText('not supported in v1');

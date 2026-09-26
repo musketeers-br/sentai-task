@@ -1,0 +1,53 @@
+{
+  "evidence": "US-5 — recent runs from the platform history (executions only), item read only",
+  "task_A_ok": {
+    "status": "1",
+    "lastError": "Success",
+    "recentRuns": [
+      {
+        "LastStart": "2026-09-26 09:45:00",
+        "Completed": "2026-09-26 09:45:00",
+        "Status": "1",
+        "Result": "Success",
+        "Username": "irisowner",
+        "LogDatetime": "2026-09-26 09:45:00"
+      }
+    ]
+  },
+  "task_B_failed": {
+    "status": "ERROR #5001: Q006 deliberate failure",
+    "lastError": "",
+    "recentRuns": [
+      {
+        "LastStart": "2026-09-26 09:45:00",
+        "Completed": "2026-09-26 09:45:00",
+        "Status": "ERROR #5001: Q006 deliberate failure",
+        "Result": "",
+        "Username": "irisowner",
+        "LogDatetime": "2026-09-26 09:45:00"
+      }
+    ]
+  },
+  "platform_history_B": [
+    {
+      "LastStart": "2026-09-26 09:45:00",
+      "Completed": "2026-09-26 09:45:00",
+      "Status": "ERROR #5001: Q006 deliberate failure",
+      "Result": "",
+      "Routine": "sentai.spike.Q006Task"
+    },
+    {
+      "LastStart": "2026-09-26 09:44:00",
+      "Completed": "2026-09-26 09:44:00",
+      "Status": "1",
+      "Result": "Create Q006-B",
+      "Routine": "TASKMGR"
+    }
+  ],
+  "checks": {
+    "a_run_ok": true,
+    "b_status_text_equals_history": true,
+    "admin_events_excluded": true,
+    "list_items_have_no_recent_runs": true
+  }
+}

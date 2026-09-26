@@ -1,0 +1,39 @@
+{
+  "evidence": "Operator without task privilege (role: %DB_IRISAPP_CODE:R, %DB_IRISAPP_DATA:RW only)",
+  "operator_login_ok": true,
+  "platform_admin_info_for_operator": 403,
+  "list": {
+    "http": 401,
+    "body": {
+      "status": 401,
+      "title": "Unauthorized",
+      "detail": "Invalid or expired token"
+    }
+  },
+  "item_4": {
+    "http": 401,
+    "body": {
+      "status": 401,
+      "title": "Unauthorized",
+      "detail": "Invalid or expired token"
+    }
+  },
+  "suspend_temp_task": {
+    "taskId": 1314,
+    "http": 401,
+    "body": {
+      "status": 401,
+      "title": "Unauthorized",
+      "detail": "Invalid or expired token"
+    }
+  },
+  "temp_task_after_refusal": {
+    "Suspended": false
+  },
+  "checks": {
+    "list_refused": true,
+    "item_refused": true,
+    "suspend_refused": true,
+    "task_unchanged": true
+  }
+}

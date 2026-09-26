@@ -59,7 +59,7 @@ create/edit/delete/run-now; no History or WQM screens; the live-run screen ignor
 `result`/`executedAs`; no test removed
 
 **Scale/Scope**: 5 new components and 3 new pure modules; 8 existing files touched; unit 48 → ~81;
-e2e 13 → 23
+e2e 13 → 24
 
 No NEEDS CLARIFICATION remains. R-1…R-7 are resolved in [research.md](research.md).
 
@@ -75,7 +75,7 @@ No NEEDS CLARIFICATION remains. R-1…R-7 are resolved in [research.md](research
 | **IV Errors as Values** | `ApiResult`/`ApiError` (existing) extended with `platformStatus`/`platformInfo`. Every screen state is a tagged union (`refused`, `notFound`, `actionError`, `unavailable`); no exception crosses a component. | ✅ |
 | **V Verifiable Increments** | Tasks are sliced by user story, each with its e2e. Cross-spec sequencing is declared (BD-3: Part A e2e after 006; BD-4 and the prototype gate for Part B). | ✅ |
 | **VI Technology Agnosticism** | Technology is named here only; the spec stays free of it. | ✅ |
-| **FR-019 audit (no business logic in the browser)** | Local decisions found in the current code are listed in [research.md §Other findings](research.md#other-findings-code-audit-against-fr-019-fr-013-and-fr-018). **Changed**: local parameter schema/default (declared types), the custom-class input, and label derivation (API `label` preferred). **Kept with reason**: category display order (presentation); the `purge-audit-records` local field (BD-2, keeps e2e green); consequence copy (spec 002 presentation). Filtering and counting of the catalog is never done locally; sorting is display order only (R-3). | ✅ |
+| **FR-019 audit (no business logic in the browser)** | Local decisions found in the current code are listed in [research.md §Other findings](research.md#other-findings-code-audit-against-fr-019-fr-013-and-fr-018). **Changed**: local parameter schema/default (declared types), the custom-class input, and label derivation (API `label` preferred). **Kept with reason**: category display order (presentation); the `purge-audit-records` local field (BD-2, **included in 005 tasks**: T002; removed once it lands); consequence copy (spec 002 presentation). Filtering and counting of the catalog is never done locally; sorting is display order only (R-3). | ✅ |
 | **Handoff constraints** | No DevExtreme; no credentials in the repo, fixtures or evidence (e2e reads env vars; temporary users get IRIS-generated passwords); no confidential names; no AI. | ✅ |
 
 **Post-design re-check**: unchanged, all ✅. There are no Complexity Tracking entries.
@@ -120,7 +120,7 @@ No NEEDS CLARIFICATION remains. R-1…R-7 are resolved in [research.md](research
 
 | Spec text | Finding | Plan |
 |---|---|---|
-| US-5.4 / FR-015 / SC-005: errors "shown on its field" | The findings carry no structured parameter (R-4) | Shown on the field only when `parameter` is present (BD-1 on 005); otherwise at step level, verbatim. SC-005's field part is gated on BD-1 |
+| US-5.4 / FR-015 / SC-005: errors "shown on its field" | The findings carry no structured parameter (R-4) | Shown on the field only when `parameter` is present (BD-1, **included in 005 tasks**: T008); otherwise at step level, verbatim. SC-005's field part is gated on BD-1 |
 | US-5.5 "Unchanged defaults are sent as the schema's default" | 005 applies the default when the key is absent | The key is omitted, the default shown as placeholder (R-7), and FR-016 is honoured |
 | Design brief item 5 "the existing dialog" | There is no typed-confirmation input in the dialog today | The prototype must design it (T0 item 5); D-7 implements it |
 | FR-002 "reached directly by address" | No path routes on the static server | Addressable by query string (R-1) |
@@ -192,11 +192,12 @@ The rules:
 | 5 | **Suspend/resume.** Unit: action-state reducer (pending → ok / error + re-read). e2e (`us10`): suspend → SUSPENDED shown and confirmed by a fresh read; resume; button disabled while pending; 403 refusal shown verbatim. | US-4, FR-008, FR-011 | 4 | — |
 | 6 | **[BLOCKED on T0] Custom group and labels.** Unit (`wire.test.ts`, `document.test.ts`): `label`/`executor`/`parameters` mapping; pre-005 catalog still maps; grouping. e2e (`us11`, part 1): *Custom* group equals the catalog's in-process entries plus legacy `custom` (disabled). `Palette`, `wire.ts`, `document.ts`. | US-5.1, FR-012 | T0, BD-4 | — |
 | 7 | **[BLOCKED on T0] Parameter form and errors.** Unit (`params.test.ts`): spec → field (each of the 4 types, bounds, required, placeholder default); writes (coerce, clear removes the key); findings matched by `parameter` only, with a fixture **with** and **without** `parameter`; an unknown type becomes a read-only row. e2e (`us11`, part 2): exact fields for `storage-headroom-check`, "takes no parameters" for `db-size-report`, an out-of-range value shown verbatim at field or step level (recorded). `params.ts`, `ParameterForm`, `Inspector`. | US-5.2–5, FR-013–FR-016 | 6 | — |
-| 8 | **[BLOCKED on T0] Destructive declared type, typed confirmation and legacy custom.** e2e (`us12`): `purge-task-history` shows the band and seal; dispatch asks for the typed value; a wrong value → 428 detail verbatim; the right value dispatches; a legacy `custom` flow shows as not supported with a read-only class and no input. `DispatchDialog`, `client.ts` dispatch body, `Inspector` (custom). | US-6, FR-017, FR-018 | 7 | — |
+| 8a | **Typed confirmation before dispatch (D-7), not blocked on T0.** Uses the existing dialog's visual system. e2e (`us12`): dispatch of a flow with a destructive step asks one typed value per destructive step; a wrong value → 428 `detail` verbatim; the right value dispatches. `DispatchDialog`, `client.ts` dispatch body. **Release gate for 005's `purge-task-history` `available: true`.** | US-6, FR-017 | — (e2e needs 005's purge-task-history or an existing destructive type) | — |
+| 8b | **[BLOCKED on T0] Declared destructive node and legacy custom.** e2e (`us12`): `purge-task-history` shows the band and seal; a legacy `custom` flow shows as not supported with a read-only class and no input. `Inspector` (custom), node rendering. | US-6, FR-017, FR-018 | 7, 8a | — |
 | 9 | **Theming parity and evidence.** e2e (`us13`): dark/light pairs of the catalog and the parameter form, with the 002 US-6 assertions. SC-003 timing with about 150 seeded tasks. Run the quickstart and record the evidence. README: the catalog screen, custom steps, BD-1…BD-4 status. | FR-020, SC-003, SC-008 | 5 (Part A); 8 (Part B pair) | — |
 
 **Cut order if time runs short**:
-1. Part B tasks 6–8 wait for the prototype and 005, without affecting Part A.
+1. Part B tasks 6, 7 and 8b wait for the prototype and 005, without affecting Part A. Task 8a is never cut while 005 ships `purge-task-history`.
 2. The Part B half of task 9 follows them.
 3. Part A tasks 1, 2, 4 and 5 are never cut.
 4. Task 3 (filters) can ship with search and state filters first and the namespace filter after.
@@ -216,7 +217,7 @@ The rules:
   | step-type wire and grouping | 3 |
   | params | 5 |
 
-- **e2e: 13 → 23 (+10).**
+- **e2e: 13 → 24 (+11).**
 
   | Spec | Tests |
   |---|---|
@@ -225,7 +226,7 @@ The rules:
   | `us9` | 1 |
   | `us10` | 2 |
   | `us11` | 2 |
-  | `us12` | 1 |
+  | `us12` | 2 (typed confirmation; declared destructive node + legacy custom) |
   | `us13` | 1 |
 
 - **Adjusted: 0 planned, 0 removed.** Two exceptions are possible:

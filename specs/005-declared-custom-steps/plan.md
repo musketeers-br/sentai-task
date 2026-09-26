@@ -143,10 +143,12 @@ src/sentai/
     └── DatabaseSizeReport.cls
 
 tests/sentai/unittest/
-├── fixtures/FakeTasks.cls                   # NEW: ok / error status / throws / switches to %SYS / big result
+├── fixtures/Fake{Ok,Fails,Throws,SwitchesNamespace,BigResult,WithParams}.cls  # NEW (T001), one class per file
+├── model/StepRunLockTest.cls                # NEW (T003): locked transitions, two-process race
 ├── registry/StepTypeTest.cls                # adjust: purge-task-history pausable=false, availability
 ├── validation/ParameterSchemaRuleTest.cls   # extend: PARAM_* + not installed + IN_PROCESS_NOT_SCHEDULABLE
-├── validation/StepAvailabilityRuleTest.cls  # adjust: 6 → 4 unavailable types (16 refusals)
+├── validation/LegacyCustomStepTest.cls      # NEW (T009): legacy custom refused on 4 paths + static guard
+├── validation/StepAvailabilityRuleTest.cls  # adjust: 6 → 5 → 4 unavailable types (purge-task-history last, after spec 007 T009)
 ├── dispatch/InProcessExecutorTest.cls       # NEW: outcomes, namespace frame, truncation, executedAs
 ├── dispatch/DeclaredStepRunTest.cls         # NEW: mixed flow, locked race, timeout, SSE version, rerun
 ├── rest/DispatchEndpointTest.cls            # extend: credential mismatch 403; rerun 403
@@ -179,13 +181,13 @@ anywhere but the catalog.
 | 6 | `db-size-report` + test. | FR-008b | 4 | [P] with 7 |
 | 7 | `storage-headroom-check` (Python) + tests (lax passes, forced fails naming locations). | FR-008a, SC-005 | 4 | [P] with 6 |
 | 8 | Regression FR-002 / SC-002: legacy `custom` refused on 4 paths; old flows load; executor never reads `customClass`. | FR-002, SC-002 | 2, 5 | — |
-| 9 | switch-journal & purge-task-history in-process: confirmation, `DESTRUCTIVE_NOT_SCHEDULABLE`, availability; adjust backend tests (StepTypeTest, StepAvailabilityRuleTest 24 → 16 refusals) and the 3 e2e specs that encoded "switch-journal not supported". | FR-011, FR-009, item 8 | 5 | — |
+| 9 | switch-journal & purge-task-history in-process: confirmation, `DESTRUCTIVE_NOT_SCHEDULABLE`, availability; adjust backend tests (StepTypeTest, StepAvailabilityRuleTest 24 → 20 refusals; → 16 once purge-task-history is flipped after spec 007 T009) and the 3 e2e specs that encoded "switch-journal not supported". | FR-011, FR-009, item 8 | 5 | — |
 | 10 | Docs + evidence: README (types, how to declare one via PR, identity model ID-1…ID-4, required privilege for native types, timeout semantics incl. queue time, work continues after timeout/cancel, result truncation); run quickstart (a)–(e) incl. mandatory (e)4; record evidence. | FR-007, FR-012, SC-006 | all | — |
 
 **Cut order if time runs short**: task 9 → result persistence of task 4 (keep report output in the
 failure reason only; `executedAs` stays) → never cut 2, 4 (locking + frame), 8.
 
-**Expected test count**: backend **122 → ~152** (≈ +30: catalog 3, validator 7, executor 7,
+**Expected test count**: backend **122 → ~152** (rebased on spec 006 and its close-out: **178 → ~208**) (≈ +30: catalog 3, validator 7, executor 7,
 dispatcher/REST 8, shipped 3, legacy 2); adjusted, none removed. Frontend e2e **13 → 13** with 3
 specs adjusted (test code only); frontend unit **48 → 48** (verified: no unit test depends on
 `purge-task-history` pausable or availability — fixtures there are local data).

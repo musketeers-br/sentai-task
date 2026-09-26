@@ -66,13 +66,19 @@ ClassMethod Validate(flowId As %String, bearerToken As %String = "") As %Dynamic
             Do errors.%Push({"stepId": (stepId), "code": "UNKNOWN_STEP_TYPE", "message": ("Step type '"_type_"' is not in the closed catalog")})
         } Else {
             If '##class(sentai.registry.StepType).IsAvailable(type) {
-                Do errors.%Push({"stepId": (stepId), "code": "STEP_TYPE_NOT_SUPPORTED_ON_TARGET", "message": ("Step type '"_type_"' is not supported on the target platform in v1 (supported: integrity-check)")})
+                Do errors.%Push({"stepId": (stepId), "code": "STEP_TYPE_NOT_SUPPORTED_ON_TARGET", "message": ("Step type '"_type_"' is not supported on the target platform in v1 (supported: "_##class(sentai.registry.StepType).AvailableTypes()_")")})
             }
             If (type = "purge-audit-records") {
                 Set hasDaysToKeep = $IsObject(step.parameters) && step.parameters.%IsDefined("daysToKeep")
                 If 'hasDaysToKeep {
-                    Do errors.%Push({"stepId": (stepId), "code": "PARAMETER_SCHEMA", "message": "purge-audit-records requires parameters.daysToKeep"})
+                    Do errors.%Push({"stepId": (stepId), "code": "PARAMETER_SCHEMA", "parameter": "daysToKeep", "message": "purge-audit-records requires parameters.daysToKeep"})
                 }
+            }
+            // Spec 005: in-process types — the step's parameters against the declared schema, and
+            // the catalog's class installed. (purge-audit-records declares its schema for the
+            // canvas only and keeps the rule above.)
+            If (##class(sentai.registry.StepType).GetExecutor(type) = "in-process") {
+                Do ..DeclaredStepFindings(stepId, type, ##class(sentai.registry.StepType).GetParameterSchema(type), step.parameters, ##class(sentai.registry.StepType).GetTargetClass(type), errors)
             }
         }
 
@@ -110,6 +116,62 @@ ClassMethod Validate(flowId As %String, bearerToken As %String = "") As %Dynamic
     Return ..Report(errors, warnings)
 }
 
+/// Spec 005 FR-005 / R-6: findings for one in-process step. `schema` and `className` are the
+/// catalog's (passed in so the rule is testable against any schema); the step's own keys are
+/// only compared with the schema, never used to select code. Each PARAM_* finding names its
+/// `parameter` (spec 007 BD-1).
+ClassMethod DeclaredStepFindings(stepId As %String, type As %String, schema As %DynamicArray, parameters As %DynamicObject, className As %String, errors As %DynamicArray)
+{
+    Set prefix = "Step '"_stepId_"' ("_type_"): "
+    Set hasParameters = $IsObject(parameters)
+    Kill declared
+    Set iter = schema.%GetIterator()
+    While iter.%GetNext(.k, .def) {
+        Set declared(def.name) = ""
+    }
+
+    If hasParameters {
+        Set iter = parameters.%GetIterator()
+        While iter.%GetNext(.key, .value) {
+            Continue:$D(declared(key))
+            Do errors.%Push({"stepId": (stepId), "code": "PARAM_UNKNOWN", "parameter": (key), "message": (prefix_"unknown parameter '"_key_"'")})
+        }
+    }
+
+    Set iter = schema.%GetIterator()
+    While iter.%GetNext(.k, .def) {
+        Set name = def.name
+        If 'hasParameters || 'parameters.%IsDefined(name) {
+            If def.required {
+                Do errors.%Push({"stepId": (stepId), "code": "PARAM_REQUIRED", "parameter": (name), "message": (prefix_"parameter '"_name_"' is required")})
+            }
+            Continue
+        }
+        Set value = parameters.%Get(name), jsonType = parameters.%GetTypeOf(name)
+        Set ok = $CASE(def.type,
+            "integer": (jsonType = "number") && ($NUMBER(value, "I") '= ""),
+            "number": (jsonType = "number"),
+            "boolean": (jsonType = "boolean"),
+            "string": (jsonType = "string"),
+            : 0)
+        If 'ok {
+            Set expected = $CASE(def.type, "integer": "an integer", "number": "a number", "boolean": "a boolean", "string": "a string", : "of type "_def.type)
+            Do errors.%Push({"stepId": (stepId), "code": "PARAM_TYPE_MISMATCH", "parameter": (name), "message": (prefix_"parameter '"_name_"' must be "_expected)})
+            Continue
+        }
+        Continue:'$LISTFIND($LB("integer", "number"), def.type)
+        Set hasMin = def.%IsDefined("min"), hasMax = def.%IsDefined("max")
+        If (hasMin && (value < def.min)) || (hasMax && (value > def.max)) {
+            Set bounds = $S(hasMin && hasMax:"between "_def.min_" and "_def.max, hasMin:"at least "_def.min, 1:"at most "_def.max)
+            Do errors.%Push({"stepId": (stepId), "code": "PARAM_OUT_OF_RANGE", "parameter": (name), "message": (prefix_"parameter '"_name_"' must be "_bounds)})
+        }
+    }
+
+    If '##class(sentai.registry.StepType).ClassIsInstalled(className) {
+        Do errors.%Push({"stepId": (stepId), "code": "STEP_TYPE_NOT_SUPPORTED_ON_TARGET", "message": ("Step type '"_type_"' is not supported on the target platform: its declared class is not installed")})
+    }
+}
+
 /// The report /schedule blocks on (FR-032): everything Validate() reports, plus one error per
 /// destructive step — scheduling a flow with any destructive step is out of scope in v1, since
 /// no approved mechanism supplies SC-006's typed confirmation at fire time (spec.md Change Log
@@ -123,8 +185,15 @@ ClassMethod ValidateForSchedule(flowId As %String, bearerToken As %String = "") 
     Do stepRs.%Prepare("SELECT id, type FROM sentai_model.Step WHERE flow = ?")
     Set stepResult = stepRs.%Execute(flowId)
     While stepResult.%Next() {
-        Continue:'##class(sentai.registry.StepType).IsDestructive(stepResult.%Get("type"))
-        Do report."errors".%Push({"stepId": (stepResult.%Get("id")), "code": "DESTRUCTIVE_NOT_SCHEDULABLE", "message": ("Step type '"_stepResult.%Get("type")_"' is destructive; flows with destructive steps are not schedulable in v1 and must be dispatched manually with typed confirmation")})
+        Set stepId = stepResult.%Get("id"), type = stepResult.%Get("type")
+        If ##class(sentai.registry.StepType).IsDestructive(type) {
+            Do report."errors".%Push({"stepId": (stepId), "code": "DESTRUCTIVE_NOT_SCHEDULABLE", "message": ("Step type '"_type_"' is destructive; flows with destructive steps are not schedulable in v1 and must be dispatched manually with typed confirmation")})
+        }
+        // Spec 005 ID-3: an in-process step runs as the dispatching operator; a scheduled run has
+        // none (it would run as the Task Manager's run-as user), so it is not schedulable.
+        If (##class(sentai.registry.StepType).GetExecutor(type) = "in-process") {
+            Do report."errors".%Push({"stepId": (stepId), "code": "IN_PROCESS_NOT_SCHEDULABLE", "message": ("Step '"_stepId_"' ("_type_") runs inside the platform as the dispatching operator and cannot run in a scheduled run")})
+        }
     }
     Quit report
 }

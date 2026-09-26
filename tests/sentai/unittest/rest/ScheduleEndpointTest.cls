@@ -28,13 +28,22 @@ Method DeleteNativeTasksFor(flowId As %String) As %Integer
 Method TestScheduleValidatedNonDestructiveFlowReturns201WithOneTaskIdPerStep()
 {
     Set id = ..CreateSupportedFlow("ScheduleOk")
+    // Adjusted at spec 005 close-out: the tasks are created by the platform's management API
+    // (ScheduleViaPlatformTest), so the platform is scripted here instead of counting real tasks.
+    Do ##class(sentai.unittest.AdminApiDouble).Script("/api/admin/v2/task", "POST", 201, "", "{""result"":{}}")
+    Set rows = []
+    Set rs = ##class(%SQL.Statement).%ExecDirect(, "SELECT id FROM sentai_model.Step WHERE flow = ?", id)
+    While rs.%Next() { Do rows.%Push({"Id": ($I(n) + 500), "Name": ("SentaiTask: "_id_"#"_rs.%Get("id"))}) }
+    Do ##class(sentai.unittest.AdminApiDouble).Script("/api/admin/v2/tasks", "GET", 200, "", {"result": (rows)}.%ToJSON())
 
     Do ..NewRequest({"scheduleSpec": "WEEKLY SAT 03:00", "category": "Default"})
     Do ##class(sentai.rest.Dispatcher).ScheduleFlow(id)
     Do $$$AssertEquals(%response.Status, 201)
 
-    // One native task per step (FR-031).
-    Do $$$AssertEquals(..DeleteNativeTasksFor(id), 3)
+    // One native task per step (FR-031), created by the platform, none in-process.
+    Do $$$AssertEquals(+$G(^sentaiTestDouble("postlog")), 3)
+    Do $$$AssertEquals(..DeleteNativeTasksFor(id), 0)
+    Do $$$AssertEquals(##class(sentai.model.Flow).%OpenId(id, 0).scheduleSpec, "WEEKLY SAT 03:00")
 }
 
 Method TestSchedulingFlowWithValidationErrorIsRefused()

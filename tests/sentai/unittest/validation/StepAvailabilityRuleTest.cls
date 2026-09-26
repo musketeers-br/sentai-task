@@ -1,7 +1,9 @@
 /// Spec 004 FR-002: a step whose type is in the catalog but not available on the target platform
 /// (D-1: only integrity-check is) is refused on every execution path — validate, dispatch,
 /// schedule and rerun — with STEP_TYPE_NOT_SUPPORTED_ON_TARGET, and nothing reaches the
-/// administrative API (SC-001: 6 types x 4 paths = 24 refusals).
+/// administrative API (SC-001: 6 types x 4 paths = 24 refusals). Spec 005: switch-journal is
+/// available (evidence/e-native-types.json) → 5 types, 20 refusals; → 4 types, 16 refusals once
+/// purge-task-history is flipped after spec 007 T009.
 Class sentai.unittest.validation.StepAvailabilityRuleTest Extends sentai.unittest.SentaiTestCase
 {
 
@@ -47,7 +49,7 @@ ClassMethod RunCountFor(flowId As %String) As %Integer
 Method TestEveryUnavailableTypeIsRefusedOnAllFourPaths()
 {
     Set refusals = 0
-    For type = "compact-globals", "defragment-globals", "switch-journal", "purge-audit-records", "purge-task-history", "custom" {
+    For type = "compact-globals", "defragment-globals", "purge-audit-records", "purge-task-history", "custom" {
         Set id = ..SingleStepFlow(type)
 
         // 1. validate
@@ -92,7 +94,7 @@ Method TestEveryUnavailableTypeIsRefusedOnAllFourPaths()
         Do $$$AssertEquals(srCount, 1, type_": no new StepRun")
         Set refusals = refusals + 1
     }
-    Do $$$AssertEquals(refusals, 24)
+    Do $$$AssertEquals(refusals, 20)
 
     // Nothing reached the administrative API on any path.
     Do $$$AssertEquals($D(^sentaiTestDouble("posted")), 0)
@@ -136,6 +138,20 @@ Method TestCustomWithoutClassReportsBothErrors()
     Do $$$AssertEquals(..ErrorsWithCode(report, "CUSTOM_CLASS_REQUIRED"), 1)
     Do $$$AssertEquals(..ErrorsWithCode(report, ..#CODE, .ids), 1)
     Do $$$AssertEquals(ids, "04")
+}
+
+/// Spec 006 D-4 (analysis R1): after the catalog names the real, compiled audit-purge class, the
+/// type is still refused, because the refusal comes from `available: false`.
+Method TestPurgeAuditStillRefusedAfterClassFix()
+{
+    Do $$$AssertTrue(##class(%Dictionary.CompiledClass).%ExistsId(##class(sentai.registry.StepType).GetTargetClass("purge-audit-records")), "the corrected class is compiled")
+    Set id = ..SingleStepFlow("purge-audit-records", "AvailD4")
+    Set report = ##class(sentai.validation.FlowValidator).Validate(id)
+    Do $$$AssertEquals(..ErrorsWithCode(report, ..#CODE, .ids), 1)
+    Set iter = report."errors".%GetIterator()
+    While iter.%GetNext(.k, .e) {
+        If (e.code = ..#CODE) Do $$$AssertTrue(e.message [ "'purge-audit-records' is not supported", e.message)
+    }
 }
 
 }

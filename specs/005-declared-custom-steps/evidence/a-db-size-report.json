@@ -1,0 +1,230 @@
+{
+  "evidence":"spec 005 T007 - quickstart (a) scoped to db-size-report: 01 db-size-report -> 02 integrity-check on Default, dispatched over REST as an administrative operator",
+  "captured_at":"2026-09-26 12:40:33Z",
+  "operator":{
+    "user":"sentai005adm",
+    "roles":"%All (temporary user, generated password, deleted afterwards)"
+  },
+  "calls":[
+    {
+      "call":"GET /catalog/step-types",
+      "status":"200",
+      "body (db-size-report entry)":[
+        {
+          "type":"db-size-report",
+          "label":"Database size report",
+          "class":"sentai.steps.DatabaseSizeReport",
+          "category":"verification",
+          "executor":"in-process",
+          "destructive":false,
+          "pausable":false,
+          "available":true,
+          "parameters":[
+          ]
+        }
+      ]
+    },
+    {
+      "call":"POST /flows",
+      "status":"201",
+      "flowId":"3135",
+      "steps":[
+        {
+          "id":"01",
+          "type":"db-size-report",
+          "taskName":"db-size-report 01",
+          "namespace":"IRISAPP",
+          "databaseDirectory":"",
+          "runAsUser":"irisadm",
+          "timeoutMinutes":10,
+          "wqmCategory":"Default",
+          "customClass":"",
+          "parameters":{
+          },
+          "isDestructive":"0"
+        },
+        {
+          "id":"02",
+          "type":"integrity-check",
+          "taskName":"integrity-check 02",
+          "namespace":"IRISAPP",
+          "databaseDirectory":"/data/IRISAPP_DATA/",
+          "runAsUser":"irisadm",
+          "timeoutMinutes":10,
+          "wqmCategory":"Default",
+          "customClass":"",
+          "parameters":{
+          },
+          "isDestructive":"0"
+        }
+      ],
+      "edges":[
+        {
+          "source":"01",
+          "target":"02"
+        }
+      ]
+    },
+    {
+      "status":"200",
+      "body":{
+        "errors":[
+        ],
+        "warnings":[
+        ]
+      },
+      "call":"POST /flows/3135/validate"
+    },
+    {
+      "status":"202",
+      "body":{
+        "guid":"76E876AF-B9A7-11F1-A439-4AA3AAEA2F3D",
+        "flowId":"3135",
+        "flowRevision":1,
+        "state":"running",
+        "startedAt":"2026-09-26 12:40:33",
+        "finishedAt":"",
+        "dispatchedBy":"sentai005adm"
+      },
+      "call":"POST /flows/3135/dispatch",
+      "note":"request body carried runCredential.refreshToken from a second sign-in of the same user; not recorded"
+    },
+    {
+      "status":"200",
+      "body":{
+        "guid":"76E876AF-B9A7-11F1-A439-4AA3AAEA2F3D",
+        "flowId":"3135",
+        "flowRevision":1,
+        "state":"completed",
+        "startedAt":"2026-09-26 12:40:33",
+        "finishedAt":"2026-09-26 12:40:57",
+        "dispatchedBy":"sentai005adm",
+        "totalDurationMs":24000,
+        "steps":[
+          {
+            "guid":"76E87A5C-B9A7-11F1-A439-4AA3AAEA2F3D",
+            "stepId":"01",
+            "state":"completed",
+            "timeQueued":"2026-09-26 12:40:33",
+            "timeStarted":"2026-09-26 12:40:33",
+            "timeFinished":"2026-09-26 12:40:33",
+            "failureReason":"",
+            "progressCurrent":"",
+            "progressTotal":"",
+            "confirmedBy":"",
+            "confirmedAt":"",
+            "executedAs":"sentai005adm",
+            "result":{
+              "databases":[
+                {
+                  "name":"IRISAPP_DATA",
+                  "directory":"/data/IRISAPP_DATA/",
+                  "sizeMB":21,
+                  "freeMB":8.5
+                },
+                {
+                  "name":"IRISAPP_DATAENSTEMP",
+                  "directory":"/data/IRISAPP_DATA/irisapp_dataenstemp/",
+                  "sizeMB":1,
+                  "freeMB":0.4
+                },
+                {
+                  "name":"IRISAPP_DATASECONDARY",
+                  "directory":"/data/IRISAPP_DATA/irisapp_datasecondary/",
+                  "sizeMB":1,
+                  "freeMB":0.4
+                },
+                {
+                  "name":"IRISSYS",
+                  "directory":"/usr/irissys/mgr/",
+                  "sizeMB":178,
+                  "freeMB":18
+                },
+                {
+                  "name":"IRISAPP_CODE",
+                  "directory":"/usr/irissys/mgr/IRISAPP_CODE/",
+                  "sizeMB":11,
+                  "freeMB":5.7
+                },
+                {
+                  "name":"ENSLIB",
+                  "directory":"/usr/irissys/mgr/enslib/",
+                  "sizeMB":153,
+                  "freeMB":11
+                },
+                {
+                  "name":"IRISAUDIT",
+                  "directory":"/usr/irissys/mgr/irisaudit/",
+                  "sizeMB":11,
+                  "freeMB":6
+                },
+                {
+                  "name":"IRISLIB",
+                  "directory":"/usr/irissys/mgr/irislib/",
+                  "sizeMB":379,
+                  "freeMB":0.49
+                },
+                {
+                  "name":"IRISLOCALDATA",
+                  "directory":"/usr/irissys/mgr/irislocaldata/",
+                  "sizeMB":11,
+                  "freeMB":6.9
+                },
+                {
+                  "name":"IRISMETRICS",
+                  "directory":"/usr/irissys/mgr/irismetrics/",
+                  "sizeMB":1,
+                  "freeMB":0.34
+                },
+                {
+                  "name":"IRISSECURITY",
+                  "directory":"/usr/irissys/mgr/irissecurity/",
+                  "sizeMB":1,
+                  "freeMB":0.29
+                },
+                {
+                  "name":"IRISTEMP",
+                  "directory":"/usr/irissys/mgr/iristemp/",
+                  "sizeMB":20,
+                  "freeMB":13
+                },
+                {
+                  "name":"SENTAIWEB",
+                  "directory":"/usr/irissys/mgr/sentaiweb/",
+                  "sizeMB":1,
+                  "freeMB":0.4
+                },
+                {
+                  "name":"USER",
+                  "directory":"/usr/irissys/mgr/user/",
+                  "sizeMB":11,
+                  "freeMB":9.9
+                }
+              ]
+            }
+          },
+          {
+            "guid":"76E87C42-B9A7-11F1-A439-4AA3AAEA2F3D",
+            "stepId":"02",
+            "state":"completed",
+            "timeQueued":"2026-09-26 12:40:33",
+            "timeStarted":"2026-09-26 12:40:33",
+            "timeFinished":"2026-09-26 12:40:57",
+            "failureReason":"",
+            "progressCurrent":"",
+            "progressTotal":"",
+            "confirmedBy":"",
+            "confirmedAt":"",
+            "executedAs":"",
+            "result":{
+            }
+          }
+        ],
+        "sumOfStepsMs":24000,
+        "log":[
+        ]
+      },
+      "call":"GET /runs/76E876AF-B9A7-11F1-A439-4AA3AAEA2F3D"
+    }
+  ]
+}

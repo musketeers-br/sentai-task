@@ -1,0 +1,67 @@
+{
+  "evidence": "SC-004 — suspend then resume, each confirmed by the platform's own info read",
+  "taskId": 1310,
+  "suspend": {
+    "product": {
+      "http": 200,
+      "suspended": true,
+      "nextRun": "2026-09-27 00:00:00"
+    },
+    "platform_info": {
+      "Type": "User",
+      "Status": "1",
+      "Error": "",
+      "LastSchedule": "",
+      "LastStarted": "",
+      "LastFinished": "",
+      "NextScheduled": "2026-09-27 00:00:00",
+      "Suspended": true
+    }
+  },
+  "resume": {
+    "product": {
+      "http": 200,
+      "suspended": false,
+      "nextRun": "2026-09-27 00:00:00"
+    },
+    "platform_info": {
+      "Type": "User",
+      "Status": "1",
+      "Error": "",
+      "LastSchedule": "",
+      "LastStarted": "",
+      "LastFinished": "",
+      "NextScheduled": "2026-09-27 00:00:00",
+      "Suspended": false
+    }
+  },
+  "unknown_task": {
+    "http": 404,
+    "body": {
+      "title": "Not Found",
+      "detail": "ERROR #5809: Object to Load not found, class '%SYS.Task', ID '99999'",
+      "status": 404,
+      "platformStatus": {
+        "errors": [
+          {
+            "error": "ERROR #5809: Object to Load not found, class '%SYS.Task', ID '99999'",
+            "code": 5809,
+            "domain": "%ObjectErrors",
+            "id": "LoadObjectNotFound",
+            "params": [
+              "%SYS.Task",
+              "99999"
+            ]
+          }
+        ],
+        "summary": "ERROR #5809: Object to Load not found, class &#39;%SYS.Task&#39;, ID &#39;99999&#39;"
+      }
+    }
+  },
+  "checks": {
+    "suspended_confirmed": true,
+    "resumed_confirmed": true,
+    "next_run_kept_while_suspended": true,
+    "unknown_is_404_verbatim": true
+  }
+}

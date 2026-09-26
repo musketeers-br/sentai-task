@@ -50,13 +50,16 @@ spec 003 "purge family pausable" value for this type only.
 
 ```json
 {"errors":[
-  {"stepId":"02","code":"PARAM_REQUIRED","message":"Step '02' (purge-task-history): parameter 'keepDays' is required"},
-  {"stepId":"02","code":"PARAM_TYPE_MISMATCH","message":"Step '02' (purge-task-history): parameter 'keepDays' must be an integer"},
-  {"stepId":"01","code":"PARAM_OUT_OF_RANGE","message":"Step '01' (storage-headroom-check): parameter 'minFreePercent' must be between 0 and 100"},
-  {"stepId":"01","code":"PARAM_UNKNOWN","message":"Step '01' (storage-headroom-check): unknown parameter 'path'"},
+  {"stepId":"02","code":"PARAM_REQUIRED","parameter":"keepDays","message":"Step '02' (purge-task-history): parameter 'keepDays' is required"},
+  {"stepId":"02","code":"PARAM_TYPE_MISMATCH","parameter":"keepDays","message":"Step '02' (purge-task-history): parameter 'keepDays' must be an integer"},
+  {"stepId":"01","code":"PARAM_OUT_OF_RANGE","parameter":"minFreePercent","message":"Step '01' (storage-headroom-check): parameter 'minFreePercent' must be between 0 and 100"},
+  {"stepId":"01","code":"PARAM_UNKNOWN","parameter":"path","message":"Step '01' (storage-headroom-check): unknown parameter 'path'"},
   {"stepId":"03","code":"STEP_TYPE_NOT_SUPPORTED_ON_TARGET","message":"Step type 'db-size-report' is not supported on the target platform: its declared class is not installed"}
  ],"warnings":[]}
 ```
+
+`parameter` (additive, spec 007 BD-1) names the parameter a `PARAM_*` finding concerns — for
+`PARAM_UNKNOWN`, the unknown key. Clients match on it and never parse `message`.
 
 Dispatch and schedule return 422 with the same report (unchanged mechanism). `/schedule` also
 reports, per in-process step:

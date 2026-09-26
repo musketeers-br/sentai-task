@@ -100,12 +100,10 @@ test('Q4 (spec 004) — steps of types unsupported in v1 are refused at validati
 	await signIn(page, `?flow=${id}`);
 
 	await page.getByRole('button', { name: 'Validate flow' }).click();
-	await expect(page.getByTestId('status-errors')).toHaveText('2 errors block scheduling (#04, #05)');
+	// Spec 005: switch-journal (#05) is available, so only #04 is refused.
+	await expect(page.getByTestId('status-errors')).toHaveText('1 error blocks scheduling (#04)');
 	await expect(page.locator('.svelte-flow__node[data-id="04"]').getByTestId('validation-error')).toContainText(
 		"Step type 'purge-audit-records' is not supported on the target platform in v1"
-	);
-	await expect(page.locator('.svelte-flow__node[data-id="05"]').getByTestId('validation-error')).toContainText(
-		"Step type 'switch-journal' is not supported on the target platform in v1"
 	);
 	await expect(page.getByRole('button', { name: 'Schedule in Task Manager' })).toBeDisabled();
 });

@@ -74,6 +74,18 @@ ClassMethod Put(urlPath As %String, bearerToken As %String, body As %DynamicObje
     Quit ..ParseBody(req)
 }
 
+/// DELETE urlPath (query string already embedded), e.g. `/api/admin/v2/task?id=<n>`.
+ClassMethod Delete(urlPath As %String, bearerToken As %String, ByRef httpStatus As %Integer) As %DynamicObject
+{
+    If $G(^sentaiTestDouble("enabled")) {
+        Quit ##class(sentai.unittest.AdminApiDouble).Delete(urlPath, bearerToken, .httpStatus)
+    }
+    Set req = ..NewRequest(bearerToken)
+    Do req.Delete(urlPath)
+    Set httpStatus = +req.HttpResponse.StatusCode
+    Quit ..ParseBody(req)
+}
+
 ClassMethod ParseBody(req As %Net.HttpRequest) As %DynamicObject
 {
     Set result = ""

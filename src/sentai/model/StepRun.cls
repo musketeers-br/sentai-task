@@ -35,6 +35,16 @@ Property adminJobId As %String(MAXLEN = 128);
 
 Parameter %JSONIGNORE = "adminJobId";
 
+/// JSON text the in-process worker copied from the task's `Result` (spec 005), at most 8000
+/// characters — InProcessExecutor truncates larger results keeping valid JSON. "" otherwise.
+Property result As %String(MAXLEN = 8000);
+
+/// $USERNAME of the worker that ran an in-process step (spec 005 ID-4); "" for management-API steps.
+Property executedAs As %String(MAXLEN = 160);
+
+/// Seconds TransitionLocked waits for the StepRun's exclusive lock.
+Parameter LOCKTIMEOUT = 5;
+
 Index GuidIndex On guid [ Unique ];
 
 Index RunStepIndex On (run, stepId);
@@ -96,6 +106,35 @@ Method TransitionTo(newState As %String, failureReason As %String = "") As %Stat
     Quit sc
 }
 
+/// The transition used by writers that may race (spec 005 plan item 3): the in-process worker
+/// and the run loop's timeout sweep. Takes the StepRun's exclusive lock, re-reads it from disk
+/// (a copy already in this process's memory may be stale) and applies TransitionTo, so exactly
+/// one terminal state wins and the loser gets SentaiIllegalTransition. A lock timeout is
+/// returned unchanged; the caller decides whether to retry. The worker passes `result` and
+/// `executedAs`: they are saved with the transition, so a loser records nothing.
+ClassMethod TransitionLocked(guid As %String, newState As %String, failureReason As %String = "", result As %String = "", executedAs As %String = "") As %Status
+{
+    If '..GuidIndexExists(guid, .id) Quit $$$ERROR($$$GeneralError, "SentaiNotFound: step run "_guid)
+    Set sc = ..%LockId(id, 0, ..#LOCKTIMEOUT)
+    Quit:$$$ISERR(sc) sc
+    Try {
+        Set stepRun = ..%OpenId(id, 0, .sc)
+        If $IsObject(stepRun) {
+            Set sc = stepRun.%Reload()
+            If $$$ISOK(sc) && ..IsLegalTransition(stepRun.state, newState) {
+                Set:(result '= "") stepRun.result = result
+                Set:(executedAs '= "") stepRun.executedAs = executedAs
+            }
+            If $$$ISOK(sc) Set sc = stepRun.TransitionTo(newState, failureReason)
+        }
+    }
+    Catch ex {
+        Set sc = ex.AsStatus()
+    }
+    Do ..%UnlockId(id, 0, 1)
+    Quit sc
+}
+
 Storage Default
 {
 <Data name="StepRunDefaultData">
@@ -140,6 +179,12 @@ Storage Default
 </Value>
 <Value name="14">
 <Value>adminJobId</Value>
+</Value>
+<Value name="15">
+<Value>result</Value>
+</Value>
+<Value name="16">
+<Value>executedAs</Value>
 </Value>
 </Data>
 <DataLocation>^sentai.model.StepRunD</DataLocation>
