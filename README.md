@@ -225,6 +225,67 @@ run then renews its own credential and erases it when it ends. The canvas does t
 Validation errors come back as `{"errors": [{"stepId", "code", "message"}], "warnings": [...]}`,
 with codes such as `CYCLE_DETECTED`, `STEP_TYPE_NOT_SUPPORTED_ON_TARGET` and `CATEGORY_NOT_FOUND`.
 
+#### The task catalog: the platform's Task Manager, as the platform reports it
+
+`GET /catalog/tasks` lists every scheduled task on the instance, not only SentaiTask's. Every value
+is the platform's own, read with **your** token. Anything the platform did not report is absent;
+nothing is filled in (spec `006-task-catalog-api`).
+
+```sh
+curl -s "http://localhost:52773/csp/sentai/api/v1/catalog/tasks?q=integrity&filter=suspended" \
+  -H "Authorization: Bearer $TOKEN"
+# {"total": 22, "matched": 1, "items": [{"taskId": 4, "name": "Integrity Check", "namespace": "%SYS",
+#   "class": "%SYS.Task.IntegrityCheck", "runAsUser": "_SYSTEM", "timePeriod": "Weekly",
+#   "nextRun": "2026-09-28 02:00:00", "lastStarted": "", "lastFinished": "", "status": "1",
+#   "lastError": "", "suspended": true, "destructive": false, "destructiveUnknown": false, ...}]}
+```
+
+**Where each value comes from.** The platform's management API: the list read says which tasks
+exist; the single read gives `class`, `runAsUser` and `timePeriod`; the info read gives `status`,
+`lastError`, `lastStarted`, `lastFinished`, `nextRun` and `suspended`. The item read
+(`/catalog/tasks/{id}`) also returns `recentRuns`.
+
+- The in-process path (`%SYS.Task` objects) is deliberately not used. On IRIS 2026.2 it does not
+  check `%Admin_Task`: a user without that privilege could read every task and suspend one, while
+  the management API refuses the same user with 403.
+- The platform's list read is lossy, so it is never used for values. It reports every suspended
+  task as `Suspended: false`, and it truncates `NextScheduled` to minutes (`"Runs After #1:00"`
+  for run-after tasks).
+
+**Reading the values.**
+
+| Field | What it means |
+|---|---|
+| `status` | `"1"` means OK. After a failed run, it is the platform's own error text for its stored status, the same text as the portal and the history show |
+| `lastError` | The platform's `Error` field verbatim. It reads `"Success"` after a successful run and is empty after a failed one; the failure text is in `status` |
+| `nextRun` | Verbatim, and `""` when the platform has none (for example a run-after task; see `timePeriod`). A suspended task keeps its `nextRun` |
+| `destructive` / `destructiveUnknown` | From the step-type catalog only. A class the catalog does not name is `destructiveUnknown: true`, never a guess. SentaiTask's own scheduled tasks take it from the step they run |
+| `origin` | `{flowId, stepId, flowExists}` on tasks named `SentaiTask: <flowId>#<stepId>` (the product's generator) |
+| `unavailable` | Lists the fields a failed per-task read would have given, with the platform's HTTP status and its `status` object verbatim |
+| `recentRuns` | Item read only: up to 5 executions from the platform's history, with its own keys. There is no duration, because the platform's precision is minutes |
+
+`isDestructive` and `lastRun` remain as deprecated aliases of `destructive` and `lastFinished`.
+
+**Filters.** `q` (name or class, case-insensitive), `namespace`, `filter=all|scheduled|suspended`
+("scheduled" means not suspended) and `destructiveOnly=0|1|true|false`. A task whose
+destructiveness is unknown is excluded by `destructiveOnly`. Other values → 400 `INVALID_FILTER`.
+`total` and `matched` give "N of M".
+
+**Suspend and resume.** `POST /catalog/tasks/{id}/suspend` with `{"suspended": true|false}` calls
+the platform's `task/suspend` or `task/resume`, then reads the task again.
+
+- The answer is 200 with the task as re-read.
+- The platform answers 200 even when its suspend fails internally, so if the re-read shows the old
+  state the answer is 502 `SUSPEND_NOT_APPLIED`, with the platform's read attached.
+
+**Privilege and refusals.** The operator needs `%Admin_Task` for reads and for suspend/resume.
+That `%Admin_Operate` alone is enough for reads is only what the platform's source suggests; it
+was not proven.
+
+- A refusal comes back with the platform's HTTP status and its `status` object as
+  `platformStatus`.
+- On 2026.2 a 403 carries no reason, and none is added.
+
 ---
 
 ## ⚠️ Known limitations (v1)
@@ -252,6 +313,18 @@ SentaiTask v1 only promises what was proven on IRIS 2026.2 (spec `004-backend-ha
   instance, so set a category such as `Default`.
 - No v1-available step type is destructive or pausable, so typed confirmation and pause are
   implemented but cannot be reached.
+- **Step-type classes that do not exist on 2026.2.** `compact-globals` (`%SYS.Task.CompactGlobals`)
+  and `defragment-globals` (`%SYS.Task.Defragment`) name classes that are not installed. They are
+  unavailable anyway. The audit purge's class was corrected to the platform's
+  `%SYS.Task.PurgeAudit`; it is still unavailable.
+- **Refusals of an operator without task privilege arrive as 401.** Every product request is
+  first checked with the platform's `GET /api/admin/info`. The platform answers 403 there to an
+  operator without task privilege, and the product reports that as `401 Invalid or expired token`
+  instead of passing on the platform's 403. Nothing is granted, but the reason is not the
+  platform's. See `specs/006-task-catalog-api/evidence/README.md`.
+- **Task catalog.** The list reads each task (two platform calls per task): 151 tasks take about
+  0.4 s on the dev container. A task deleted between the list and its reads shows up with
+  `unavailable` entries instead of values.
 
 ---
 

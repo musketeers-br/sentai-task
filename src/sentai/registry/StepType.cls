@@ -13,7 +13,7 @@ XData Catalog [ MimeType = application/json ]
   { "type": "compact-globals",     "class": "%SYS.Task.CompactGlobals",     "category": "storage",      "destructive": false, "pausable": false, "available": false },
   { "type": "defragment-globals",  "class": "%SYS.Task.Defragment",         "category": "storage",      "destructive": false, "pausable": false, "available": false },
   { "type": "switch-journal",      "class": "%SYS.Task.SwitchJournal",      "category": "journal",      "destructive": false, "pausable": false, "available": false },
-  { "type": "purge-audit-records", "class": "%SYS.Task.PurgeAuditDatabase", "category": "purge",        "destructive": true,  "pausable": true,  "available": false },
+  { "type": "purge-audit-records", "class": "%SYS.Task.PurgeAudit",         "category": "purge",        "destructive": true,  "pausable": true,  "available": false },
   { "type": "purge-task-history",  "class": "%SYS.Task.PurgeTaskHistory",   "category": "purge",        "destructive": true,  "pausable": true,  "available": false },
   { "type": "custom",              "class": "",                            "category": "custom",       "destructive": false, "pausable": false, "available": false }
 ]
@@ -48,6 +48,23 @@ ClassMethod IsDestructive(type As %String) As %Boolean
     Set entry = ..Lookup(type)
     If (entry = "") Quit 0
     Quit entry.destructive
+}
+
+/// Destructiveness of a platform task by its class (spec 006 FR-004): the `destructive` of the
+/// catalog entry whose `class` equals `taskClass` exactly (case-sensitive, like platform class
+/// names). `known` is 0 when no entry names that class; the entry's `type` is never matched.
+ClassMethod DestructiveByClass(taskClass As %String, Output known As %Boolean) As %Boolean
+{
+    Set known = 0, destructive = 0
+    Quit:(taskClass = "") 0
+    Set iter = ..GetCatalog().%GetIterator()
+    While iter.%GetNext(.key, .entry) {
+        If (entry.class '= "") && (entry.class = taskClass) {
+            Set known = 1, destructive = ''entry.destructive
+            Quit
+        }
+    }
+    Quit destructive
 }
 
 /// Whether pause is supported for the type in v1 — true only for the purge family

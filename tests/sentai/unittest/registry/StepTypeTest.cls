@@ -58,4 +58,30 @@ Method TestUnknownTypeIsNotInCatalog()
     Do $$$AssertEquals(##class(sentai.registry.StepType).IsKnownType("not-a-real-type"), 0)
 }
 
+
+/// Spec 006 T002: destructiveness by a platform task class, from the catalog's `class` only.
+Method TestDestructiveByClass()
+{
+    Do $$$AssertEquals(##class(sentai.registry.StepType).DestructiveByClass("%SYS.Task.PurgeTaskHistory", .k), 1)
+    Do $$$AssertEquals(k, 1)
+    Do $$$AssertEquals(##class(sentai.registry.StepType).DestructiveByClass("%SYS.Task.IntegrityCheck", .k), 0)
+    Do $$$AssertEquals(k, 1)
+    Do $$$AssertEquals(##class(sentai.registry.StepType).DestructiveByClass("%SYS.Task.SecurityScan", .k), 0)
+    Do $$$AssertEquals(k, 0)
+    Do $$$AssertEquals(##class(sentai.registry.StepType).DestructiveByClass("", .k), 0)
+    Do $$$AssertEquals(k, 0, "the custom entry's empty class never matches")
+    Do ##class(sentai.registry.StepType).DestructiveByClass("%sys.task.purgetaskhistory", .k)
+    Do $$$AssertEquals(k, 0, "exact, case-sensitive")
+    Do ##class(sentai.registry.StepType).DestructiveByClass("purge-task-history", .k)
+    Do $$$AssertEquals(k, 0, "matches the class, never the type")
+}
+
+/// Spec 006 D-4: the audit purge's platform class is %SYS.Task.PurgeAudit (research R-5); the
+/// type stays unavailable.
+Method TestPurgeAuditClassIsThePlatformsAndStillUnavailable()
+{
+    Do $$$AssertEquals(##class(sentai.registry.StepType).GetTargetClass("purge-audit-records"), "%SYS.Task.PurgeAudit")
+    Do $$$AssertEquals(##class(sentai.registry.StepType).IsAvailable("purge-audit-records"), 0)
+}
+
 }

@@ -138,4 +138,19 @@ Method TestCustomWithoutClassReportsBothErrors()
     Do $$$AssertEquals(ids, "04")
 }
 
+
+/// Spec 006 D-4 (analysis R1): after the catalog names the real, compiled audit-purge class, the
+/// type is still refused, because the refusal comes from `available: false`.
+Method TestPurgeAuditStillRefusedAfterClassFix()
+{
+    Do $$$AssertTrue(##class(%Dictionary.CompiledClass).%ExistsId(##class(sentai.registry.StepType).GetTargetClass("purge-audit-records")), "the corrected class is compiled")
+    Set id = ..SingleStepFlow("purge-audit-records", "AvailD4")
+    Set report = ##class(sentai.validation.FlowValidator).Validate(id)
+    Do $$$AssertEquals(..ErrorsWithCode(report, ..#CODE, .ids), 1)
+    Set iter = report."errors".%GetIterator()
+    While iter.%GetNext(.k, .e) {
+        If (e.code = ..#CODE) Do $$$AssertTrue(e.message [ "'purge-audit-records' is not supported", e.message)
+    }
+}
+
 }

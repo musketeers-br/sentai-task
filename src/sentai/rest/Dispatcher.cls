@@ -119,6 +119,14 @@ ClassMethod WriteJSON(status As %Integer, obj) As %Status
     Quit $$$OK
 }
 
+/// Writes a service outcome as it is: `{httpStatus, body}` or `{httpStatus, problem}`, where the
+/// problem keeps the platform's `platformStatus`/`platformInfo` untouched (Constitution III, IV).
+ClassMethod WriteOutcome(outcome As %DynamicObject) As %Status
+{
+    If outcome.%IsDefined("problem") Quit ..WriteJSON(outcome.httpStatus, outcome.problem)
+    Quit ..WriteJSON(outcome.httpStatus, outcome.body)
+}
+
 ClassMethod WriteProblem(status As %Integer, title As %String, detail As %String) As %Status
 {
     Set problem = {}
@@ -523,35 +531,30 @@ ClassMethod ListStepTypes() As %Status
     Quit ..WriteJSON(200, ##class(sentai.registry.StepType).GetCatalog())
 }
 
-/// --- /catalog/tasks (FR-038, FR-039, User Story 6, P3 reducible) ---
+/// --- /catalog/tasks (spec 006: every value is the platform's own, read with the caller's token) ---
 ClassMethod ListCatalogTasks() As %Status
 {
     Set q = %request.Get("q")
     Set namespace = %request.Get("namespace")
     Set filter = $S(%request.Get("filter") '= "":%request.Get("filter"), 1:"all")
-    Set destructiveOnly = +%request.Get("destructiveOnly")
-    Quit ..WriteJSON(200, ##class(sentai.catalog.TaskService).List(..CurrentToken(), q, namespace, filter, destructiveOnly))
+    Set destructiveOnly = $S(%request.Get("destructiveOnly") '= "":%request.Get("destructiveOnly"), 1:"0")
+    Quit ..WriteOutcome(##class(sentai.catalog.TaskService).List(..CurrentToken(), q, namespace, filter, destructiveOnly))
 }
 
-ClassMethod ReadCatalogTask(taskId As %Integer) As %Status
+ClassMethod ReadCatalogTask(taskId As %String) As %Status
 {
-    Set catalog = ##class(sentai.catalog.TaskService).List(..CurrentToken())
-    Set iter = catalog.items.%GetIterator()
-    While iter.%GetNext(.k, .entry) {
-        If (entry.taskId = taskId) {
-            Return ..WriteJSON(200, entry)
-        }
-    }
-    Quit ..WriteProblem(404, "Not Found", "Task '"_taskId_"' does not exist")
+    Quit ..WriteOutcome(##class(sentai.catalog.TaskService).Read(taskId, ..CurrentToken()))
 }
 
-ClassMethod SuspendCatalogTask(taskId As %Integer) As %Status
+ClassMethod SuspendCatalogTask(taskId As %String) As %Status
 {
     Set payload = ..ReadJSONBody()
-    Set suspended = $S($IsObject(payload) && payload.%IsDefined("suspended"):payload.suspended, 1:1)
-    Set sc = ##class(sentai.catalog.TaskService).Suspend(taskId, suspended, ..CurrentToken())
-    If $$$ISERR(sc) Quit ..WriteProblem(500, "Internal Error", $SYSTEM.Status.GetErrorText(sc))
-    Quit ..WriteJSON(200, {})
+    Set suspended = 1
+    If $IsObject(payload) && payload.%IsDefined("suspended") {
+        If (payload.%GetTypeOf("suspended") '= "boolean") Quit ..WriteProblem(400, "Bad Request", "suspended must be a boolean")
+        Set suspended = payload.suspended
+    }
+    Quit ..WriteOutcome(##class(sentai.catalog.TaskService).SetSuspended(taskId, suspended, ..CurrentToken()))
 }
 
 /// --- /wqm/categories (FR-033–FR-036, User Story 5) ---

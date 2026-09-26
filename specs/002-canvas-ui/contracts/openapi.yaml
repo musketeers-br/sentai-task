@@ -242,12 +242,12 @@ paths:
   /catalog/tasks:
     get:
       tags: [catalog]
-      summary: Every scheduled task on the instance, not only ours (FR-028)
+      summary: Every scheduled task on the instance, each value the platform's own (spec 006)
       parameters:
-        - { name: q, in: query, schema: { type: string } }
-        - { name: namespace, in: query, schema: { type: string } }
-        - { name: filter, in: query, schema: { type: string, enum: [all, scheduled, suspended] } }
-        - { name: destructiveOnly, in: query, schema: { type: boolean } }
+        - { name: q, in: query, schema: { type: string }, description: "Case-insensitive, over name and class" }
+        - { name: namespace, in: query, schema: { type: string }, description: "Case-insensitive equality" }
+        - { name: filter, in: query, schema: { type: string, enum: [all, scheduled, suspended], default: all }, description: "scheduled = not suspended per the platform" }
+        - { name: destructiveOnly, in: query, schema: { type: string, enum: ["0", "1", "true", "false"], default: "0" }, description: "Excludes destructiveUnknown tasks" }
       responses:
         "200":
           description: OK
@@ -256,31 +256,41 @@ paths:
               schema:
                 type: object
                 properties:
-                  total: { type: integer }
-                  matched: { type: integer }
+                  total: { type: integer, description: Tasks on the platform's list }
+                  matched: { type: integer, description: Tasks returned after the filters }
                   items: { type: array, items: { $ref: "#/components/schemas/CatalogTask" } }
+        "400": { description: "INVALID_FILTER", content: { application/json: { schema: { $ref: "#/components/schemas/Problem" } } } }
+        "403": { description: "The platform refused the list read (verbatim platformStatus)", content: { application/json: { schema: { $ref: "#/components/schemas/Problem" } } } }
+        "502": { description: "PLATFORM_UNREACHABLE", content: { application/json: { schema: { $ref: "#/components/schemas/Problem" } } } }
 
   /catalog/tasks/{taskId}:
     parameters: [ { name: taskId, in: path, required: true, schema: { type: integer } } ]
     get:
       tags: [catalog]
-      summary: Task detail with current run GUID and the last five runs (FR-030)
+      summary: One task, with its recent executions from the platform's history (spec 006)
       responses:
         "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/CatalogTaskDetail" } } } }
+        "403": { description: "The platform refused the read (verbatim platformStatus)", content: { application/json: { schema: { $ref: "#/components/schemas/Problem" } } } }
+        "404": { description: "Not a positive integer (no platform call), or the platform's not-found verbatim", content: { application/json: { schema: { $ref: "#/components/schemas/Problem" } } } }
+        "502": { description: "PLATFORM_UNREACHABLE", content: { application/json: { schema: { $ref: "#/components/schemas/Problem" } } } }
 
   /catalog/tasks/{taskId}/suspend:
     parameters: [ { name: taskId, in: path, required: true, schema: { type: integer } } ]
     post:
       tags: [catalog]
-      summary: Suspend or resume a scheduled task (FR-031)
+      summary: Suspend or resume a task through the platform's proven contract, confirmed by a re-read (spec 006 R-3)
       requestBody:
         content:
           application/json:
             schema:
               type: object
-              properties: { suspended: { type: boolean } }
+              properties: { suspended: { type: boolean, default: true } }
       responses:
-        "200": { description: OK }
+        "200": { description: The task as re-read after the call, content: { application/json: { schema: { $ref: "#/components/schemas/CatalogTaskDetail" } } } }
+        "400": { description: "suspended is not a boolean", content: { application/json: { schema: { $ref: "#/components/schemas/Problem" } } } }
+        "403": { description: "The platform refused (verbatim platformStatus; 2026.2 gives no reason)", content: { application/json: { schema: { $ref: "#/components/schemas/Problem" } } } }
+        "404": { description: "The platform's not-found, verbatim", content: { application/json: { schema: { $ref: "#/components/schemas/Problem" } } } }
+        "502": { description: "SUSPEND_NOT_APPLIED (platformInfo = the platform's info read) or PLATFORM_UNREACHABLE", content: { application/json: { schema: { $ref: "#/components/schemas/Problem" } } } }
 
   /wqm/categories:
     get:
@@ -500,35 +510,70 @@ components:
 
     CatalogTask:
       type: object
+      description: >
+        One platform task as the platform reports it (spec 006). A field the platform did not report
+        is absent; a failed per-task read is listed in `unavailable`. Nothing is defaulted.
       properties:
         taskId: { type: integer }
         name: { type: string }
-        className: { type: string, example: "%SYS.Task.PurgeAuditDatabase" }
         namespace: { type: string }
-        nextRun: { type: string, format: date-time, nullable: true }
-        lastRun: { type: string, format: date-time, nullable: true }
-        state: { $ref: "#/components/schemas/StepState" }
+        class: { type: string, example: "%SYS.Task.IntegrityCheck", description: "Platform TaskClass (single read)" }
         runAsUser: { type: string }
-        isDestructive: { type: boolean }
-        suspended: { type: boolean }
+        timePeriod: { type: string, example: "Weekly", description: "Verbatim, e.g. Daily, Weekly, Run After" }
+        nextRun: { type: string, description: "Verbatim NextScheduled; empty when the platform has none; kept while suspended" }
+        lastStarted: { type: string }
+        lastFinished: { type: string }
+        status: { type: string, description: "\"1\" or the platform's own text for its serialized status" }
+        lastError: { type: string, description: "The platform's Error field verbatim (\"Success\" after a successful run)" }
+        suspended: { type: boolean, description: "From the info read (the list read reports it wrongly)" }
+        destructive: { type: boolean }
+        destructiveUnknown: { type: boolean, description: "The step-type catalog does not know this task's class" }
+        origin:
+          type: object
+          description: "Present only on tasks named SentaiTask: <flowId>#<stepId>"
+          properties:
+            flowId: { type: string }
+            stepId: { type: string }
+            flowExists: { type: boolean }
+        unavailable:
+          type: array
+          items:
+            type: object
+            properties:
+              read: { type: string, enum: [single, info, history] }
+              fields: { type: array, items: { type: string } }
+              httpStatus: { type: integer }
+              platformStatus: { $ref: "#/components/schemas/PlatformStatus" }
+        isDestructive: { type: boolean, deprecated: true, description: "Alias of destructive" }
+        lastRun: { type: string, deprecated: true, description: "Alias of lastFinished" }
 
     CatalogTaskDetail:
       allOf:
         - $ref: "#/components/schemas/CatalogTask"
         - type: object
           properties:
-            wqmCategory: { type: string }
-            privilege: { type: string, example: "%Admin_Task:USE" }
-            currentRunGuid: { type: string, format: uuid, nullable: true }
-            lastRuns:
+            recentRuns:
               type: array
               maxItems: 5
+              description: >
+                Executions from the platform's history (Routine = class), newest first, with the
+                platform's keys; absent when the history cannot be read (see `unavailable`).
               items:
                 type: object
                 properties:
-                  at: { type: string, format: date-time }
-                  state: { $ref: "#/components/schemas/StepState" }
-                  durationMs: { type: integer }
+                  LastStart: { type: string }
+                  Completed: { type: string }
+                  Status: { type: string }
+                  Result: { type: string }
+                  Username: { type: string }
+                  LogDatetime: { type: string }
+
+    PlatformStatus:
+      type: object
+      description: The management API's own `status` object, passed through verbatim
+      properties:
+        errors: { type: array, items: { type: object } }
+        summary: { type: string }
 
     WqmCategory:
       type: object
@@ -547,3 +592,5 @@ components:
         status: { type: integer }
         title: { type: string }
         detail: { type: string }
+        platformStatus: { $ref: "#/components/schemas/PlatformStatus" }
+        platformInfo: { type: object, description: "The platform's read, verbatim (SUSPEND_NOT_APPLIED)" }

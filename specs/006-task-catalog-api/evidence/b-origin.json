@@ -1,0 +1,115 @@
+{
+  "evidence": "SC-003 — a scheduled 3-step flow shows exactly 3 tasks with its origin",
+  "flowId": "1013",
+  "scheduledTaskIds": [
+    1310,
+    1311,
+    1312
+  ],
+  "nearMissTaskId": 1313,
+  "read_flow_exists": {
+    "matched": 4,
+    "items": [
+      {
+        "taskId": 1310,
+        "name": "SentaiTask: 1013#01",
+        "class": "sentai.dispatch.ScheduledFlowTask",
+        "origin": {
+          "flowId": "1013",
+          "stepId": "01",
+          "flowExists": true
+        },
+        "destructive": false,
+        "destructiveUnknown": false
+      },
+      {
+        "taskId": 1311,
+        "name": "SentaiTask: 1013#02",
+        "class": "sentai.dispatch.ScheduledFlowTask",
+        "origin": {
+          "flowId": "1013",
+          "stepId": "02",
+          "flowExists": true
+        },
+        "destructive": false,
+        "destructiveUnknown": false
+      },
+      {
+        "taskId": 1312,
+        "name": "SentaiTask: 1013#03",
+        "class": "sentai.dispatch.ScheduledFlowTask",
+        "origin": {
+          "flowId": "1013",
+          "stepId": "03",
+          "flowExists": true
+        },
+        "destructive": false,
+        "destructiveUnknown": false
+      },
+      {
+        "taskId": 1313,
+        "name": "SentaiTask: 1013#01 copy",
+        "class": "sentai.spike.Q006Task",
+        "origin": null,
+        "destructive": false,
+        "destructiveUnknown": true
+      }
+    ]
+  },
+  "read_after_flow_deleted": {
+    "matched": 4,
+    "items": [
+      {
+        "taskId": 1310,
+        "name": "SentaiTask: 1013#01",
+        "origin": {
+          "flowId": "1013",
+          "stepId": "01",
+          "flowExists": false
+        },
+        "destructive": false,
+        "destructiveUnknown": true
+      },
+      {
+        "taskId": 1311,
+        "name": "SentaiTask: 1013#02",
+        "origin": {
+          "flowId": "1013",
+          "stepId": "02",
+          "flowExists": false
+        },
+        "destructive": false,
+        "destructiveUnknown": true
+      },
+      {
+        "taskId": 1312,
+        "name": "SentaiTask: 1013#03",
+        "origin": {
+          "flowId": "1013",
+          "stepId": "03",
+          "flowExists": false
+        },
+        "destructive": false,
+        "destructiveUnknown": true
+      },
+      {
+        "taskId": 1313,
+        "name": "SentaiTask: 1013#01 copy",
+        "origin": null,
+        "destructive": false,
+        "destructiveUnknown": true
+      }
+    ]
+  },
+  "checks": {
+    "exactly_three_marked": true,
+    "steps": [
+      "01",
+      "02",
+      "03"
+    ],
+    "near_miss_unmarked": true,
+    "flow_not_found_after_delete": true,
+    "unknown_after_delete": true
+  }
+}

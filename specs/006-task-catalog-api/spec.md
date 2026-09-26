@@ -39,13 +39,32 @@ platform's scheduled tasks, see what each one really is and how it last went, re
 SentaiTask created, and suspend or resume a task — the last only if the platform's contract for it
 is proven.
 
+## Clarifications
+
+### Session 2026-09-26
+
+The platform facts behind this section were proven on the real instance ([research.md](research.md)).
+
+- Read source → the platform's management API with the operator's own token: the list read for
+  which tasks exist, the single read for class, run-as user and time period, and the info read
+  for status, error, times and suspended. The in-process path skips the platform's task privilege
+  (R-1).
+- The platform's list read is lossy: every suspended task is listed `Suspended:false`, and
+  `NextScheduled` is truncated. The list is used only to enumerate tasks (R-1).
+- Suspend/resume contract proven: `POST task/suspend?id=` / `task/resume?id=` with a JSON body. A
+  suspended task keeps its next run (R-3).
+- History read proven: `task/history?taskId=`. Executions and administrative events are mixed,
+  with minute precision (R-4).
+- Empty values, timestamps and `Status`/`Error` semantics (R-5).
+
 ## Scope
 
 ### In scope
 
 1. Correct each field in the table above from the platform's own reads, or remove it.
-2. Prove, on the real instance, how the platform suspends and resumes a task; make the product's
-   suspend/resume call use exactly that, or answer with an explicit "not supported" error.
+2. Prove, on the real instance, how the platform suspends and resumes a task, and make the
+   product's suspend/resume call use exactly that. The contract was proven (R-3). A platform 200
+   without the requested state answers `502 SUSPEND_NOT_APPLIED`.
 3. Mark tasks created by SentaiTask with the flow and step they belong to.
 4. Make the list's filters (text, namespace, scheduled/suspended, destructive only) operate on the
    corrected data.
@@ -82,7 +101,8 @@ platform's own reads report for that task; no field is invented.
    returned verbatim.
 3. **Given** a task whose class is one the step-type catalog knows as destructive (e.g. the audit
    purge), **When** listed, **Then** it is marked destructive; a task of an unknown class is marked
-   not destructive **and** flagged as "destructiveness unknown".
+   not destructive **and** flagged as "destructiveness unknown". (The audit purge's platform class
+   is `%SYS.Task.PurgeAudit`; the step-type catalog is corrected by plan D-4.)
 4. **Given** the operator reads one task, **Then** the single-task read returns the same corrected
    values as the list for that task.
 
@@ -119,8 +139,9 @@ change is the platform's, visible on the next read.
 **Why this priority**: the only control the catalog offers; valuable, but only if the platform's
 contract is proven.
 
-**Independent Test**: On the real instance, suspend a task → the platform reports it suspended and
-it no longer shows a next run; resume it → the platform reports it active again.
+**Independent Test**: On the real instance, suspend a task → the platform reports it suspended (its
+next run is returned as the platform reports it; a suspended task keeps it, R-3); resume it → the
+platform reports it active again.
 
 **Acceptance Scenarios**:
 
@@ -130,9 +151,10 @@ it no longer shows a next run; resume it → the platform reports it active agai
    active on the next read.
 3. **Given** the platform refuses (insufficient privilege, unknown task), **When** the operator
    suspends, **Then** the refusal and the platform's reason are returned verbatim.
-4. **Given** the suspend contract could **not** be proven on the real instance, **When** the
-   operator calls suspend or resume, **Then** the call answers with an explicit "not supported on
-   the target platform" error and changes nothing; the README says why.
+4. **Given** the platform accepts the call (200) but its next read does not show the requested
+   state, **When** the operator suspends or resumes, **Then** the call answers
+   `502 SUSPEND_NOT_APPLIED` with the platform's read verbatim. (The "not supported on the target
+   platform" fallback is dropped: the contract was proven, R-3.)
 
 ---
 
@@ -159,7 +181,8 @@ values match, with a correct "N of M" count.
 
 ### User Story 5 — Recent runs of a task (Priority: P3, conditional)
 
-An operator reading one task sees its recent runs (when, how long, outcome).
+An operator reading one task sees its recent runs (start, completion and outcome as the platform
+reports them, at the platform's minute precision; no duration is computed).
 
 **Why this priority**: in the prototype, but only if the platform offers a proven read for it.
 
@@ -187,6 +210,8 @@ says why.
 - **Many tasks** (the prototype shows 148): the list still answers within the success criterion.
 - **Tasks in namespaces the operator cannot access**: whatever the platform returns is what is
   shown.
+- **Invalid filter value** (`filter` outside `all|scheduled|suspended`, or `destructiveOnly` outside
+  `0|1|true|false`): 400 `INVALID_FILTER`, no platform call.
 
 ## Requirements *(mandatory)*
 
@@ -195,16 +220,19 @@ says why.
 - **FR-001 — Real class.** Each task's class is the platform's own task class for that task.
 - **FR-002 — Real run-as user.** Each task's run-as user is the platform's value.
 - **FR-003 — Real status.** Each task carries the platform's status, last error, last started and
-  last finished values verbatim; the invented `state` value is no longer returned.
+  last finished values verbatim; the invented `state` value is no longer returned. `status` is the
+  platform's `Status` passed through when it is `"1"` (or any value that is not a serialized error),
+  or the platform's own text for a serialized `%Status` (`$SYSTEM.Status.GetErrorText`), which equals
+  the history `Status` and `DisplayStatus` (R-5). `lastError` is the platform's `Error` field
+  verbatim, including `"Success"`.
 - **FR-004 — Destructiveness.** A task is marked destructive when its class is one the step-type
   catalog declares destructive; tasks of classes the catalog does not know carry an explicit
   "destructiveness unknown" flag instead of a guess.
 - **FR-005 — SentaiTask origin.** Tasks whose name follows `SentaiTask: <flowId>#<stepId>` carry
   the flow and step ids and whether that flow exists in SentaiTask; no other task is marked.
-- **FR-006 — Suspend/resume proven or refused.** Suspend and resume use exactly the platform
-  contract proven on the real instance, with the platform's refusals returned verbatim. If no
-  contract is proven, both answer an explicit "not supported on the target platform" error and
-  change nothing.
+- **FR-006 — Suspend/resume on the proven contract.** Suspend and resume use exactly the platform
+  contract proven on the real instance (R-3), with the platform's refusals returned verbatim. A
+  platform 200 without the requested state answers `502 SUSPEND_NOT_APPLIED`.
 - **FR-007 — Filters on true data.** Text, namespace, scheduled/suspended and destructive-only
   filters operate on the corrected values; the response states how many matched and how many
   exist.
@@ -214,7 +242,9 @@ says why.
   have given are absent and the task is flagged with the platform's reason; nothing is filled in.
 - **FR-010 — Compatibility.** No flow-document change; field additions are additive; the only
   removals are values that were false (`state` as invented, `className` from `Type`). Existing
-  tests pass, adjusted only where they encoded those false values; none deleted.
+  tests pass, adjusted only where they encoded those false values; none deleted. `isDestructive`
+  and `lastRun` are kept as deprecated aliases carrying the corrected values (`destructive`,
+  `lastFinished`).
 
 ### Key Entities
 
@@ -231,16 +261,15 @@ says why.
 
 - **SC-001**: For **100%** of tasks on the real instance, every returned class, run-as user,
   status and last-error value equals the platform's own reads for that task (field-by-field
-  comparison recorded as evidence).
+  comparison recorded as evidence). `status` is compared as defined in FR-003.
 - **SC-002**: **0** invented values: no field returned for a task that the platform did not report.
 - **SC-003**: After scheduling a flow of N steps, the catalog shows exactly **N** tasks marked with
   that flow and their step ids.
-- **SC-004**: Suspend then resume of one task is confirmed by the platform's own read after each
-  call — or, if the contract is not proven, both calls are refused with the explicit error and the
-  task is unchanged.
+- **SC-004**: Suspend then resume of one task is confirmed by `suspended` in the platform's own
+  info read after each call; `nextRun` is returned verbatim.
 - **SC-005**: The full list for the instance (≈ 20 tasks today; up to 150 in the prototype)
   answers in under **2 seconds** on the dev container.
-- **SC-006**: Delivered within ~5 tasks.
+- **SC-006**: Delivered within ~5 plan-level increments.
 
 ## Assumptions
 
