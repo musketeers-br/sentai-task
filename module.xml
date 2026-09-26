@@ -29,7 +29,7 @@
       <!-- The canvas (static SvelteKit build in /opt/sentai-web), served by
            sentai.web.StaticFiles. Unauthenticated on purpose: the page itself is public
            HTML/JS/CSS, and the operator signs in once, in the canvas, which exchanges the
-           password for API tokens. No data is reachable here — the file server reads only
+           password for API tokens. No data is reachable here: the file server reads only
            /opt/sentai-web, and every flow/run call goes to /csp/sentai/api/v1 (JWT).
            SentaiWebPage (created in iris.script) only lets the anonymous request enter the
            IRISAPP namespace: read on its default globals database, nothing else. -->
