@@ -4,7 +4,7 @@
 
 **Created**: 2026-09-25
 
-**Status**: Draft
+**Status**: Implemented (2026-09-26; `purge-task-history` stays unavailable until spec 007 typed confirmation — see research R-10)
 
 **Input**: Widen what an operator can orchestrate beyond `integrity-check` (spec 004 D-1) without
 breaking the Constitution: custom work enters the product as **declared** step types, reviewed in

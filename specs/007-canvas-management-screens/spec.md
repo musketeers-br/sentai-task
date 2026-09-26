@@ -4,7 +4,7 @@
 
 **Created**: 2026-09-26
 
-**Status**: Draft
+**Status**: Planned (plan; tasks pending plan update after 005)
 
 **Input**: Add the management screens the canvas is missing: a **Task catalog** screen over the
 platform's Task Manager (spec 006) and **declared custom steps** in the flow editor (spec 005).
