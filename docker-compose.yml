@@ -4,6 +4,13 @@ services:
       context: .
       dockerfile: Dockerfile
     restart: always
+    # The base image's WORKDIR is /home/irisowner, but the Dockerfile overrides it to
+    # /home/irisowner/dev for the build step. At runtime that path is the bind-mounted
+    # host checkout, which the container user (irisowner, uid 51773) cannot write to,
+    # so the /iris-main entrypoint aborts with
+    # "Unable to find/open file iris-main.log in current directory".
+    # Keep the runtime cwd off the bind mount so iris-main.log is writable.
+    working_dir: /home/irisowner
     environment:
       - ISC_CPF_MERGE_FILE=/home/irisowner/dev/merge.cpf
     ports:
