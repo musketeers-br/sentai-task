@@ -15,7 +15,8 @@
 | **SC-001 / SC-002** field-by-field, every task | ✅ **pass**, run twice (see below) | `a-field-compare.json` (second run) |
 | **SC-003** SentaiTask origin | ✅ **pass** | `b-origin.json` |
 | **SC-004** suspend then resume | ✅ **pass** | `c-suspend-resume.json` |
-| Operator without task privilege | ⚠️ **refused, but not verbatim** (see the finding below) | `d-refusal.json` |
+| Operator without task privilege | ✅ **refused verbatim** after the gate fix (`d-refusal.json` is the before) | `g-gate-fix.json` |
+| `/schedule` through the platform | ✅ **pass** | `h-schedule-via-platform.json` |
 | **SC-005** full list < 2 s | ✅ **pass** | `e-timing.txt` |
 | **US-5** recent runs | ✅ **pass** | `f-recent-runs.json` |
 
@@ -63,40 +64,48 @@ UTF-8 translation. The script was fixed (`TranslateTable="UTF8"`), and the produ
 - `TASKMGR` administrative rows were excluded.
 - List items carry no `recentRuns`.
 
-## Finding — the platform's refusal does not reach the operator verbatim
+## Finding — the platform's refusal did not reach the operator verbatim (fixed)
 
-**What happens.** An operator whose roles are only `%DB_IRISAPP_CODE:R, %DB_IRISAPP_DATA:RW`
-(no `%Admin_Task`) signs in successfully. The platform then answers **403** to that operator's
-`GET /api/admin/info`. The product's token gate (`Dispatcher.OnPreDispatch` → `IsTokenValid`,
-spec 003 research R-002 fallback) validates **every** request with that same `/api/admin/info`
-call and treats anything but 200 as an invalid token. So every catalog call, including list,
-item and suspend, answers:
+**Before** (`d-refusal.json`): the product's token gate (`Dispatcher.IsTokenValid`, spec 003
+R-002 fallback) called `GET /api/admin/info` and treated anything but 200 as an invalid token. The
+platform answers 403 there to an operator without task privilege, so every catalog call answered
+`401 Invalid or expired token`. Nothing was granted, but the platform's reason never reached the
+operator.
 
-```json
-401 {"status":401,"title":"Unauthorized","detail":"Invalid or expired token"}
-```
+**Fix.** A 403 on `/api/admin/info` proves the token authenticated; the gate lets the request
+through and each endpoint returns the platform's own answer. It grants nothing: the REST web app
+authenticates with the platform's JWT and runs with the operator's own roles (no MatchRoles).
+Unit tests: `AuthenticationTest` (+2).
 
-**Effect.**
-- The operator is refused, and the task stayed unchanged, so nothing was granted. Constitution III
-  is not breached on authority.
-- The refusal is **not** the platform's verbatim 403, and it is mislabelled as an expired token.
-  The catalog's own verbatim-refusal path (proven by the unit tests `TaskReadTest`,
-  `TaskSuspendTest`) is never reached on this instance for such an operator.
-- The canvas reacts to a 401 by asking the operator to sign in again.
+**After** (`g-gate-fix.json`): an invalid token is still 401 (platform and product); the
+operator's list, item and suspend are the platform's 403 with `platformStatus`; the temporary
+task stayed unsuspended.
 
-**Why it is not fixed here.** The gate belongs to the product's authentication layer (spec 003)
-and applies to every endpoint. Changing it is outside this feature's tasks and needs its own
-decision.
+**What the fix exposed, and its fix.** With the gate open to such an operator, `/schedule` was
+reachable, and it created `%SYS.Task` **in-process** — the path that skips `%Admin_Task` (research
+R-1). The platform has `POST /api/admin/v2/task` (`%Api.Admin.Endpoints.Task.CRUD`, which accepts
+`%Admin_Task` or `%Admin_Operate`; its body requires every schema field; the answer carries no id).
+`/schedule` now creates each task there with the operator's token (`sentai.dispatch.NativeScheduler`):
+the id comes from the platform's list (newest task of that name); a refusal is returned verbatim
+and earlier creates of the same request are deleted; a failed read of the flow's steps is its own
+refusal (`SQLCODE -99` → 403), never "0 steps, scheduled". Unit tests: `ScheduleViaPlatformTest`
+(+7), `ScheduleEndpointTest` adjusted (1).
 
-**Fix to decide.** A platform 403 on `/api/admin/info` proves the token authenticated. The gate
-could let the request through, and each endpoint would then return the platform's own refusal
-(403 with `platformStatus`) verbatim. The alternative is to keep the gate and document the 401.
+`h-schedule-via-platform.json`: the administrator gets one task per step, `RunAsUser` = the caller,
+`IsRoot` from the edges, and the catalog resolves the origin; the operator without SQL privilege
+gets `403 SQLCODE -99` verbatim; with SELECT on the product schema the operator is stopped at
+validation (see the next finding); in both cases no task is created and the flow's
+`scheduleSpec` is not recorded.
+
+**Open (not changed).** Schedule validation reports a platform refusal of the WQM category read as
+`CATEGORY_NOT_FOUND` ("does not exist"). Same class of mislabel as the old 401; it belongs to the
+spec 004 validator.
 
 ## Test counts
 
 | Suite | Before 006 | After 006 | Adjusted | Removed |
 |---|---|---|---|---|
-| Backend | 122/122 | **169/169** (+47) | 2 (both in `CatalogTasksTest`) | 0 |
+| Backend | 122/122 | **169/169** (+47); **178/178** after the gate and schedule fix (+9) | 3 (2 in `CatalogTasksTest`, 1 in `ScheduleEndpointTest`) | 0 |
 | Frontend unit | 48/48 | 48/48 | — | — |
 | Frontend e2e | 13/13 | 13/13 | — | — |
 

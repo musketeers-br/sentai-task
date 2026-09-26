@@ -58,4 +58,98 @@ Method TestStructuralErrorBlocksDispatchRegardlessOfPriorValidation()
     Do $$$AssertEquals(%response.Status, 422)
 }
 
+/// --- Spec 005 T011: one identity per run (plan ID-1, ID-2; research R-8) ---
+Method RunsOf(flowId As %String) As %Integer
+{
+    &sql(SELECT COUNT(*) INTO :n FROM sentai_model.Run WHERE flow = :flowId)
+    Quit +n
+}
+
+Method ScriptRefresh(sub As %String)
+{
+    Do ##class(sentai.unittest.AdminApiDouble).Script("/api/admin/refresh", "POST", 200, "", {"access_token": "fresh-access", "refresh_token": "fresh-refresh", "sub": (sub)}.%ToJSON())
+}
+
+Method TestRunCredentialOfAnotherUserIsRefused()
+{
+    Set id = ..CreateSupportedFlow("DispatchCredOther")
+    Do ..ScriptRefresh("someone-else")
+    Do ..NewRequest({"confirmations": [], "runCredential": {"refreshToken": "their-refresh"}})
+    Do ##class(sentai.rest.Dispatcher).DispatchFlow(id)
+    Do $$$AssertEquals(%response.Status, 403)
+    Do $$$AssertEquals(..RunsOf(id), 0)
+    // The credential was redeemed once, with the refresh token the request carried.
+    Do $$$AssertEquals($LG(^sentaiTestDouble("posted", "/api/admin/refresh"), 2), "{""refresh_token"":""their-refresh""}")
+}
+
+Method TestRunCredentialOfTheSameUserBecomesTheRunCredential()
+{
+    Set id = ..CreateSupportedFlow("DispatchCredSame")
+    Do ..ScriptRefresh($ZCVT(##class(sentai.rest.Dispatcher).CurrentUser(), "L"))
+    Do ..NewRequest({"confirmations": [], "runCredential": {"refreshToken": "my-refresh"}})
+    Do ##class(sentai.rest.Dispatcher).DispatchFlow(id)
+    Do $$$AssertEquals(%response.Status, 202)
+    Do $$$AssertEquals(..RunsOf(id), 1)
+    // Redeeming revokes the access token paired with that refresh token — which the canvas also
+    // sends as the request's bearer — so the rest of the request (validation's category read)
+    // uses the fresh one.
+    Do $$$AssertEquals($G(^sentaiTestDouble("gets", "/api/admin/v2/wqm-categories")), "fresh-access")
+    // The background loop erases the credential when the run ends, so the stored pair is
+    // observed through its use: the run's calls to the platform carry the fresh access token.
+    For i = 1:1:50 {
+        Set used = ""
+        Set n = ""
+        For {
+            Set n = $O(^sentaiTestDouble("postlog", n))
+            Quit:(n = "")
+            Set entry = ^sentaiTestDouble("postlog", n)
+            Set:($LG(entry, 1) [ "integrity-check") used = $LG(entry, 3)
+        }
+        Quit:(used '= "")
+        Hang 0.1
+    }
+    Do $$$AssertEquals(used, "fresh-access", "the fresh pair is the run credential")
+}
+
+Method TestRefusedRedemptionIs401WithThePlatformsText()
+{
+    Set id = ..CreateSupportedFlow("DispatchCredBad")
+    Do ##class(sentai.unittest.AdminApiDouble).Script("/api/admin/refresh", "POST", 401, "", {"status": {"errors": [], "summary": "Invalid refresh token"}}.%ToJSON())
+    Do ..NewRequest({"confirmations": [], "runCredential": {"refreshToken": "expired"}})
+    Do ##class(sentai.rest.Dispatcher).DispatchFlow(id)
+    Do $$$AssertEquals(%response.Status, 401)
+    Do $$$AssertEquals(..RunsOf(id), 0)
+}
+
+Method RerunRequest(asUser As %String, ByRef run) As %String
+{
+    Set run = ..DispatchUngated(..CreateSupportedFlow("RerunWho"))
+    Set guid = ^sentaiRun(run.guid, "01")
+    Do $$$AssertStatusOK(##class(sentai.model.StepRun).TransitionLocked(guid, "failed", "fixture"))
+    Set %request = ##class(%CSP.Request).%New()
+    Set %response = ##class(%CSP.Response).%New()
+    Kill %session
+    Set %session("Username") = asUser
+    Quit guid
+}
+
+Method TestRerunByAnotherUserIsRefused()
+{
+    // DispatchUngated dispatches as "tester".
+    Set guid = ..RerunRequest("someone-else", .run)
+    Do ##class(sentai.rest.Dispatcher).RerunStep(run.guid, guid)
+    Kill %session
+    Do $$$AssertEquals(%response.Status, 403)
+    Do $$$AssertEquals(^sentaiRun(run.guid, "01"), guid, "no new StepRun")
+}
+
+Method TestRerunByTheDispatcherIsAccepted()
+{
+    Set guid = ..RerunRequest("TESTER", .run)
+    Do ##class(sentai.rest.Dispatcher).RerunStep(run.guid, guid)
+    Kill %session
+    Do $$$AssertEquals(%response.Status, 202)
+    Do $$$AssertTrue(^sentaiRun(run.guid, "01") '= guid)
+}
+
 }

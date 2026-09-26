@@ -178,11 +178,88 @@ catalog class is not compiled (`%Dictionary.CompiledClass.%ExistsId`) or does no
   ("2 errors … (#04, #05)"). No frontend **unit** test depends on `purge-task-history`
   pausable/availability (their catalogs are local fixtures).
 
-## R-8 — Run-credential owner *(to verify at the start of task 5)*
+## R-9 — Database sizes from `IRISAPP` *(spec 005 T005, 2026-09-26)*
+
+**Command** (container, namespace `IRISAPP`, as the container's own user): the class query
+`%SYS.DatabaseQuery:FreeSpace` — formal spec `Mask:%String="*"`, `ROWSPEC` =
+`DatabaseName, Directory, MaxSize, Size, ExpansionSize, Available, Free (% Free), DiskFreeSpace,
+Status, SizeInt, AvailableNum, DiskFreeSpaceNum, ReadOnly` — run through
+`%SQL.Statement.%PrepareClassQuery("%SYS.DatabaseQuery", "FreeSpace")` and `%Execute()`.
+
+**Output** (first rows, verbatim values):
+
+```
+IRISAPP_DATA   /data/IRISAPP_DATA/              Size=11MB  SizeInt=11  AvailableNum=1.5  Free=14 Status=Mounted/RW
+IRISSYS        /usr/irissys/mgr/                Size=159MB SizeInt=159 AvailableNum=6.5  Free=4  Status=Mounted/RW
+IRISAPP_CODE   /usr/irissys/mgr/IRISAPP_CODE/   Size=11MB  SizeInt=11  AvailableNum=5.9  Free=54 Status=Mounted/RW
+ENSLIB         /usr/irissys/mgr/enslib/         Size=153MB SizeInt=153 AvailableNum=11   Free=7  Status=Mounted/R
+…  (IRISAUDIT, IRISLIB, IRISLOCALDATA, IRISMETRICS, IRISSECURITY, IRISTEMP, …)
+```
+
+**Decision**: `db-size-report` and the storage headroom check list databases with this query,
+from the worker, under the operator's authority. `sizeMB` = `SizeInt`, `freeMB` = `AvailableNum`
+(free space **inside** the database file, MB); `directory` = `Directory`. The headroom check uses
+the `Directory` values as its locations (plus the primary journal directory). A query error is
+returned as the step's `%Status`, verbatim.
+
+## R-8 — Run-credential owner *(verified 2026-09-26, spec 005 T011)*
 
 Question: does the `sub` returned by `/api/admin/refresh` name the owner of the **refresh token**
-(the run sign-in), independently of the bearer used for the call? Spec 001 evidence 01/02 shows
-`sub` in the flat login/refresh envelope, but only for one user. Verify with two users on the
-container; if `sub` does not identify the refresh-token owner, FR-013 cannot be met as written:
-stop and amend the spec before shipping (plan Risks).
+(the run sign-in), independently of the bearer used for the call?
 
+**Command** (container, from inside IRIS through the local web server): two temporary users A
+(`sentai005a`) and B (`sentai005b`), passwords generated inside IRIS and never printed, both
+deleted afterwards. Each signs in with `POST /api/admin/login`. Then `POST /api/admin/refresh`
+with **bearer = A's access token** and **body = B's refresh token**; and, as a control, with A's
+own pair.
+
+**Output**:
+
+```
+loginA  200 sub=sentai005a
+loginB  200 sub=sentai005b
+crossed 200 sub=sentai005b   keys=access_token,refresh_token,sub,iat,exp
+same    200 sub=sentai005a
+```
+
+**Decision**: `sub` names the owner of the refresh token, whoever the bearer is — FR-013 is met as
+written. `/dispatch` redeems `runCredential.refreshToken` once before creating the run and
+refuses with 403 `RUN_CREDENTIAL_USER_MISMATCH` when `sub` ≠ the requesting user
+(case-insensitive); otherwise the fresh pair becomes the run credential. Note: the platform
+accepts a refresh token under another user's bearer, which is exactly why the product must
+compare `sub` itself.
+
+## R-10 — Native types over REST, administrator and "unprivileged" operator *(spec 005 T013, 2026-09-26)*
+
+Evidence: [evidence/e-native-types.json](evidence/e-native-types.json) (status + body only). For
+this run only, `switch-journal` and `purge-task-history` were `available: true` on the dev
+container; `purge-task-history` was reverted right after (held until spec 007 T009, see T016).
+
+**Administrator** (temporary user, `%All`) — quickstart (e)1–3 as expected: schedule 422
+(`DESTRUCTIVE_NOT_SCHEDULABLE` 02; `IN_PROCESS_NOT_SCHEDULABLE` 02, 03); dispatch without
+confirmation 428 naming 02, with it 202; run `completed`; journal
+`20260926.003 → 20260926.004`; 02 and 03 `executedAs = sentai005adm`.
+
+**Operator without administrative privilege** — quickstart (e)4. The R-1 role
+(`%DB_IRISAPP_CODE:R, %DB_IRISAPP_DATA:RW`) plus SQL on schema `sentai_model` cannot pass
+validation: the platform refuses its WQM category read (403), so every step reports
+`CATEGORY_NOT_FOUND` (fail closed, spec 004 FR-006). The least addition that lets that read
+succeed, found by trial on the container, is `%Admin_Manage:U` + `%DB_IRISSYS:R`
+(`%Admin_Manage:U` alone → 500 `<PROTECT>` on `^oddCOM("Config.WorkQueues",…)`;
+`%Admin_Operate:U` → 403). With that role (IRISSYS still read-only):
+
+```
+02 purge-task-history  completed  executedAs=sentai005op
+03 switch-journal      failed     executedAs=sentai005op
+   "ERROR #1142: Error switching journal file: ERROR #921: Operation requires %Admin_Operate:USE privilege"
+journal unchanged (20260926.004 → 20260926.004)
+```
+
+**Finding — differs from quickstart (e)4's expectation** ("02 and 03 failed, each with
+`<PROTECT>`"). What the spec needs is proven: each in-process step ran as the dispatching
+operator (`executedAs`), the platform decided, and its refusal reached the operator verbatim
+(Constitution III). But the platform's answer is not the one the quickstart predicted: with the
+resources an operator needs to *validate* a flow, the platform **allows** the task-history purge,
+and refuses the journal switch with `#921 … %Admin_Operate:USE`, not `<PROTECT>`. R-5's
+`<PROTECT>` results were for the smaller R-1 role, which cannot get through validation over
+REST. README states the privilege each native type needs as the platform reports it.

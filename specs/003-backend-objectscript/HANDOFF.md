@@ -220,3 +220,12 @@ nothing outside that root), its code sits in `SENTAIWEB` (public R), and its onl
 `SentaiWebPage` (`MatchRoles`), is `%DB_IRISAPP_DATA:R` — the minimum IRIS requires to enter the
 namespace. `IRISAPP_CODE` and `IRISAPP_DATA` keep no public access.
 
+## Resolution by spec 005 (2026-09-26)
+
+Spec [`005-declared-custom-steps`](../005-declared-custom-steps/spec.md) partially addresses **E-2**:
+`switch-journal` and `purge-task-history` no longer call the management-API endpoints that 404;
+they run **in-process** (their `%SYS.Task.*` class on a WQM worker, as the dispatching operator).
+`switch-journal` is available (evidence `005/evidence/e-native-types.json`); `purge-task-history`
+is proven but held until spec 007 T009 ships the typed-confirmation dialog. Two new read-only
+declared types are available: `storage-headroom-check` and `db-size-report`. `compact-globals`,
+`defragment-globals` and `purge-audit-records` remain unavailable (E-2 open for them).

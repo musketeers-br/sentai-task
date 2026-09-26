@@ -140,7 +140,8 @@ USER>zpm "install sentai-task"
 
 ### On the canvas
 
-1. **Compose.** Drag *Integrity check* from the palette onto the canvas (the other step types are
+1. **Compose.** Drag an available step type (*Integrity check*, *Switch journal*, *Storage
+   headroom check*, *Database size report*) from the palette onto the canvas (the others are
    listed but marked *not supported in v1*, see [Known limitations](#%EF%B8%8F-known-limitations-v1)).
    Drag from a step's right handle to another step's left handle to connect them; edges that would
    create a cycle are refused as you draw. Several edges into one step meet at a single diamond:
@@ -223,7 +224,44 @@ run then renews its own credential and erases it when it ends. The canvas does t
 | WQM | `GET /wqm/categories` · `GET/PUT /wqm/categories/{name}` |
 
 Validation errors come back as `{"errors": [{"stepId", "code", "message"}], "warnings": [...]}`,
-with codes such as `CYCLE_DETECTED`, `STEP_TYPE_NOT_SUPPORTED_ON_TARGET` and `CATEGORY_NOT_FOUND`.
+with codes such as `CYCLE_DETECTED`, `STEP_TYPE_NOT_SUPPORTED_ON_TARGET`, `CATEGORY_NOT_FOUND`
+and, for declared step types, `PARAM_REQUIRED`, `PARAM_TYPE_MISMATCH`, `PARAM_OUT_OF_RANGE`,
+`PARAM_UNKNOWN` (each also carries `parameter`) and, on `/schedule`, `IN_PROCESS_NOT_SCHEDULABLE`.
+
+#### Declared step types
+
+Besides `integrity-check` (run through the platform's management API), some step types are
+**declared**: an entry in the closed catalog (`XData Catalog` in `sentai.registry.StepType`,
+`executor: "in-process"`) names a class extending `%SYS.Task.Definition` and the schema of the
+parameters it takes. A step of that type runs the class's `OnTask()` on a Work Queue Manager worker
+of the step's category, inside IRIS.
+
+| Type | Class | Parameters | Notes |
+|---|---|---|---|
+| `storage-headroom-check` | `sentai.steps.StorageHeadroomCheck` | `minFreePercent` number 0–100, default 10 | Read-only. Fails when a database directory or the journal directory has less free disk than the threshold, naming each location and its free %. Embedded Python (`shutil.disk_usage`). |
+| `db-size-report` | `sentai.steps.DatabaseSizeReport` | — | Read-only. `result.databases` lists every database with `sizeMB` and `freeMB` (`%SYS.DatabaseQuery:FreeSpace`). |
+| `switch-journal` | `%SYS.Task.SwitchJournal` | — | Starts a new journal file. Needs `%Admin_Operate:USE`; without it the platform's `#921` text is the failure reason. |
+| `purge-task-history` | `%SYS.Task.PurgeTaskHistory` | `keepDays` integer ≥ 0, default 30 | Destructive (typed confirmation, not schedulable). Implemented and proven; **not available yet** — waits for the canvas's typed-confirmation dialog (spec 007). |
+
+- **Adding one** is a code change reviewed in a pull request: write the class (extending
+  `%SYS.Task.Definition`, optionally with a `Result` property holding JSON text) and add one catalog
+  entry with its `parameters`. Nothing an operator types ever selects code: the class comes from
+  the catalog by the step's `type`, properties are set by iterating the declared schema, and a
+  legacy `custom` step's `customClass` is never read on any execution path.
+- **Identity.** A declared step runs **as the operator who dispatched the run**: the worker takes
+  the identity of the run loop that queued it. The platform decides, at that moment, whether that
+  operator may do the work, and its refusal is the step's failure reason, verbatim. Each step shows
+  who ran it in `executedAs` (`GET /runs/{guid}` → `steps[]`). A run has one identity:
+  `/dispatch` with a `runCredential` of another user is refused with 403
+  `RUN_CREDENTIAL_USER_MISMATCH` before any run exists, and only the dispatcher may re-run a step
+  (403 `RERUN_NOT_BY_DISPATCHER`). Declared steps are not schedulable
+  (`IN_PROCESS_NOT_SCHEDULABLE`): a scheduled run has no operator.
+- **Timeout.** `timeoutMinutes` (60 when 0) counts from the moment the step becomes `running`,
+  which includes the time spent waiting for a worker under the category's limits. A timed-out or
+  cancelled step's work may still finish in the background; its late result is discarded.
+- **Result.** A class's `Result` is shown as `result` in the run read (`{}` when none), at most
+  8000 characters: a larger report keeps the first elements of its largest list and adds
+  `"truncated": true, "omitted": <n>`.
 
 #### The task catalog: the platform's Task Manager, as the platform reports it
 
@@ -292,13 +330,19 @@ was not proven.
 
 SentaiTask v1 only promises what was proven on IRIS 2026.2 (spec `004-backend-hardening`):
 
-- **Only `integrity-check` runs.** The other six step types (`compact-globals`,
-  `defragment-globals`, `switch-journal`, `purge-audit-records`, `purge-task-history`, `custom`)
-  are still listed in `GET /catalog/step-types` with `available: false`, and saved flows that use
-  them still load. Validate, dispatch, schedule and rerun refuse them with
-  `STEP_TYPE_NOT_SUPPORTED_ON_TARGET`.
-- **Scheduling is not operational.** `/schedule` validates the flow and registers a native task,
-  but scheduled runs cannot authenticate to the platform in v1 and are not a supported execution
+- **Available step types:** `integrity-check`, `switch-journal`, `storage-headroom-check` and
+  `db-size-report` (spec `005-declared-custom-steps`, see [Declared step types](#declared-step-types)).
+  The others (`compact-globals`, `defragment-globals`, `purge-audit-records`,
+  `purge-task-history`, `custom`) are still listed in `GET /catalog/step-types` with
+  `available: false`, and saved flows that use them still load. Validate, dispatch, schedule and
+  rerun refuse them with `STEP_TYPE_NOT_SUPPORTED_ON_TARGET`.
+- **Operators who validate need `%Admin_Manage:USE` and read on IRISSYS.** Validation reads the
+  WQM categories with the operator's token; with less, that read is refused and every step reports
+  `CATEGORY_NOT_FOUND`. On IRIS 2026.2 those resources are also enough for the platform to allow
+  the task-history purge (it refuses the journal switch without `%Admin_Operate:USE`) — the
+  platform decides, not SentaiTask.
+- **Scheduling is not operational.** `/schedule` validates the flow and registers native tasks
+  (through the platform, see below), but scheduled runs cannot authenticate to the platform in v1 and are not a supported execution
   path. Use manual dispatch.
 - **Run credential.** A dispatched run calls the platform with an access token that expires 60 s
   after it was issued, and refreshing a token revokes the previous one. The canvas therefore asks
@@ -312,16 +356,26 @@ SentaiTask v1 only promises what was proven on IRIS 2026.2 (spec `004-backend-ha
   `CATEGORY_NOT_FOUND`. The default for new flows, `SENTAI.DEFAULT`, does not exist on a stock
   instance, so set a category such as `Default`.
 - No v1-available step type is destructive or pausable, so typed confirmation and pause are
-  implemented but cannot be reached.
+  implemented but cannot be reached over HTTP (the first destructive one, `purge-task-history`,
+  becomes available with the canvas's typed-confirmation dialog, spec 007).
 - **Step-type classes that do not exist on 2026.2.** `compact-globals` (`%SYS.Task.CompactGlobals`)
   and `defragment-globals` (`%SYS.Task.Defragment`) name classes that are not installed. They are
   unavailable anyway. The audit purge's class was corrected to the platform's
   `%SYS.Task.PurgeAudit`; it is still unavailable.
-- **Refusals of an operator without task privilege arrive as 401.** Every product request is
-  first checked with the platform's `GET /api/admin/info`. The platform answers 403 there to an
-  operator without task privilege, and the product reports that as `401 Invalid or expired token`
-  instead of passing on the platform's 403. Nothing is granted, but the reason is not the
-  platform's. See `specs/006-task-catalog-api/evidence/README.md`.
+- **Token check.** Every product request is first checked with the platform's
+  `GET /api/admin/info`: 200 or 403 (an authenticated operator the platform refuses that read)
+  pass; anything else is `401 Invalid or expired token`. What the operator may then do is decided
+  by the platform at each call, and its refusal is returned verbatim (e.g. 403 with
+  `platformStatus` from the catalog, or `SQLCODE -99` when the operator has no SQL privilege on
+  the product's tables).
+- **Scheduling creates tasks through the platform.** `/schedule` creates each native task with
+  `POST /api/admin/v2/task` and the operator's token (the platform accepts `%Admin_Task` or
+  `%Admin_Operate`); a refusal is returned verbatim and tasks already created by the same request
+  are deleted. The task runs as the operator who scheduled it.
+- **A refused WQM category read is reported as `CATEGORY_NOT_FOUND`.** Validation says the
+  category "does not exist" when the platform actually refused the read (operator without
+  `%Admin_Manage:USE` and read on IRISSYS; `%Admin_Operate:USE` alone is refused — spec 005
+  research R-10). Not changed yet.
 - **Task catalog.** The list reads each task (two platform calls per task): 151 tasks take about
   0.4 s on the dev container. A task deleted between the list and its reads shows up with
   `unavailable` entries instead of values.

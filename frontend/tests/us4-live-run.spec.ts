@@ -188,6 +188,7 @@ test('Dispatch is refused for a flow with steps unsupported in v1, naming them o
 
 	await expect(page.getByRole('dialog').getByRole('alert')).toContainText('Not dispatched');
 	await page.getByRole('dialog').getByRole('button', { name: 'Cancel' }).click();
-	await expect(page.getByTestId('status-errors')).toHaveText('2 errors block scheduling (#04, #05)');
+	// Spec 005: switch-journal (#05) is available, so only #04 is refused.
+	await expect(page.getByTestId('status-errors')).toHaveText('1 error blocks scheduling (#04)');
 	await expect(page.getByTestId('run-state')).toHaveCount(0);
 });

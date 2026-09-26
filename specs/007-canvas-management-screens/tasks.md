@@ -100,7 +100,7 @@ Run the task's new spec as soon as its gate opens.
 |---|---|---|
 | **G-A** | Spec 006 T001–T005 implemented on the container (BD-3) | Part A e2e: T002–T006 |
 | **G-B** | T001 prototype exists in `design/` **and** spec 005 T001–T008 + T013 implemented on the container (BD-4) | Part B visual tasks: T007, T008, T010 |
-| **G-C** | Spec 005 T013 + T016 make `purge-task-history` `available: true` | The e2e of T009 only; T009's code and unit tests are ungated |
+| **G-C** | Spec 005 T013 implemented on the container, and `purge-task-history` set `available: true` **temporarily and uncommitted on the dev container only** (reverted after the run, recorded in the evidence) — the committed flip (005 T016) comes **after** T009 is merged, never before | The e2e of T009 (and T010's destructive-node e2e); T009's code and unit tests are ungated |
 
 Unit tests never wait for a gate.
 
@@ -439,7 +439,9 @@ confirmation, and the legacy `custom` class read-only.
 - [ ] T009 [US6] Typed confirmation before dispatch (plan row 8a, D-7).
   - **Not blocked on T001.** It uses the existing dialog's visual system.
   - **Release gate for spec 005:** `purge-task-history` may only become `available: true`
-    (005 T016) after this task is merged. It may be pulled forward and done before T002.
+    (005 T016) after this task is merged **with its e2e green**. The e2e runs under G-C's
+    temporary, uncommitted flip, so there is no cycle: T009 merged (e2e green) → 005 T016 commits
+    the flip. It may be pulled forward and done before T002.
   - It edits `client.ts`, so it runs between other `client.ts` tasks, never concurrently.
   - **Gate: e2e needs G-C.** The unit tests are ungated.
 
@@ -535,7 +537,7 @@ time, using contract fixtures.
 | 005 T008 with `parameter` in findings (BD-1) | SC-005's field-level part of T008. Without it, T008's e2e records step-level and SC-005 is **not met** |
 | 005 T002 declares `purge-audit-records` parameters (BD-2) | T007/T008 delete the local `DEFAULT_PARAMETERS`/`PARAMETER_FIELDS` |
 | **007 T009 merged** | **005 T016 may flip `purge-task-history` to `available: true`** (the reverse gate) |
-| 005 T016 flips `purge-task-history` (G-C) | e2e of T009 and T010 |
+| 005 T013 on the container + temporary flip (G-C) | e2e of T009 and T010 (T009 must be green before 005 T016 commits the flip) |
 
 - BD-1 and BD-2 live in **005's `tasks.md`** (added by T000). BD-3 and BD-4 are the deployment
   gates G-A and G-B.

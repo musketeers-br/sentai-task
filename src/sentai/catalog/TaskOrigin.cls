@@ -1,5 +1,5 @@
 /// The link from a platform task back to the SentaiTask flow and step that created it (spec 006
-/// FR-005). The grammar is the product's own generator (`Dispatcher.CreateNativeTask`:
+/// FR-005). The grammar is the product's own generator (`NativeScheduler.TaskName`:
 /// "SentaiTask: "_flowId_"#"_stepId) with the flow %ID and the flow schema's stepId pattern;
 /// any other name carries no origin. The name is platform data, matched as data (no evaluation).
 Class sentai.catalog.TaskOrigin Extends %RegisteredObject

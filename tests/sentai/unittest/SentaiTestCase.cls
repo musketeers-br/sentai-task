@@ -154,4 +154,33 @@ Method CreateCanonicalFlow(namePrefix As %String = "Canonical") As %String
     Quit id
 }
 
+/// Spec 005: persists a flow of the given steps (each at least {"id","type"}; the other fields
+/// default to a step on `Default` in this namespace) and edges; returns its id.
+Method CreateFlowOf(namePrefix As %String, steps As %DynamicArray, edges As %DynamicArray = "") As %String
+{
+    Set:(edges = "") edges = []
+    Set iter = steps.%GetIterator()
+    While iter.%GetNext(.k, .s) {
+        Do:'s.%IsDefined("taskName") s.%Set("taskName", s.type_" "_s.id)
+        Do:'s.%IsDefined("namespace") s.%Set("namespace", $NAMESPACE)
+        Do:'s.%IsDefined("runAsUser") s.%Set("runAsUser", "irisadm")
+        Do:'s.%IsDefined("timeoutMinutes") s.%Set("timeoutMinutes", 5)
+        Do:'s.%IsDefined("wqmCategory") s.%Set("wqmCategory", "Default")
+        If (s.type = "integrity-check") && 's.%IsDefined("databaseDirectory") {
+            Do s.%Set("databaseDirectory", ..DatabaseDirectoryOf($NAMESPACE))
+        }
+    }
+    Set payload = {
+        "schemaVersion": 1,
+        "name": (namePrefix_"-"_$TR($H, ",", "-")_"-"_$I(^sentaiTestSeq)),
+        "defaultCategory": "Default",
+        "steps": (steps),
+        "edges": (edges),
+        "joins": []
+    }
+    Set sc = ##class(sentai.model.Flow).SaveGraph(payload, "", 0, "testuser", .id)
+    Do $$$AssertStatusOK(sc)
+    Quit id
+}
+
 }

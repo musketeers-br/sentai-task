@@ -143,9 +143,11 @@ src/sentai/
     └── DatabaseSizeReport.cls
 
 tests/sentai/unittest/
-├── fixtures/FakeTasks.cls                   # NEW: ok / error status / throws / switches to %SYS / big result
+├── fixtures/Fake{Ok,Fails,Throws,SwitchesNamespace,BigResult,WithParams}.cls  # NEW (T001), one class per file
+├── model/StepRunLockTest.cls                # NEW (T003): locked transitions, two-process race
 ├── registry/StepTypeTest.cls                # adjust: purge-task-history pausable=false, availability
 ├── validation/ParameterSchemaRuleTest.cls   # extend: PARAM_* + not installed + IN_PROCESS_NOT_SCHEDULABLE
+├── validation/LegacyCustomStepTest.cls      # NEW (T009): legacy custom refused on 4 paths + static guard
 ├── validation/StepAvailabilityRuleTest.cls  # adjust: 6 → 5 → 4 unavailable types (purge-task-history last, after spec 007 T009)
 ├── dispatch/InProcessExecutorTest.cls       # NEW: outcomes, namespace frame, truncation, executedAs
 ├── dispatch/DeclaredStepRunTest.cls         # NEW: mixed flow, locked race, timeout, SSE version, rerun
@@ -185,7 +187,7 @@ anywhere but the catalog.
 **Cut order if time runs short**: task 9 → result persistence of task 4 (keep report output in the
 failure reason only; `executedAs` stays) → never cut 2, 4 (locking + frame), 8.
 
-**Expected test count**: backend **122 → ~152** (rebased on spec 006: **169 → ~199**) (≈ +30: catalog 3, validator 7, executor 7,
+**Expected test count**: backend **122 → ~152** (rebased on spec 006 and its close-out: **178 → ~208**) (≈ +30: catalog 3, validator 7, executor 7,
 dispatcher/REST 8, shipped 3, legacy 2); adjusted, none removed. Frontend e2e **13 → 13** with 3
 specs adjusted (test code only); frontend unit **48 → 48** (verified: no unit test depends on
 `purge-task-history` pausable or availability — fixtures there are local data).

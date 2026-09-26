@@ -1,0 +1,63 @@
+{
+  "evidence": "Token gate after the fix: a platform 403 on /api/admin/info is an authenticated operator; the endpoints return the platform's own refusal",
+  "captured_at": "2026-09-26T12:16:58Z",
+  "operator": "temporary user, role %DB_IRISAPP_CODE:R, %DB_IRISAPP_DATA:RW only (no task privilege)",
+  "invalid_token": {
+    "platform_admin_info": 401,
+    "product_catalog": 401,
+    "product_body": {
+      "nonJsonBody": ""
+    }
+  },
+  "operator_token": {
+    "platform_admin_info": 403,
+    "list": {
+      "http": 403,
+      "body": {
+        "title": "Forbidden",
+        "detail": "",
+        "status": 403,
+        "platformStatus": {
+          "errors": [],
+          "summary": ""
+        }
+      }
+    },
+    "item": {
+      "taskId": 1458,
+      "http": 403,
+      "body": {
+        "title": "Forbidden",
+        "detail": "",
+        "status": 403,
+        "platformStatus": {
+          "errors": [],
+          "summary": ""
+        }
+      }
+    },
+    "suspend": {
+      "taskId": 1458,
+      "http": 403,
+      "body": {
+        "title": "Forbidden",
+        "detail": "",
+        "status": 403,
+        "platformStatus": {
+          "errors": [],
+          "summary": ""
+        }
+      }
+    },
+    "flows_list_http": 200
+  },
+  "temp_task_suspended_after_refusal": "0",
+  "checks": {
+    "invalid_token_still_401": true,
+    "operator_is_403_at_platform": true,
+    "list_refusal_is_platform_403": true,
+    "item_refusal_is_platform_403": true,
+    "suspend_refusal_is_platform_403": true,
+    "task_unchanged": true
+  }
+}

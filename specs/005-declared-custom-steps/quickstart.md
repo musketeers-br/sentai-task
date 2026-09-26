@@ -81,6 +81,11 @@ Flow E1: `01 integrity-check` → `02 purge-task-history (keepDays 30)` → `03 
    - Expected: 02 and 03 `failed`, each `failureReason` containing the platform's `<PROTECT>` text
      **verbatim**; `executedAs` = the temporary user; journal file name unchanged.
    - Evidence: the run read (status + body, no tokens) and the before/after journal file name.
+   - **Observed 2026-09-26 (research R-10)**: an operator who can pass validation needs
+     `%Admin_Manage:U` + `%DB_IRISSYS:R` (for the WQM category read); with them the platform
+     **completed** 02 and refused 03 with `ERROR #921: Operation requires %Admin_Operate:USE
+     privilege` (verbatim, `executedAs` = the temporary user, journal unchanged). The identity and
+     verbatim-refusal properties hold; the "`<PROTECT>` on both" prediction does not.
 5. **Run credential of another user** → `/dispatch` as user A with a `runCredential` redeemed from
    user B → 403 `RUN_CREDENTIAL_USER_MISMATCH`, no run created (ID-1).
 6. **Re-run by someone else** → a failed step of a run dispatched by A, `/rerun` as B → 403

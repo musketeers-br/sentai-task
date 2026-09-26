@@ -306,7 +306,7 @@ step is refused; every in-process step's outcome names the dispatcher.
 - **FR-009 — Destructive declared types** follow the existing typed-confirmation and
   not-schedulable rules with no new mechanism.
 - **FR-010 — No regressions.** No flow-document schema change; all existing tests (backend
-  at the start of implementation — 169/169 after spec 006 — e2e 13/13) pass, adjusted only where they encoded a now-false promise; no test deleted.
+  at the start of implementation — 178/178 after spec 006 and its close-out — e2e 13/13) pass, adjusted only where they encoded a now-false promise; no test deleted.
 - **FR-011 — Native types via the in-process path.** `switch-journal` and `purge-task-history`
   run through FR-003 instead of their unproven management-API endpoints, each with a declared
   parameter schema, and each `available: true` only under FR-007 **and** D-1 proving the
@@ -380,4 +380,9 @@ step is refused; every in-process step's outcome names the dispatcher.
 - Spec 004 (availability flag, single validation gate, rerun guard).
 - The E-1 run credential (spec 002 work) for the steps that still use the management API.
 - Real IRIS 2026.2 container for FR-007 / SC-001, SC-005, SC-006.
-- Spec 007 for any operator-facing UI of declared types.
+- Spec 007 for any operator-facing UI of declared types, and specifically spec 007 T009 (typed
+  confirmation in the dispatch dialog): FR-011's release of `purge-task-history` waits for it.
+- Spec 006 (implemented): new test baseline (178, including the close-out's token gate and schedule-through-the-platform fix), `StepType.cls` changes (`DestructiveByClass`,
+  `purge-audit-records` class `%SYS.Task.PurgeAudit`) that T002/T013 rebase on.
+- The product's token gate (spec 003) passing an authenticated operator whose platform answer is
+  403, so that quickstart (e)4 reaches the platform's own refusal (fixed at spec 006 close-out).

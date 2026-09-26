@@ -17,6 +17,24 @@ Method TestExpiredOrInvalidTokenIsRejected()
     Do $$$AssertEquals(##class(sentai.rest.Dispatcher).IsTokenValid("an-expired-token"), 0)
 }
 
+/// A 403 from the platform proves the token authenticated: the operator is known, only the
+/// administrative read is refused. The gate lets the request through so each endpoint returns the
+/// platform's own answer for that operator (Constitution III). It grants nothing: the request
+/// already runs with the operator's own roles (JWT web app, no MatchRoles).
+Method TestAuthenticatedOperatorWithoutAdminPrivilegeIsAccepted()
+{
+    Do ##class(sentai.unittest.AdminApiDouble).Script("/api/admin/info", "GET", 403, "", "{""errors"":[],""summary"":""""}")
+    Do $$$AssertEquals(##class(sentai.rest.Dispatcher).IsTokenValid("an-unprivileged-operators-token"), 1)
+}
+
+Method TestOtherPlatformAnswersAreRejected()
+{
+    For status = 400, 404, 500, 502 {
+        Do ##class(sentai.unittest.AdminApiDouble).Script("/api/admin/info", "GET", status, "", "{}")
+        Do $$$AssertEquals(##class(sentai.rest.Dispatcher).IsTokenValid("a-token"), 0, "HTTP "_status_" is not proof of authentication")
+    }
+}
+
 Method TestMissingAuthorizationHeaderYieldsEmptyToken()
 {
     Kill %request

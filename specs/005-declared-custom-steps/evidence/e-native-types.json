@@ -1,0 +1,317 @@
+{
+  "evidence":"spec 005 T013 - quickstart (e)1-4 on the real instance: switch-journal and purge-task-history in-process",
+  "captured_at":"2026-09-26 12:48:29Z",
+  "availability":"switch-journal and purge-task-history set to available:true on the dev container for this run only; purge-task-history reverted right after (uncommitted, held until spec 007 T009)",
+  "administrator":{
+    "user":"sentai005adm",
+    "roles":"%All (temporary user, generated password, deleted afterwards)",
+    "calls":[
+      {
+        "call":"POST /flows",
+        "status":"201",
+        "flowId":"4402",
+        "steps":[
+          {
+            "id":"01",
+            "type":"integrity-check",
+            "taskName":"integrity-check 01",
+            "namespace":"IRISAPP",
+            "databaseDirectory":"/data/IRISAPP_DATA/",
+            "runAsUser":"irisadm",
+            "timeoutMinutes":10,
+            "wqmCategory":"Default",
+            "customClass":"",
+            "parameters":{
+            },
+            "isDestructive":"0"
+          },
+          {
+            "id":"02",
+            "type":"purge-task-history",
+            "taskName":"purge-task-history 02",
+            "namespace":"%SYS",
+            "databaseDirectory":"",
+            "runAsUser":"irisadm",
+            "timeoutMinutes":10,
+            "wqmCategory":"Default",
+            "customClass":"",
+            "parameters":{
+              "keepDays":30
+            },
+            "isDestructive":"1"
+          },
+          {
+            "id":"03",
+            "type":"switch-journal",
+            "taskName":"switch-journal 03",
+            "namespace":"%SYS",
+            "databaseDirectory":"",
+            "runAsUser":"irisadm",
+            "timeoutMinutes":10,
+            "wqmCategory":"Default",
+            "customClass":"",
+            "parameters":{
+            },
+            "isDestructive":"0"
+          }
+        ],
+        "edges":[
+          {
+            "source":"01",
+            "target":"02"
+          },
+          {
+            "source":"02",
+            "target":"03"
+          }
+        ]
+      },
+      {
+        "status":"422",
+        "body":{
+          "errors":[
+            {
+              "stepId":"02",
+              "code":"DESTRUCTIVE_NOT_SCHEDULABLE",
+              "message":"Step type 'purge-task-history' is destructive; flows with destructive steps are not schedulable in v1 and must be dispatched manually with typed confirmation"
+            },
+            {
+              "stepId":"02",
+              "code":"IN_PROCESS_NOT_SCHEDULABLE",
+              "message":"Step '02' (purge-task-history) runs inside the platform as the dispatching operator and cannot run in a scheduled run"
+            },
+            {
+              "stepId":"03",
+              "code":"IN_PROCESS_NOT_SCHEDULABLE",
+              "message":"Step '03' (switch-journal) runs inside the platform as the dispatching operator and cannot run in a scheduled run"
+            }
+          ],
+          "warnings":[
+          ]
+        },
+        "call":"POST /flows/4402/schedule",
+        "step":"(e)1 schedule"
+      },
+      {
+        "status":"428",
+        "body":{
+          "status":428,
+          "title":"Confirmation Required",
+          "detail":"Step '02' requires a matching typed confirmation before dispatch"
+        },
+        "call":"POST /flows/4402/dispatch",
+        "step":"(e)2 dispatch without confirmation"
+      },
+      {
+        "status":"202",
+        "body":{
+          "guid":"92BEC76E-B9A8-11F1-A439-4AA3AAEA2F3D",
+          "flowId":"4402",
+          "flowRevision":1,
+          "state":"running",
+          "startedAt":"2026-09-26 12:48:29",
+          "finishedAt":"",
+          "dispatchedBy":"sentai005adm"
+        },
+        "call":"POST /flows/4402/dispatch",
+        "step":"(e)2 dispatch with typed confirmation (and a runCredential of the same user, not recorded)"
+      },
+      {
+        "status":"200",
+        "body":{
+          "guid":"92BEC76E-B9A8-11F1-A439-4AA3AAEA2F3D",
+          "flowId":"4402",
+          "flowRevision":1,
+          "state":"completed",
+          "startedAt":"2026-09-26 12:48:29",
+          "finishedAt":"2026-09-26 12:48:54",
+          "dispatchedBy":"sentai005adm",
+          "totalDurationMs":25000,
+          "steps":[
+            {
+              "guid":"92BECD20-B9A8-11F1-A439-4AA3AAEA2F3D",
+              "stepId":"01",
+              "state":"completed",
+              "timeQueued":"2026-09-26 12:48:29",
+              "timeStarted":"2026-09-26 12:48:29",
+              "timeFinished":"2026-09-26 12:48:52",
+              "failureReason":"",
+              "progressCurrent":"",
+              "progressTotal":"",
+              "confirmedBy":"",
+              "confirmedAt":"",
+              "executedAs":"",
+              "result":{
+              }
+            },
+            {
+              "guid":"92BECF90-B9A8-11F1-A439-4AA3AAEA2F3D",
+              "stepId":"02",
+              "state":"completed",
+              "timeQueued":"2026-09-26 12:48:29",
+              "timeStarted":"2026-09-26 12:48:53",
+              "timeFinished":"2026-09-26 12:48:53",
+              "failureReason":"",
+              "progressCurrent":"",
+              "progressTotal":"",
+              "confirmedBy":"sentai005adm",
+              "confirmedAt":"2026-09-26 12:48:29",
+              "executedAs":"sentai005adm",
+              "result":{
+              }
+            },
+            {
+              "guid":"92BED0AD-B9A8-11F1-A439-4AA3AAEA2F3D",
+              "stepId":"03",
+              "state":"completed",
+              "timeQueued":"2026-09-26 12:48:29",
+              "timeStarted":"2026-09-26 12:48:53",
+              "timeFinished":"2026-09-26 12:48:53",
+              "failureReason":"",
+              "progressCurrent":"",
+              "progressTotal":"",
+              "confirmedBy":"",
+              "confirmedAt":"",
+              "executedAs":"sentai005adm",
+              "result":{
+              }
+            }
+          ],
+          "sumOfStepsMs":23000,
+          "log":[
+          ]
+        },
+        "call":"GET /runs/92BEC76E-B9A8-11F1-A439-4AA3AAEA2F3D",
+        "step":"(e)3 run read"
+      }
+    ],
+    "journal":{
+      "before":"/usr/irissys/mgr/journal/20260926.003",
+      "after":"/usr/irissys/mgr/journal/20260926.004"
+    }
+  },
+  "unprivileged":{
+    "user":"sentai005op",
+    "role":"SentaiOpRole005",
+    "resources":"%DB_IRISAPP_CODE:R,%DB_IRISAPP_DATA:RW,%Admin_Manage:U,%DB_IRISSYS:R",
+    "sql":"SELECT, INSERT, UPDATE, DELETE on schema sentai_model",
+    "why":"DB resources as R-1; %Admin_Manage:U + %DB_IRISSYS:R are the least that let the platform's WQM category read succeed (validation reads it with the operator's token); IRISSYS stays read-only",
+    "calls":[
+      {
+        "call":"POST /flows",
+        "status":"201",
+        "flowId":"4403",
+        "steps":[
+          {
+            "id":"02",
+            "type":"purge-task-history",
+            "taskName":"purge-task-history 02",
+            "namespace":"%SYS",
+            "databaseDirectory":"",
+            "runAsUser":"irisadm",
+            "timeoutMinutes":10,
+            "wqmCategory":"Default",
+            "customClass":"",
+            "parameters":{
+              "keepDays":30
+            },
+            "isDestructive":"1"
+          },
+          {
+            "id":"03",
+            "type":"switch-journal",
+            "taskName":"switch-journal 03",
+            "namespace":"%SYS",
+            "databaseDirectory":"",
+            "runAsUser":"irisadm",
+            "timeoutMinutes":10,
+            "wqmCategory":"Default",
+            "customClass":"",
+            "parameters":{
+            },
+            "isDestructive":"0"
+          }
+        ]
+      },
+      {
+        "status":"200",
+        "body":{
+          "errors":[
+          ],
+          "warnings":[
+          ]
+        },
+        "call":"POST /flows/4403/validate"
+      },
+      {
+        "status":"202",
+        "body":{
+          "guid":"A2012F69-B9A8-11F1-A439-4AA3AAEA2F3D",
+          "flowId":"4403",
+          "flowRevision":1,
+          "state":"running",
+          "startedAt":"2026-09-26 12:48:54",
+          "finishedAt":"",
+          "dispatchedBy":"sentai005op"
+        },
+        "call":"POST /flows/4403/dispatch",
+        "note":"typed confirmation for 02 and the operator's own runCredential (not recorded)"
+      },
+      {
+        "status":"200",
+        "body":{
+          "guid":"A2012F69-B9A8-11F1-A439-4AA3AAEA2F3D",
+          "flowId":"4403",
+          "flowRevision":1,
+          "state":"failed",
+          "startedAt":"2026-09-26 12:48:54",
+          "finishedAt":"2026-09-26 12:50:36",
+          "dispatchedBy":"sentai005op",
+          "totalDurationMs":102000,
+          "steps":[
+            {
+              "guid":"A201351B-B9A8-11F1-A439-4AA3AAEA2F3D",
+              "stepId":"02",
+              "state":"completed",
+              "timeQueued":"2026-09-26 12:48:54",
+              "timeStarted":"2026-09-26 12:48:54",
+              "timeFinished":"2026-09-26 12:48:54",
+              "failureReason":"",
+              "progressCurrent":"",
+              "progressTotal":"",
+              "confirmedBy":"sentai005op",
+              "confirmedAt":"2026-09-26 12:48:54",
+              "executedAs":"sentai005op",
+              "result":{
+              }
+            },
+            {
+              "guid":"A2013706-B9A8-11F1-A439-4AA3AAEA2F3D",
+              "stepId":"03",
+              "state":"failed",
+              "timeQueued":"2026-09-26 12:48:54",
+              "timeStarted":"2026-09-26 12:48:54",
+              "timeFinished":"2026-09-26 12:50:35",
+              "failureReason":"ERROR #1142: Error switching journal file: ERROR #921: Operation requires %Admin_Operate:USE privilege",
+              "progressCurrent":"",
+              "progressTotal":"",
+              "confirmedBy":"",
+              "confirmedAt":"",
+              "executedAs":"sentai005op",
+              "result":{
+              }
+            }
+          ],
+          "sumOfStepsMs":101000,
+          "log":[
+          ]
+        },
+        "call":"GET /runs/A2012F69-B9A8-11F1-A439-4AA3AAEA2F3D"
+      }
+    ],
+    "journal":{
+      "before":"/usr/irissys/mgr/journal/20260926.004",
+      "after":"/usr/irissys/mgr/journal/20260926.004"
+    }
+  }
+}

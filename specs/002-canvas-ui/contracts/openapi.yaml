@@ -105,7 +105,20 @@ paths:
                 properties:
                   taskIds: { type: array, items: { type: integer } }
                   nextRun: { type: string, format: date-time }
+        "403":
+          description: >-
+            The platform refused this operator: the task create (`POST /api/admin/v2/task`, with
+            `platformStatus` verbatim) or the read of the flow's steps (`SQLCODE -99: …`). Tasks
+            already created by the request are deleted.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Problem" }
         "422": { $ref: "#/components/responses/ValidationError" }
+        "502":
+          description: "SCHEDULE_NOT_CONFIRMED: the platform accepted a create but lists no task of that name (rolled back), or PLATFORM_UNREACHABLE."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Problem" }
 
   /flows/{flowId}/dispatch:
     parameters: [ { $ref: "#/components/parameters/FlowId" } ]

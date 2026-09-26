@@ -1,0 +1,1495 @@
+{
+  "evidence": "spec 005 T016 - quickstart (a)-(e) on the real instance (IRIS 2026.2, sentai-task-iris-1), status + body per call, no tokens or passwords",
+  "captured_at": "2026-09-26 12:59:44Z",
+  "users": {
+    "administrator": "sentai005adm",
+    "second administrator": "sentai005b",
+    "roles": "%All (temporary users, generated passwords, deleted afterwards)",
+    "unprivileged": {
+      "user": "sentai005op",
+      "role": "SentaiOpRole005",
+      "resources": "%DB_IRISAPP_CODE:R,%DB_IRISAPP_DATA:RW,%Admin_Manage:U,%DB_IRISSYS:R",
+      "sql": "SELECT, INSERT, UPDATE, DELETE on schema sentai_model"
+    }
+  },
+  "availability_note": "purge-task-history set available:true on the dev container for section (e) only and reverted right after (held until spec 007 T009)",
+  "a": [
+    {
+      "call": "GET /catalog/step-types",
+      "status": "200",
+      "body (in-process entries)": [
+        {
+          "type": "switch-journal",
+          "label": "Switch journal",
+          "class": "%SYS.Task.SwitchJournal",
+          "category": "journal",
+          "executor": "in-process",
+          "destructive": false,
+          "pausable": false,
+          "available": true,
+          "parameters": []
+        },
+        {
+          "type": "purge-task-history",
+          "label": "Purge task history",
+          "class": "%SYS.Task.PurgeTaskHistory",
+          "category": "purge",
+          "executor": "in-process",
+          "destructive": true,
+          "pausable": false,
+          "available": false,
+          "parameters": [
+            {
+              "name": "keepDays",
+              "property": "KeepDays",
+              "type": "integer",
+              "required": false,
+              "default": 30,
+              "min": 0,
+              "description": "Days of task history to keep"
+            }
+          ]
+        },
+        {
+          "type": "storage-headroom-check",
+          "label": "Storage headroom check",
+          "class": "sentai.steps.StorageHeadroomCheck",
+          "category": "storage",
+          "executor": "in-process",
+          "destructive": false,
+          "pausable": false,
+          "available": true,
+          "parameters": [
+            {
+              "name": "minFreePercent",
+              "property": "MinFreePercent",
+              "type": "number",
+              "required": false,
+              "default": 10,
+              "min": 0,
+              "max": 100,
+              "description": "Fail when any database or journal location has less free space than this percentage"
+            }
+          ]
+        },
+        {
+          "type": "db-size-report",
+          "label": "Database size report",
+          "class": "sentai.steps.DatabaseSizeReport",
+          "category": "verification",
+          "executor": "in-process",
+          "destructive": false,
+          "pausable": false,
+          "available": true,
+          "parameters": []
+        }
+      ]
+    },
+    {
+      "call": "POST /flows",
+      "status": "201",
+      "flowId": "4822",
+      "steps": [
+        {
+          "id": "01",
+          "type": "storage-headroom-check",
+          "taskName": "storage-headroom-check 01",
+          "namespace": "IRISAPP",
+          "databaseDirectory": "",
+          "runAsUser": "irisadm",
+          "timeoutMinutes": 10,
+          "wqmCategory": "Default",
+          "customClass": "",
+          "parameters": {},
+          "isDestructive": "0"
+        },
+        {
+          "id": "02",
+          "type": "db-size-report",
+          "taskName": "db-size-report 02",
+          "namespace": "IRISAPP",
+          "databaseDirectory": "",
+          "runAsUser": "irisadm",
+          "timeoutMinutes": 10,
+          "wqmCategory": "Default",
+          "customClass": "",
+          "parameters": {},
+          "isDestructive": "0"
+        },
+        {
+          "id": "03",
+          "type": "integrity-check",
+          "taskName": "integrity-check 03",
+          "namespace": "IRISAPP",
+          "databaseDirectory": "/data/IRISAPP_DATA/",
+          "runAsUser": "irisadm",
+          "timeoutMinutes": 10,
+          "wqmCategory": "Default",
+          "customClass": "",
+          "parameters": {},
+          "isDestructive": "0"
+        }
+      ],
+      "edges": [
+        {
+          "source": "01",
+          "target": "02"
+        },
+        {
+          "source": "01",
+          "target": "03"
+        }
+      ]
+    },
+    {
+      "status": "200",
+      "body": {
+        "errors": [],
+        "warnings": []
+      },
+      "call": "POST /flows/4822/validate"
+    },
+    {
+      "status": "202",
+      "body": {
+        "guid": "25764BDC-B9AA-11F1-A439-4AA3AAEA2F3D",
+        "flowId": "4822",
+        "flowRevision": 1,
+        "state": "running",
+        "startedAt": "2026-09-26 12:59:44",
+        "finishedAt": "",
+        "dispatchedBy": "sentai005adm"
+      },
+      "call": "POST /flows/4822/dispatch",
+      "note": "with runCredential of the same user (not recorded)"
+    },
+    {
+      "status": "200",
+      "body": {
+        "guid": "25764BDC-B9AA-11F1-A439-4AA3AAEA2F3D",
+        "flowId": "4822",
+        "flowRevision": 1,
+        "state": "completed",
+        "startedAt": "2026-09-26 12:59:44",
+        "finishedAt": "2026-09-26 13:00:11",
+        "dispatchedBy": "sentai005adm",
+        "totalDurationMs": 27000,
+        "steps": [
+          {
+            "guid": "25764FFF-B9AA-11F1-A439-4AA3AAEA2F3D",
+            "stepId": "01",
+            "state": "completed",
+            "timeQueued": "2026-09-26 12:59:44",
+            "timeStarted": "2026-09-26 12:59:44",
+            "timeFinished": "2026-09-26 12:59:44",
+            "failureReason": "",
+            "progressCurrent": "",
+            "progressTotal": "",
+            "confirmedBy": "",
+            "confirmedAt": "",
+            "executedAs": "sentai005adm",
+            "result": {
+              "minFreePercent": 10,
+              "locations": [
+                {
+                  "path": "/data/IRISAPP_DATA/",
+                  "freePercent": 93.7,
+                  "ok": true
+                },
+                {
+                  "path": "/data/IRISAPP_DATA/irisapp_dataenstemp/",
+                  "freePercent": 93.7,
+                  "ok": true
+                },
+                {
+                  "path": "/data/IRISAPP_DATA/irisapp_datasecondary/",
+                  "freePercent": 93.7,
+                  "ok": true
+                },
+                {
+                  "path": "/usr/irissys/mgr/",
+                  "freePercent": 93.7,
+                  "ok": true
+                },
+                {
+                  "path": "/usr/irissys/mgr/IRISAPP_CODE/",
+                  "freePercent": 93.7,
+                  "ok": true
+                },
+                {
+                  "path": "/usr/irissys/mgr/enslib/",
+                  "freePercent": 93.7,
+                  "ok": true
+                },
+                {
+                  "path": "/usr/irissys/mgr/irisaudit/",
+                  "freePercent": 93.7,
+                  "ok": true
+                },
+                {
+                  "path": "/usr/irissys/mgr/irislib/",
+                  "freePercent": 93.7,
+                  "ok": true
+                },
+                {
+                  "path": "/usr/irissys/mgr/irislocaldata/",
+                  "freePercent": 93.7,
+                  "ok": true
+                },
+                {
+                  "path": "/usr/irissys/mgr/irismetrics/",
+                  "freePercent": 93.7,
+                  "ok": true
+                },
+                {
+                  "path": "/usr/irissys/mgr/irissecurity/",
+                  "freePercent": 93.7,
+                  "ok": true
+                },
+                {
+                  "path": "/usr/irissys/mgr/iristemp/",
+                  "freePercent": 93.7,
+                  "ok": true
+                },
+                {
+                  "path": "/usr/irissys/mgr/sentaiweb/",
+                  "freePercent": 93.7,
+                  "ok": true
+                },
+                {
+                  "path": "/usr/irissys/mgr/user/",
+                  "freePercent": 93.7,
+                  "ok": true
+                },
+                {
+                  "path": "/usr/irissys/mgr/journal/",
+                  "freePercent": 93.7,
+                  "ok": true
+                }
+              ]
+            }
+          },
+          {
+            "guid": "25765307-B9AA-11F1-A439-4AA3AAEA2F3D",
+            "stepId": "02",
+            "state": "completed",
+            "timeQueued": "2026-09-26 12:59:44",
+            "timeStarted": "2026-09-26 12:59:45",
+            "timeFinished": "2026-09-26 12:59:45",
+            "failureReason": "",
+            "progressCurrent": "",
+            "progressTotal": "",
+            "confirmedBy": "",
+            "confirmedAt": "",
+            "executedAs": "sentai005adm",
+            "result": {
+              "databases": [
+                {
+                  "name": "IRISAPP_DATA",
+                  "directory": "/data/IRISAPP_DATA/",
+                  "sizeMB": 21,
+                  "freeMB": 2.2
+                },
+                {
+                  "name": "IRISAPP_DATAENSTEMP",
+                  "directory": "/data/IRISAPP_DATA/irisapp_dataenstemp/",
+                  "sizeMB": 1,
+                  "freeMB": 0.4
+                },
+                {
+                  "name": "IRISAPP_DATASECONDARY",
+                  "directory": "/data/IRISAPP_DATA/irisapp_datasecondary/",
+                  "sizeMB": 1,
+                  "freeMB": 0.4
+                },
+                {
+                  "name": "IRISSYS",
+                  "directory": "/usr/irissys/mgr/",
+                  "sizeMB": 253,
+                  "freeMB": 27
+                },
+                {
+                  "name": "IRISAPP_CODE",
+                  "directory": "/usr/irissys/mgr/IRISAPP_CODE/",
+                  "sizeMB": 11,
+                  "freeMB": 5.5
+                },
+                {
+                  "name": "ENSLIB",
+                  "directory": "/usr/irissys/mgr/enslib/",
+                  "sizeMB": 153,
+                  "freeMB": 11
+                },
+                {
+                  "name": "IRISAUDIT",
+                  "directory": "/usr/irissys/mgr/irisaudit/",
+                  "sizeMB": 11,
+                  "freeMB": 5.8
+                },
+                {
+                  "name": "IRISLIB",
+                  "directory": "/usr/irissys/mgr/irislib/",
+                  "sizeMB": 379,
+                  "freeMB": 0.49
+                },
+                {
+                  "name": "IRISLOCALDATA",
+                  "directory": "/usr/irissys/mgr/irislocaldata/",
+                  "sizeMB": 11,
+                  "freeMB": 5.9
+                },
+                {
+                  "name": "IRISMETRICS",
+                  "directory": "/usr/irissys/mgr/irismetrics/",
+                  "sizeMB": 1,
+                  "freeMB": 0.34
+                },
+                {
+                  "name": "IRISSECURITY",
+                  "directory": "/usr/irissys/mgr/irissecurity/",
+                  "sizeMB": 1,
+                  "freeMB": 0.26
+                },
+                {
+                  "name": "IRISTEMP",
+                  "directory": "/usr/irissys/mgr/iristemp/",
+                  "sizeMB": 20,
+                  "freeMB": 10
+                },
+                {
+                  "name": "SENTAIWEB",
+                  "directory": "/usr/irissys/mgr/sentaiweb/",
+                  "sizeMB": 1,
+                  "freeMB": 0.4
+                },
+                {
+                  "name": "USER",
+                  "directory": "/usr/irissys/mgr/user/",
+                  "sizeMB": 11,
+                  "freeMB": 9.9
+                }
+              ]
+            }
+          },
+          {
+            "guid": "257653FD-B9AA-11F1-A439-4AA3AAEA2F3D",
+            "stepId": "03",
+            "state": "completed",
+            "timeQueued": "2026-09-26 12:59:44",
+            "timeStarted": "2026-09-26 12:59:45",
+            "timeFinished": "2026-09-26 13:00:11",
+            "failureReason": "",
+            "progressCurrent": "",
+            "progressTotal": "",
+            "confirmedBy": "",
+            "confirmedAt": "",
+            "executedAs": "",
+            "result": {}
+          }
+        ],
+        "sumOfStepsMs": 26000,
+        "log": []
+      },
+      "call": "GET /runs/25764BDC-B9AA-11F1-A439-4AA3AAEA2F3D"
+    }
+  ],
+  "b": [
+    {
+      "call": "POST /flows",
+      "status": "201",
+      "flowId": "4823",
+      "steps": [
+        {
+          "id": "01",
+          "type": "storage-headroom-check",
+          "taskName": "storage-headroom-check 01",
+          "namespace": "IRISAPP",
+          "databaseDirectory": "",
+          "runAsUser": "irisadm",
+          "timeoutMinutes": 10,
+          "wqmCategory": "Default",
+          "customClass": "",
+          "parameters": {
+            "minFreePercent": 99.9
+          },
+          "isDestructive": "0"
+        },
+        {
+          "id": "02",
+          "type": "db-size-report",
+          "taskName": "db-size-report 02",
+          "namespace": "IRISAPP",
+          "databaseDirectory": "",
+          "runAsUser": "irisadm",
+          "timeoutMinutes": 10,
+          "wqmCategory": "Default",
+          "customClass": "",
+          "parameters": {},
+          "isDestructive": "0"
+        },
+        {
+          "id": "03",
+          "type": "integrity-check",
+          "taskName": "integrity-check 03",
+          "namespace": "IRISAPP",
+          "databaseDirectory": "/data/IRISAPP_DATA/",
+          "runAsUser": "irisadm",
+          "timeoutMinutes": 10,
+          "wqmCategory": "Default",
+          "customClass": "",
+          "parameters": {},
+          "isDestructive": "0"
+        }
+      ],
+      "edges": [
+        {
+          "source": "01",
+          "target": "02"
+        },
+        {
+          "source": "01",
+          "target": "03"
+        }
+      ]
+    },
+    {
+      "status": "200",
+      "body": {
+        "errors": [],
+        "warnings": []
+      },
+      "call": "POST /flows/4823/validate"
+    },
+    {
+      "status": "202",
+      "body": {
+        "guid": "35E409C8-B9AA-11F1-A439-4AA3AAEA2F3D",
+        "flowId": "4823",
+        "flowRevision": 1,
+        "state": "running",
+        "startedAt": "2026-09-26 13:00:12",
+        "finishedAt": "",
+        "dispatchedBy": "sentai005adm"
+      },
+      "call": "POST /flows/4823/dispatch",
+      "note": "with runCredential of the same user (not recorded)"
+    },
+    {
+      "status": "200",
+      "body": {
+        "guid": "35E409C8-B9AA-11F1-A439-4AA3AAEA2F3D",
+        "flowId": "4823",
+        "flowRevision": 1,
+        "state": "failed",
+        "startedAt": "2026-09-26 13:00:12",
+        "finishedAt": "2026-09-26 13:00:13",
+        "dispatchedBy": "sentai005adm",
+        "totalDurationMs": 1000,
+        "steps": [
+          {
+            "guid": "35E40EB8-B9AA-11F1-A439-4AA3AAEA2F3D",
+            "stepId": "01",
+            "state": "failed",
+            "timeQueued": "2026-09-26 13:00:12",
+            "timeStarted": "2026-09-26 13:00:12",
+            "timeFinished": "2026-09-26 13:00:12",
+            "failureReason": "ERROR #5001: Storage headroom below 99.9%: '/data/IRISAPP_DATA/' has 93.7% free, below the 99.9% threshold; '/data/IRISAPP_DATA/irisapp_dataenstemp/' has 93.7% free, below the 99.9% threshold; '/data/IRISAPP_DATA/irisapp_datasecondary/' has 93.7% free, below the 99.9% threshold; '/usr/irissys/mgr/' has 93.7% free, below the 99.9% threshold; '/usr/irissys/mgr/IRISAPP_CODE/' has 93.7% free, below the 99.9% threshold; '/usr/irissys/mgr/enslib/' has 93.7% free, below the 99.9% threshold; '/usr/irissys/mgr/irisaudit/' has 93.7% free, below the 99.9% threshold; '/usr/irissys/mgr/irislib/' has 93.7% free, below the 99.9% threshold; '/usr/irissys/mgr/irislocaldata/' has 93.7% free, below the 99.9% threshold; '/usr/irissys/mgr/irismetrics/' has 93.7% free, below the 99.9% threshold; '/usr/irissys/mgr/irissecurity/' has 93.7% free, below the 99.9% threshold; '/usr/irissys/mgr/iristemp/' has 93.7% free, below the 99.9% threshold; '/usr/irissys/mgr/sentaiweb/' has 93.7% free, below the 99.9% threshold; '/usr/irissys/mgr/user/' has 93.7% free, below the 99.9% threshold; '/usr/irissys/mgr/journal/' has 93.7% free, below the 99.9% threshold",
+            "progressCurrent": "",
+            "progressTotal": "",
+            "confirmedBy": "",
+            "confirmedAt": "",
+            "executedAs": "sentai005adm",
+            "result": {
+              "minFreePercent": 99.9,
+              "locations": [
+                {
+                  "path": "/data/IRISAPP_DATA/",
+                  "freePercent": 93.7,
+                  "ok": false
+                },
+                {
+                  "path": "/data/IRISAPP_DATA/irisapp_dataenstemp/",
+                  "freePercent": 93.7,
+                  "ok": false
+                },
+                {
+                  "path": "/data/IRISAPP_DATA/irisapp_datasecondary/",
+                  "freePercent": 93.7,
+                  "ok": false
+                },
+                {
+                  "path": "/usr/irissys/mgr/",
+                  "freePercent": 93.7,
+                  "ok": false
+                },
+                {
+                  "path": "/usr/irissys/mgr/IRISAPP_CODE/",
+                  "freePercent": 93.7,
+                  "ok": false
+                },
+                {
+                  "path": "/usr/irissys/mgr/enslib/",
+                  "freePercent": 93.7,
+                  "ok": false
+                },
+                {
+                  "path": "/usr/irissys/mgr/irisaudit/",
+                  "freePercent": 93.7,
+                  "ok": false
+                },
+                {
+                  "path": "/usr/irissys/mgr/irislib/",
+                  "freePercent": 93.7,
+                  "ok": false
+                },
+                {
+                  "path": "/usr/irissys/mgr/irislocaldata/",
+                  "freePercent": 93.7,
+                  "ok": false
+                },
+                {
+                  "path": "/usr/irissys/mgr/irismetrics/",
+                  "freePercent": 93.7,
+                  "ok": false
+                },
+                {
+                  "path": "/usr/irissys/mgr/irissecurity/",
+                  "freePercent": 93.7,
+                  "ok": false
+                },
+                {
+                  "path": "/usr/irissys/mgr/iristemp/",
+                  "freePercent": 93.7,
+                  "ok": false
+                },
+                {
+                  "path": "/usr/irissys/mgr/sentaiweb/",
+                  "freePercent": 93.7,
+                  "ok": false
+                },
+                {
+                  "path": "/usr/irissys/mgr/user/",
+                  "freePercent": 93.7,
+                  "ok": false
+                },
+                {
+                  "path": "/usr/irissys/mgr/journal/",
+                  "freePercent": 93.7,
+                  "ok": false
+                }
+              ]
+            }
+          },
+          {
+            "guid": "35E4113C-B9AA-11F1-A439-4AA3AAEA2F3D",
+            "stepId": "02",
+            "state": "failed",
+            "timeQueued": "2026-09-26 13:00:12",
+            "timeStarted": "",
+            "timeFinished": "2026-09-26 13:00:13",
+            "failureReason": "One or more required inputs failed",
+            "progressCurrent": "",
+            "progressTotal": "",
+            "confirmedBy": "",
+            "confirmedAt": "",
+            "executedAs": "",
+            "result": {}
+          },
+          {
+            "guid": "35E41286-B9AA-11F1-A439-4AA3AAEA2F3D",
+            "stepId": "03",
+            "state": "failed",
+            "timeQueued": "2026-09-26 13:00:12",
+            "timeStarted": "",
+            "timeFinished": "2026-09-26 13:00:13",
+            "failureReason": "One or more required inputs failed",
+            "progressCurrent": "",
+            "progressTotal": "",
+            "confirmedBy": "",
+            "confirmedAt": "",
+            "executedAs": "",
+            "result": {}
+          }
+        ],
+        "sumOfStepsMs": 0,
+        "log": []
+      },
+      "call": "GET /runs/35E409C8-B9AA-11F1-A439-4AA3AAEA2F3D"
+    }
+  ],
+  "c": [
+    {
+      "case": "purge-task-history keepDays thirty",
+      "flowId": "4829",
+      "validate": {
+        "status": "200",
+        "body": {
+          "errors": [
+            {
+              "stepId": "01",
+              "code": "STEP_TYPE_NOT_SUPPORTED_ON_TARGET",
+              "message": "Step type 'purge-task-history' is not supported on the target platform in v1 (supported: integrity-check, switch-journal, storage-headroom-check, db-size-report)"
+            },
+            {
+              "stepId": "01",
+              "code": "PARAM_TYPE_MISMATCH",
+              "parameter": "keepDays",
+              "message": "Step '01' (purge-task-history): parameter 'keepDays' must be an integer"
+            }
+          ],
+          "warnings": []
+        },
+        "call": "POST /flows/4829/validate"
+      },
+      "dispatch": {
+        "status": "422",
+        "body": {
+          "errors": [
+            {
+              "stepId": "01",
+              "code": "STEP_TYPE_NOT_SUPPORTED_ON_TARGET",
+              "message": "Step type 'purge-task-history' is not supported on the target platform in v1 (supported: integrity-check, switch-journal, storage-headroom-check, db-size-report)"
+            },
+            {
+              "stepId": "01",
+              "code": "PARAM_TYPE_MISMATCH",
+              "parameter": "keepDays",
+              "message": "Step '01' (purge-task-history): parameter 'keepDays' must be an integer"
+            }
+          ],
+          "warnings": []
+        },
+        "call": "POST /flows/4829/dispatch"
+      },
+      "schedule": {
+        "status": "422",
+        "body": {
+          "errors": [
+            {
+              "stepId": "01",
+              "code": "STEP_TYPE_NOT_SUPPORTED_ON_TARGET",
+              "message": "Step type 'purge-task-history' is not supported on the target platform in v1 (supported: integrity-check, switch-journal, storage-headroom-check, db-size-report)"
+            },
+            {
+              "stepId": "01",
+              "code": "PARAM_TYPE_MISMATCH",
+              "parameter": "keepDays",
+              "message": "Step '01' (purge-task-history): parameter 'keepDays' must be an integer"
+            },
+            {
+              "stepId": "01",
+              "code": "DESTRUCTIVE_NOT_SCHEDULABLE",
+              "message": "Step type 'purge-task-history' is destructive; flows with destructive steps are not schedulable in v1 and must be dispatched manually with typed confirmation"
+            },
+            {
+              "stepId": "01",
+              "code": "IN_PROCESS_NOT_SCHEDULABLE",
+              "message": "Step '01' (purge-task-history) runs inside the platform as the dispatching operator and cannot run in a scheduled run"
+            }
+          ],
+          "warnings": []
+        },
+        "call": "POST /flows/4829/schedule"
+      },
+      "runs for flow": 0
+    },
+    {
+      "case": "storage-headroom-check minFreePercent 150",
+      "flowId": "4830",
+      "validate": {
+        "status": "200",
+        "body": {
+          "errors": [
+            {
+              "stepId": "01",
+              "code": "PARAM_OUT_OF_RANGE",
+              "parameter": "minFreePercent",
+              "message": "Step '01' (storage-headroom-check): parameter 'minFreePercent' must be between 0 and 100"
+            }
+          ],
+          "warnings": []
+        },
+        "call": "POST /flows/4830/validate"
+      },
+      "dispatch": {
+        "status": "422",
+        "body": {
+          "errors": [
+            {
+              "stepId": "01",
+              "code": "PARAM_OUT_OF_RANGE",
+              "parameter": "minFreePercent",
+              "message": "Step '01' (storage-headroom-check): parameter 'minFreePercent' must be between 0 and 100"
+            }
+          ],
+          "warnings": []
+        },
+        "call": "POST /flows/4830/dispatch"
+      },
+      "schedule": {
+        "status": "422",
+        "body": {
+          "errors": [
+            {
+              "stepId": "01",
+              "code": "PARAM_OUT_OF_RANGE",
+              "parameter": "minFreePercent",
+              "message": "Step '01' (storage-headroom-check): parameter 'minFreePercent' must be between 0 and 100"
+            },
+            {
+              "stepId": "01",
+              "code": "IN_PROCESS_NOT_SCHEDULABLE",
+              "message": "Step '01' (storage-headroom-check) runs inside the platform as the dispatching operator and cannot run in a scheduled run"
+            }
+          ],
+          "warnings": []
+        },
+        "call": "POST /flows/4830/schedule"
+      },
+      "runs for flow": 0
+    },
+    {
+      "case": "storage-headroom-check path /etc",
+      "flowId": "4831",
+      "validate": {
+        "status": "200",
+        "body": {
+          "errors": [
+            {
+              "stepId": "01",
+              "code": "PARAM_UNKNOWN",
+              "parameter": "path",
+              "message": "Step '01' (storage-headroom-check): unknown parameter 'path'"
+            }
+          ],
+          "warnings": []
+        },
+        "call": "POST /flows/4831/validate"
+      },
+      "dispatch": {
+        "status": "422",
+        "body": {
+          "errors": [
+            {
+              "stepId": "01",
+              "code": "PARAM_UNKNOWN",
+              "parameter": "path",
+              "message": "Step '01' (storage-headroom-check): unknown parameter 'path'"
+            }
+          ],
+          "warnings": []
+        },
+        "call": "POST /flows/4831/dispatch"
+      },
+      "schedule": {
+        "status": "422",
+        "body": {
+          "errors": [
+            {
+              "stepId": "01",
+              "code": "PARAM_UNKNOWN",
+              "parameter": "path",
+              "message": "Step '01' (storage-headroom-check): unknown parameter 'path'"
+            },
+            {
+              "stepId": "01",
+              "code": "IN_PROCESS_NOT_SCHEDULABLE",
+              "message": "Step '01' (storage-headroom-check) runs inside the platform as the dispatching operator and cannot run in a scheduled run"
+            }
+          ],
+          "warnings": []
+        },
+        "call": "POST /flows/4831/schedule"
+      },
+      "runs for flow": 0
+    },
+    {
+      "status": "422",
+      "body": {
+        "errors": [
+          {
+            "stepId": "01",
+            "code": "IN_PROCESS_NOT_SCHEDULABLE",
+            "message": "Step '01' (storage-headroom-check) runs inside the platform as the dispatching operator and cannot run in a scheduled run"
+          },
+          {
+            "stepId": "02",
+            "code": "IN_PROCESS_NOT_SCHEDULABLE",
+            "message": "Step '02' (db-size-report) runs inside the platform as the dispatching operator and cannot run in a scheduled run"
+          }
+        ],
+        "warnings": []
+      },
+      "call": "POST /flows/4822/schedule",
+      "case": "schedule the flow of (a)"
+    }
+  ],
+  "d": [
+    {
+      "call": "POST /flows",
+      "status": "201",
+      "flowId": "4824",
+      "steps": [
+        {
+          "id": "01",
+          "type": "custom",
+          "taskName": "custom 01",
+          "namespace": "%SYS",
+          "databaseDirectory": "",
+          "runAsUser": "irisadm",
+          "timeoutMinutes": 10,
+          "wqmCategory": "Default",
+          "customClass": "%SYS.Task.SwitchJournal",
+          "parameters": {},
+          "isDestructive": "0"
+        }
+      ]
+    },
+    {
+      "status": "200",
+      "body": {
+        "errors": [
+          {
+            "stepId": "01",
+            "code": "STEP_TYPE_NOT_SUPPORTED_ON_TARGET",
+            "message": "Step type 'custom' is not supported on the target platform in v1 (supported: integrity-check, switch-journal, storage-headroom-check, db-size-report)"
+          }
+        ],
+        "warnings": []
+      },
+      "call": "POST /flows/4824/validate"
+    },
+    {
+      "status": "422",
+      "body": {
+        "errors": [
+          {
+            "stepId": "01",
+            "code": "STEP_TYPE_NOT_SUPPORTED_ON_TARGET",
+            "message": "Step type 'custom' is not supported on the target platform in v1 (supported: integrity-check, switch-journal, storage-headroom-check, db-size-report)"
+          }
+        ],
+        "warnings": []
+      },
+      "call": "POST /flows/4824/dispatch"
+    },
+    {
+      "status": "422",
+      "body": {
+        "errors": [
+          {
+            "stepId": "01",
+            "code": "STEP_TYPE_NOT_SUPPORTED_ON_TARGET",
+            "message": "Step type 'custom' is not supported on the target platform in v1 (supported: integrity-check, switch-journal, storage-headroom-check, db-size-report)"
+          }
+        ],
+        "warnings": []
+      },
+      "call": "POST /flows/4824/schedule"
+    },
+    {
+      "status": "409",
+      "body": {
+        "status": 409,
+        "title": "Conflict",
+        "detail": "ERROR #5001: STEP_TYPE_NOT_SUPPORTED_ON_TARGET: step '01' type 'custom' is not supported on the target platform in v1"
+      },
+      "call": "POST /runs/3687DCE2-B9AA-11F1-A439-4AA3AAEA2F3D/steps/3687F0BE-B9AA-11F1-A439-4AA3AAEA2F3D/rerun",
+      "note": "a failed custom StepRun of a run created directly (ungated) to model a run that predates the rule"
+    },
+    {
+      "call": "GET /flows/4824",
+      "status": "200",
+      "steps": [
+        {
+          "id": "01",
+          "type": "custom",
+          "taskName": "custom 01",
+          "namespace": "%SYS",
+          "databaseDirectory": "",
+          "runAsUser": "irisadm",
+          "timeoutMinutes": 10,
+          "wqmCategory": "Default",
+          "customClass": "%SYS.Task.SwitchJournal",
+          "parameters": {},
+          "isDestructive": "0"
+        }
+      ]
+    },
+    {
+      "journal": {
+        "before": "/usr/irissys/mgr/journal/20260926.004",
+        "after": "/usr/irissys/mgr/journal/20260926.004"
+      }
+    }
+  ],
+  "e": {
+    "1-3": [
+      {
+        "call": "POST /flows",
+        "status": "201",
+        "flowId": "4825",
+        "steps": [
+          {
+            "id": "01",
+            "type": "integrity-check",
+            "taskName": "integrity-check 01",
+            "namespace": "IRISAPP",
+            "databaseDirectory": "/data/IRISAPP_DATA/",
+            "runAsUser": "irisadm",
+            "timeoutMinutes": 10,
+            "wqmCategory": "Default",
+            "customClass": "",
+            "parameters": {},
+            "isDestructive": "0"
+          },
+          {
+            "id": "02",
+            "type": "purge-task-history",
+            "taskName": "purge-task-history 02",
+            "namespace": "%SYS",
+            "databaseDirectory": "",
+            "runAsUser": "irisadm",
+            "timeoutMinutes": 10,
+            "wqmCategory": "Default",
+            "customClass": "",
+            "parameters": {
+              "keepDays": 30
+            },
+            "isDestructive": "1"
+          },
+          {
+            "id": "03",
+            "type": "switch-journal",
+            "taskName": "switch-journal 03",
+            "namespace": "%SYS",
+            "databaseDirectory": "",
+            "runAsUser": "irisadm",
+            "timeoutMinutes": 10,
+            "wqmCategory": "Default",
+            "customClass": "",
+            "parameters": {},
+            "isDestructive": "0"
+          }
+        ],
+        "edges": [
+          {
+            "source": "01",
+            "target": "02"
+          },
+          {
+            "source": "02",
+            "target": "03"
+          }
+        ]
+      },
+      {
+        "status": "422",
+        "body": {
+          "errors": [
+            {
+              "stepId": "02",
+              "code": "DESTRUCTIVE_NOT_SCHEDULABLE",
+              "message": "Step type 'purge-task-history' is destructive; flows with destructive steps are not schedulable in v1 and must be dispatched manually with typed confirmation"
+            },
+            {
+              "stepId": "02",
+              "code": "IN_PROCESS_NOT_SCHEDULABLE",
+              "message": "Step '02' (purge-task-history) runs inside the platform as the dispatching operator and cannot run in a scheduled run"
+            },
+            {
+              "stepId": "03",
+              "code": "IN_PROCESS_NOT_SCHEDULABLE",
+              "message": "Step '03' (switch-journal) runs inside the platform as the dispatching operator and cannot run in a scheduled run"
+            }
+          ],
+          "warnings": []
+        },
+        "call": "POST /flows/4825/schedule",
+        "step": "(e)1"
+      },
+      {
+        "status": "428",
+        "body": {
+          "status": 428,
+          "title": "Confirmation Required",
+          "detail": "Step '02' requires a matching typed confirmation before dispatch"
+        },
+        "call": "POST /flows/4825/dispatch",
+        "step": "(e)2 without confirmation"
+      },
+      {
+        "status": "202",
+        "body": {
+          "guid": "36923674-B9AA-11F1-A439-4AA3AAEA2F3D",
+          "flowId": "4825",
+          "flowRevision": 1,
+          "state": "running",
+          "startedAt": "2026-09-26 13:00:13",
+          "finishedAt": "",
+          "dispatchedBy": "sentai005adm"
+        },
+        "call": "POST /flows/4825/dispatch",
+        "step": "(e)2 with typed confirmation"
+      },
+      {
+        "status": "200",
+        "body": {
+          "guid": "36923674-B9AA-11F1-A439-4AA3AAEA2F3D",
+          "flowId": "4825",
+          "flowRevision": 1,
+          "state": "completed",
+          "startedAt": "2026-09-26 13:00:13",
+          "finishedAt": "2026-09-26 13:00:38",
+          "dispatchedBy": "sentai005adm",
+          "totalDurationMs": 25000,
+          "steps": [
+            {
+              "guid": "369239CB-B9AA-11F1-A439-4AA3AAEA2F3D",
+              "stepId": "01",
+              "state": "completed",
+              "timeQueued": "2026-09-26 13:00:13",
+              "timeStarted": "2026-09-26 13:00:13",
+              "timeFinished": "2026-09-26 13:00:37",
+              "failureReason": "",
+              "progressCurrent": "",
+              "progressTotal": "",
+              "confirmedBy": "",
+              "confirmedAt": "",
+              "executedAs": "",
+              "result": {}
+            },
+            {
+              "guid": "36923B4D-B9AA-11F1-A439-4AA3AAEA2F3D",
+              "stepId": "02",
+              "state": "completed",
+              "timeQueued": "2026-09-26 13:00:13",
+              "timeStarted": "2026-09-26 13:00:37",
+              "timeFinished": "2026-09-26 13:00:37",
+              "failureReason": "",
+              "progressCurrent": "",
+              "progressTotal": "",
+              "confirmedBy": "sentai005adm",
+              "confirmedAt": "2026-09-26 13:00:13",
+              "executedAs": "sentai005adm",
+              "result": {}
+            },
+            {
+              "guid": "36923C4A-B9AA-11F1-A439-4AA3AAEA2F3D",
+              "stepId": "03",
+              "state": "completed",
+              "timeQueued": "2026-09-26 13:00:13",
+              "timeStarted": "2026-09-26 13:00:38",
+              "timeFinished": "2026-09-26 13:00:38",
+              "failureReason": "",
+              "progressCurrent": "",
+              "progressTotal": "",
+              "confirmedBy": "",
+              "confirmedAt": "",
+              "executedAs": "sentai005adm",
+              "result": {}
+            }
+          ],
+          "sumOfStepsMs": 24000,
+          "log": []
+        },
+        "call": "GET /runs/36923674-B9AA-11F1-A439-4AA3AAEA2F3D",
+        "step": "(e)3"
+      },
+      {
+        "journal": {
+          "before": "/usr/irissys/mgr/journal/20260926.004",
+          "after": "/usr/irissys/mgr/journal/20260926.005"
+        }
+      }
+    ],
+    "4": [
+      {
+        "call": "POST /flows",
+        "status": "201",
+        "flowId": "4826",
+        "steps": [
+          {
+            "id": "02",
+            "type": "purge-task-history",
+            "taskName": "purge-task-history 02",
+            "namespace": "%SYS",
+            "databaseDirectory": "",
+            "runAsUser": "irisadm",
+            "timeoutMinutes": 10,
+            "wqmCategory": "Default",
+            "customClass": "",
+            "parameters": {
+              "keepDays": 30
+            },
+            "isDestructive": "1"
+          },
+          {
+            "id": "03",
+            "type": "switch-journal",
+            "taskName": "switch-journal 03",
+            "namespace": "%SYS",
+            "databaseDirectory": "",
+            "runAsUser": "irisadm",
+            "timeoutMinutes": 10,
+            "wqmCategory": "Default",
+            "customClass": "",
+            "parameters": {},
+            "isDestructive": "0"
+          }
+        ]
+      },
+      {
+        "status": "200",
+        "body": {
+          "errors": [],
+          "warnings": []
+        },
+        "call": "POST /flows/4826/validate"
+      },
+      {
+        "status": "202",
+        "body": {
+          "guid": "45CAFE67-B9AA-11F1-A439-4AA3AAEA2F3D",
+          "flowId": "4826",
+          "flowRevision": 1,
+          "state": "running",
+          "startedAt": "2026-09-26 13:00:39",
+          "finishedAt": "",
+          "dispatchedBy": "sentai005op"
+        },
+        "call": "POST /flows/4826/dispatch"
+      },
+      {
+        "status": "200",
+        "body": {
+          "guid": "45CAFE67-B9AA-11F1-A439-4AA3AAEA2F3D",
+          "flowId": "4826",
+          "flowRevision": 1,
+          "state": "failed",
+          "startedAt": "2026-09-26 13:00:39",
+          "finishedAt": "2026-09-26 13:02:20",
+          "dispatchedBy": "sentai005op",
+          "totalDurationMs": 101000,
+          "steps": [
+            {
+              "guid": "45CB04A5-B9AA-11F1-A439-4AA3AAEA2F3D",
+              "stepId": "02",
+              "state": "completed",
+              "timeQueued": "2026-09-26 13:00:39",
+              "timeStarted": "2026-09-26 13:00:39",
+              "timeFinished": "2026-09-26 13:00:39",
+              "failureReason": "",
+              "progressCurrent": "",
+              "progressTotal": "",
+              "confirmedBy": "sentai005op",
+              "confirmedAt": "2026-09-26 13:00:39",
+              "executedAs": "sentai005op",
+              "result": {}
+            },
+            {
+              "guid": "45CB07CE-B9AA-11F1-A439-4AA3AAEA2F3D",
+              "stepId": "03",
+              "state": "failed",
+              "timeQueued": "2026-09-26 13:00:39",
+              "timeStarted": "2026-09-26 13:00:39",
+              "timeFinished": "2026-09-26 13:02:20",
+              "failureReason": "ERROR #1142: Error switching journal file: ERROR #921: Operation requires %Admin_Operate:USE privilege",
+              "progressCurrent": "",
+              "progressTotal": "",
+              "confirmedBy": "",
+              "confirmedAt": "",
+              "executedAs": "sentai005op",
+              "result": {}
+            }
+          ],
+          "sumOfStepsMs": 101000,
+          "log": []
+        },
+        "call": "GET /runs/45CAFE67-B9AA-11F1-A439-4AA3AAEA2F3D"
+      },
+      {
+        "journal": {
+          "before": "/usr/irissys/mgr/journal/20260926.005",
+          "after": "/usr/irissys/mgr/journal/20260926.005"
+        }
+      }
+    ],
+    "5": [
+      {
+        "status": "403",
+        "body": {
+          "status": 403,
+          "title": "Forbidden",
+          "detail": "RUN_CREDENTIAL_USER_MISMATCH: the run credential belongs to 'sentai005b', not to the dispatching user 'sentai005adm'"
+        },
+        "call": "POST /flows/4822/dispatch",
+        "note": "as sentai005adm with a runCredential from a sign-in of sentai005b (not recorded)"
+      },
+      {
+        "runs for flow before": 1,
+        "runs for flow after": 1
+      }
+    ],
+    "6": [
+      {
+        "call": "POST /flows/4827/dispatch",
+        "status": "202",
+        "flowId": "4827",
+        "note": "two independent roots: 01 fails fast, 02 keeps the run live"
+      },
+      {
+        "status": "403",
+        "body": {
+          "status": 403,
+          "title": "Forbidden",
+          "detail": "RERUN_NOT_BY_DISPATCHER: only 'sentai005adm', who dispatched this run, may re-run its steps"
+        },
+        "call": "POST /runs/82DC8328-B9AA-11F1-A439-4AA3AAEA2F3D/steps/82DC888B-B9AA-11F1-A439-4AA3AAEA2F3D/rerun",
+        "as": "sentai005b"
+      },
+      {
+        "status": "202",
+        "body": {
+          "guid": "8330F56D-B9AA-11F1-A439-4AA3AAEA2F3D",
+          "stepId": "01",
+          "state": "queued",
+          "timeQueued": "2026-09-26 13:02:22",
+          "timeStarted": "",
+          "timeFinished": "",
+          "failureReason": "",
+          "progressCurrent": "",
+          "progressTotal": "",
+          "confirmedBy": "",
+          "confirmedAt": "",
+          "executedAs": "",
+          "result": {}
+        },
+        "call": "POST /runs/82DC8328-B9AA-11F1-A439-4AA3AAEA2F3D/steps/82DC888B-B9AA-11F1-A439-4AA3AAEA2F3D/rerun",
+        "as": "sentai005adm"
+      },
+      {
+        "status": "200",
+        "body": {
+          "guid": "82DC8328-B9AA-11F1-A439-4AA3AAEA2F3D",
+          "flowId": "4827",
+          "flowRevision": 1,
+          "state": "failed",
+          "startedAt": "2026-09-26 13:02:21",
+          "finishedAt": "2026-09-26 13:02:46",
+          "dispatchedBy": "sentai005adm",
+          "totalDurationMs": 25000,
+          "steps": [
+            {
+              "guid": "82DC888B-B9AA-11F1-A439-4AA3AAEA2F3D",
+              "stepId": "01",
+              "state": "failed",
+              "timeQueued": "2026-09-26 13:02:21",
+              "timeStarted": "2026-09-26 13:02:21",
+              "timeFinished": "2026-09-26 13:02:21",
+              "failureReason": "ERROR #5001: Storage headroom below 99.9%: '/data/IRISAPP_DATA/' has 93.7% free, below the 99.9% threshold; '/data/IRISAPP_DATA/irisapp_dataenstemp/' has 93.7% free, below the 99.9% threshold; '/data/IRISAPP_DATA/irisapp_datasecondary/' has 93.7% free, below the 99.9% threshold; '/usr/irissys/mgr/' has 93.7% free, below the 99.9% threshold; '/usr/irissys/mgr/IRISAPP_CODE/' has 93.7% free, below the 99.9% threshold; '/usr/irissys/mgr/enslib/' has 93.7% free, below the 99.9% threshold; '/usr/irissys/mgr/irisaudit/' has 93.7% free, below the 99.9% threshold; '/usr/irissys/mgr/irislib/' has 93.7% free, below the 99.9% threshold; '/usr/irissys/mgr/irislocaldata/' has 93.7% free, below the 99.9% threshold; '/usr/irissys/mgr/irismetrics/' has 93.7% free, below the 99.9% threshold; '/usr/irissys/mgr/irissecurity/' has 93.7% free, below the 99.9% threshold; '/usr/irissys/mgr/iristemp/' has 93.7% free, below the 99.9% threshold; '/usr/irissys/mgr/sentaiweb/' has 93.7% free, below the 99.9% threshold; '/usr/irissys/mgr/user/' has 93.7% free, below the 99.9% threshold; '/usr/irissys/mgr/journal/' has 93.7% free, below the 99.9% threshold",
+              "progressCurrent": "",
+              "progressTotal": "",
+              "confirmedBy": "",
+              "confirmedAt": "",
+              "executedAs": "sentai005adm",
+              "result": {
+                "minFreePercent": 99.9,
+                "locations": [
+                  {
+                    "path": "/data/IRISAPP_DATA/",
+                    "freePercent": 93.7,
+                    "ok": false
+                  },
+                  {
+                    "path": "/data/IRISAPP_DATA/irisapp_dataenstemp/",
+                    "freePercent": 93.7,
+                    "ok": false
+                  },
+                  {
+                    "path": "/data/IRISAPP_DATA/irisapp_datasecondary/",
+                    "freePercent": 93.7,
+                    "ok": false
+                  },
+                  {
+                    "path": "/usr/irissys/mgr/",
+                    "freePercent": 93.7,
+                    "ok": false
+                  },
+                  {
+                    "path": "/usr/irissys/mgr/IRISAPP_CODE/",
+                    "freePercent": 93.7,
+                    "ok": false
+                  },
+                  {
+                    "path": "/usr/irissys/mgr/enslib/",
+                    "freePercent": 93.7,
+                    "ok": false
+                  },
+                  {
+                    "path": "/usr/irissys/mgr/irisaudit/",
+                    "freePercent": 93.7,
+                    "ok": false
+                  },
+                  {
+                    "path": "/usr/irissys/mgr/irislib/",
+                    "freePercent": 93.7,
+                    "ok": false
+                  },
+                  {
+                    "path": "/usr/irissys/mgr/irislocaldata/",
+                    "freePercent": 93.7,
+                    "ok": false
+                  },
+                  {
+                    "path": "/usr/irissys/mgr/irismetrics/",
+                    "freePercent": 93.7,
+                    "ok": false
+                  },
+                  {
+                    "path": "/usr/irissys/mgr/irissecurity/",
+                    "freePercent": 93.7,
+                    "ok": false
+                  },
+                  {
+                    "path": "/usr/irissys/mgr/iristemp/",
+                    "freePercent": 93.7,
+                    "ok": false
+                  },
+                  {
+                    "path": "/usr/irissys/mgr/sentaiweb/",
+                    "freePercent": 93.7,
+                    "ok": false
+                  },
+                  {
+                    "path": "/usr/irissys/mgr/user/",
+                    "freePercent": 93.7,
+                    "ok": false
+                  },
+                  {
+                    "path": "/usr/irissys/mgr/journal/",
+                    "freePercent": 93.7,
+                    "ok": false
+                  }
+                ]
+              }
+            },
+            {
+              "guid": "8330F56D-B9AA-11F1-A439-4AA3AAEA2F3D",
+              "stepId": "01",
+              "state": "failed",
+              "timeQueued": "2026-09-26 13:02:22",
+              "timeStarted": "2026-09-26 13:02:22",
+              "timeFinished": "2026-09-26 13:02:22",
+              "failureReason": "ERROR #5001: Storage headroom below 99.9%: '/data/IRISAPP_DATA/' has 93.7% free, below the 99.9% threshold; '/data/IRISAPP_DATA/irisapp_dataenstemp/' has 93.7% free, below the 99.9% threshold; '/data/IRISAPP_DATA/irisapp_datasecondary/' has 93.7% free, below the 99.9% threshold; '/usr/irissys/mgr/' has 93.7% free, below the 99.9% threshold; '/usr/irissys/mgr/IRISAPP_CODE/' has 93.7% free, below the 99.9% threshold; '/usr/irissys/mgr/enslib/' has 93.7% free, below the 99.9% threshold; '/usr/irissys/mgr/irisaudit/' has 93.7% free, below the 99.9% threshold; '/usr/irissys/mgr/irislib/' has 93.7% free, below the 99.9% threshold; '/usr/irissys/mgr/irislocaldata/' has 93.7% free, below the 99.9% threshold; '/usr/irissys/mgr/irismetrics/' has 93.7% free, below the 99.9% threshold; '/usr/irissys/mgr/irissecurity/' has 93.7% free, below the 99.9% threshold; '/usr/irissys/mgr/iristemp/' has 93.7% free, below the 99.9% threshold; '/usr/irissys/mgr/sentaiweb/' has 93.7% free, below the 99.9% threshold; '/usr/irissys/mgr/user/' has 93.7% free, below the 99.9% threshold; '/usr/irissys/mgr/journal/' has 93.7% free, below the 99.9% threshold",
+              "progressCurrent": "",
+              "progressTotal": "",
+              "confirmedBy": "",
+              "confirmedAt": "",
+              "executedAs": "sentai005adm",
+              "result": {
+                "minFreePercent": 99.9,
+                "locations": [
+                  {
+                    "path": "/data/IRISAPP_DATA/",
+                    "freePercent": 93.7,
+                    "ok": false
+                  },
+                  {
+                    "path": "/data/IRISAPP_DATA/irisapp_dataenstemp/",
+                    "freePercent": 93.7,
+                    "ok": false
+                  },
+                  {
+                    "path": "/data/IRISAPP_DATA/irisapp_datasecondary/",
+                    "freePercent": 93.7,
+                    "ok": false
+                  },
+                  {
+                    "path": "/usr/irissys/mgr/",
+                    "freePercent": 93.7,
+                    "ok": false
+                  },
+                  {
+                    "path": "/usr/irissys/mgr/IRISAPP_CODE/",
+                    "freePercent": 93.7,
+                    "ok": false
+                  },
+                  {
+                    "path": "/usr/irissys/mgr/enslib/",
+                    "freePercent": 93.7,
+                    "ok": false
+                  },
+                  {
+                    "path": "/usr/irissys/mgr/irisaudit/",
+                    "freePercent": 93.7,
+                    "ok": false
+                  },
+                  {
+                    "path": "/usr/irissys/mgr/irislib/",
+                    "freePercent": 93.7,
+                    "ok": false
+                  },
+                  {
+                    "path": "/usr/irissys/mgr/irislocaldata/",
+                    "freePercent": 93.7,
+                    "ok": false
+                  },
+                  {
+                    "path": "/usr/irissys/mgr/irismetrics/",
+                    "freePercent": 93.7,
+                    "ok": false
+                  },
+                  {
+                    "path": "/usr/irissys/mgr/irissecurity/",
+                    "freePercent": 93.7,
+                    "ok": false
+                  },
+                  {
+                    "path": "/usr/irissys/mgr/iristemp/",
+                    "freePercent": 93.7,
+                    "ok": false
+                  },
+                  {
+                    "path": "/usr/irissys/mgr/sentaiweb/",
+                    "freePercent": 93.7,
+                    "ok": false
+                  },
+                  {
+                    "path": "/usr/irissys/mgr/user/",
+                    "freePercent": 93.7,
+                    "ok": false
+                  },
+                  {
+                    "path": "/usr/irissys/mgr/journal/",
+                    "freePercent": 93.7,
+                    "ok": false
+                  }
+                ]
+              }
+            },
+            {
+              "guid": "82DC8B51-B9AA-11F1-A439-4AA3AAEA2F3D",
+              "stepId": "02",
+              "state": "completed",
+              "timeQueued": "2026-09-26 13:02:21",
+              "timeStarted": "2026-09-26 13:02:21",
+              "timeFinished": "2026-09-26 13:02:46",
+              "failureReason": "",
+              "progressCurrent": "",
+              "progressTotal": "",
+              "confirmedBy": "",
+              "confirmedAt": "",
+              "executedAs": "",
+              "result": {}
+            }
+          ],
+          "sumOfStepsMs": 25000,
+          "log": []
+        },
+        "call": "GET /runs/82DC8328-B9AA-11F1-A439-4AA3AAEA2F3D"
+      }
+    ]
+  },
+  "c_note": "section (c) re-run in a second session (the first loop hit a harness syntax error); same instance, same day"
+}

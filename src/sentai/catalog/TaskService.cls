@@ -149,7 +149,7 @@ ClassMethod Problem(httpStatus As %Integer, detail As %String, platformStatus As
 
 ClassMethod Title(httpStatus As %Integer) As %String
 {
-    Quit $CASE(httpStatus, 400:"Bad Request", 401:"Unauthorized", 403:"Forbidden", 404:"Not Found", 415:"Unsupported Media Type", 502:"Bad Gateway", :"Error")
+    Quit $CASE(httpStatus, 400:"Bad Request", 401:"Unauthorized", 403:"Forbidden", 404:"Not Found", 415:"Unsupported Media Type", 500:"Internal Error", 502:"Bad Gateway", :"Error")
 }
 
 ClassMethod IsTaskId(id As %String) As %Boolean
