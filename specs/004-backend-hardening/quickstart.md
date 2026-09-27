@@ -49,6 +49,16 @@ Recorded when convenient; a mismatch here is a note, not a failure of 004.
   (86 pre-existing, one renamed, none deleted + 19 new), 0 failed.
 - **HTTP run**: `IRIS_USER=… IRIS_PASSWORD=… python3 specs/004-backend-hardening/evidence/run_quickstart.py`
   executes the catalog check and blocks (a)–(c), writing `evidence/quickstart-http-<date>.json`.
+- **HTTP run recorded 2026-09-27** (`evidence/quickstart-http-20260927.json`, after specs 005–009):
+  10 of 13 expectations hold — (b) and (c) fully, (a) create/validate/dispatch and "no 404". The
+  three mismatches are later, intended changes or documented limits, not regressions:
+  1. *catalog: only integrity-check available* — spec 005 made `switch-journal`,
+     `storage-headroom-check` and `db-size-report` available, and 005 T016 `purge-task-history`.
+  2. *(a) SSE reached run-terminal* — the stream ends before the run (HANDOFF item 4: the web
+     gateway compresses it); the canvas polls `GET /runs/{guid}` instead.
+  3. *(a) run completed* — the script dispatches without `runCredential`, so step 03, started 61 s
+     after dispatch, got `HTTP 401` (E-1, documented: a plain dispatch keeps the 60 s token; the
+     canvas always sends a run credential). Steps 01 and 02 completed.
 - **Scheduling (D-2)**: `/schedule` validates the flow and registers a native task, but scheduled
   runs cannot authenticate to the platform in v1 and are not a supported execution path. Use
   manual dispatch.

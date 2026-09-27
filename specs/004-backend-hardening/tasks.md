@@ -95,7 +95,7 @@ rules cannot break them.
 
 ## Phase 5: Polish & cross-cutting (FR-007, FR-008)
 
-- [ ] T008 Documentation, full suite and real-instance acceptance (~30 min; depends on T001–T007):
+- [X] T008 Documentation, full suite and real-instance acceptance (~30 min; depends on T001–T007):
   - `README.md`: add `## Known limitations (v1)` after "What does it do": only `integrity-check` runs (other 6 types load but are refused with `STEP_TYPE_NOT_SUPPORTED_ON_TARGET`); scheduling — the D-2 wording verbatim from spec.md; platform calls made more than 60 s after dispatch fail with 401 (surfaced verbatim as the step's failure reason); step parameters (`databaseDirectory`, …) are not forwarded to the platform; flows must name an existing WQM category (default `SENTAI.DEFAULT` does not exist on a stock instance — use e.g. `Default`); no v1 type uses typed confirmation or pause.
   - `specs/003-backend-objectscript/HANDOFF.md`: add `## Resolution by spec 004` — E-1, E-3 "addressed by 004: documented, not fixed"; E-2 "addressed by 004: 6 types blocked, `integrity-check` only"; F-1, F-3, F-4 "fixed by 004 (T006, T007, T005)"; F-2, F-5 unchanged.
   - `specs/003-backend-objectscript/quickstart.md`: banner at the top — "Superseded for v1 by `specs/004-backend-hardening/quickstart.md`; kept as the T070 record."
