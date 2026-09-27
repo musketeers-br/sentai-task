@@ -57,6 +57,10 @@
 		<div class="muted mono">
 			{step.namespace}{step.databaseDirectory ? ` · ${step.databaseDirectory}` : ''} · #{id}
 		</div>
+		<!-- Spec 009 FR-011: where the step runs, and as whom, as the run read says. -->
+		<div class="muted mono where">
+			on <span data-testid="executed-on">{sr?.executedOn ?? step.target ?? 'local'}</span>{#if sr?.executedAs}{` · as ${sr.executedAs}`}{/if}
+		</div>
 
 		{#if state === 'running'}
 			<div class="elapsed" data-testid="elapsed">{duration === null ? '—' : formatDuration(duration)}</div>

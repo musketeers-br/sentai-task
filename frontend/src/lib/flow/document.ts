@@ -11,6 +11,8 @@ export interface StepTypeInfo {
 	pausable: boolean;
 	/** Spec 004 D-1: whether the target platform can execute this type in this release. */
 	available: boolean;
+	/** Spec 008 FR-008: whether a step of this type may run on a target server. */
+	remoteCapable?: boolean;
 }
 
 export interface FlowStep {
@@ -24,6 +26,8 @@ export interface FlowStep {
 	wqmCategory: string;
 	customClass: string;
 	parameters: Record<string, unknown>;
+	/** Spec 008: the target server the step runs on; absent = this instance. */
+	target?: string;
 }
 
 export interface Position {

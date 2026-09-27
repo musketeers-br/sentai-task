@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { session } from '$lib/api/session.svelte';
 	import { confirmationsFor } from '$lib/flow/document';
+	import { targetsUsedBy } from '$lib/targets/targets';
 	import type { FlowEditor } from '$lib/flow/editor.svelte';
 
 	let {
@@ -16,11 +17,15 @@
 	/** Typed confirmations by step id; kept across a refused attempt so only the wrong one is retyped. */
 	let typed = $state<Record<string, string>>({});
 	const confirmation = $derived(confirmationsFor(editor.steps, editor.registry, typed));
+	/** Spec 009 FR-009: the targets this flow uses, one password each (never kept). */
+	const targets = $derived(targetsUsedBy(editor.steps));
+	let targetPasswords = $state<Record<string, string>>({});
 
 	$effect(() => {
 		if (open && !dialog.open) {
 			message = null;
 			typed = {};
+			targetPasswords = {};
 			dialog.showModal();
 		} else if (!open && dialog.open) {
 			dialog.close();
@@ -30,9 +35,10 @@
 	async function onsubmit(event: SubmitEvent) {
 		event.preventDefault();
 		busy = true;
-		const result = await editor.dispatch(password, confirmation.confirmations);
+		const result = await editor.dispatch(password, confirmation.confirmations, targetPasswords);
 		busy = false;
 		password = '';
+		targetPasswords = {};
 		if (result.ok) {
 			open = false;
 			ondispatched(result.guid);
@@ -78,6 +84,17 @@
 
 		<label for="dispatch-password">Password for {session.user}</label>
 		<input id="dispatch-password" type="password" autocomplete="current-password" required bind:value={password} />
+
+		{#each targets as target (target)}
+			<label for={`dispatch-target-${target}`}>Password for {session.user} on {target}</label>
+			<input
+				id={`dispatch-target-${target}`}
+				type="password"
+				autocomplete="off"
+				required
+				bind:value={targetPasswords[target]}
+			/>
+		{/each}
 
 		{#if message}<p class="error" role="alert">{message}</p>{/if}
 

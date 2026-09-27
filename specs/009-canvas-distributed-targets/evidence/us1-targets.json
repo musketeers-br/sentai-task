@@ -1,0 +1,49 @@
+{
+  "evidence_id": "us1-targets",
+  "captured_at": "2026-09-27T17:27:47.214Z",
+  "request": {
+    "method": "GET",
+    "path": "/targets/e2e-t-muk3d5ya/status"
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "target": "e2e-t-muk3d5ya",
+      "readAt": "2026-09-27 17:27:37",
+      "reachable": true,
+      "version": "IRIS for UNIX (Ubuntu Server LTS for x86-64 Containers) 2026.2 (Build 221U) Fri Jun 26 2026 09:58:52 EDT",
+      "user": "_SYSTEM",
+      "categories": [
+        {
+          "Name": "Default",
+          "MaxActiveWorkers": "Dynamic (40)",
+          "DefaultWorkers": "Dynamic (20)",
+          "MaxWorkers": "Dynamic (40)",
+          "MaxTotalWorkers": 0,
+          "AlwaysQueue": false
+        },
+        {
+          "Name": "SQL",
+          "MaxActiveWorkers": "Dynamic (40)",
+          "DefaultWorkers": "Dynamic (20)",
+          "MaxWorkers": "Dynamic (40)",
+          "MaxTotalWorkers": 0,
+          "AlwaysQueue": false
+        },
+        {
+          "Name": "Utility",
+          "MaxActiveWorkers": "8",
+          "DefaultWorkers": "8",
+          "MaxWorkers": "Dynamic (40)",
+          "MaxTotalWorkers": 0,
+          "AlwaysQueue": true
+        }
+      ]
+    }
+  },
+  "notes": [
+    "Targets screen values compared with GET /targets and GET /targets/{name}/status (reachable, version, user, categories).",
+    "Refusals shown verbatim: INVALID_TARGET (400), wrong target password (401), unknown host (502 TARGET_UNREACHABLE).",
+    "No token or password is recorded."
+  ]
+}

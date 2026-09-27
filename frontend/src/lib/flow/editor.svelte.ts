@@ -1,3 +1,5 @@
+import { targetsUsedBy, type TargetView } from '$lib/targets/targets';
+import { refusalText } from '$lib/catalog/catalog';
 import type { Edge, Node } from '@xyflow/svelte';
 import { api, describeError, type ScheduleResult } from '$lib/api/client';
 import { session } from '$lib/api/session.svelte';
@@ -42,6 +44,8 @@ function toFlowEdge({ source, target }: EdgeRef): Edge {
 export class FlowEditor {
 	registry = $state.raw<StepTypeInfo[]>([]);
 	wqmCategories = $state.raw<string[]>([]);
+	/** Spec 009: registered target servers, as GET /targets returns them (for *Run on*). */
+	targets = $state.raw<TargetView[]>([]);
 	nodes = $state.raw<StepFlowNode[]>([]);
 	edges = $state.raw<Edge[]>([]);
 
@@ -193,14 +197,22 @@ export class FlowEditor {
 	 */
 	async dispatch(
 		password: string,
-		confirmations: Array<{ stepId: string; typedName: string }> = []
+		confirmations: Array<{ stepId: string; typedName: string }> = [],
+		targetPasswords: Record<string, string> = {}
 	): Promise<{ ok: true; guid: string } | { ok: false; message: string }> {
 		if ((this.dirty || !this.id) && !(await this.save())) {
 			return { ok: false, message: this.notice?.text ?? 'Save failed.' };
 		}
 		const credential = await session.dedicatedToken(password);
 		if (!credential.ok) return credential;
-		const result = await api.dispatch(this.id!, credential, confirmations);
+		// Spec 009 FR-009: one sign-in per target the flow uses; any refusal stops here, verbatim.
+		const targetCredentials: Array<{ target: string; refreshToken: string }> = [];
+		for (const target of targetsUsedBy(this.steps)) {
+			const signedIn = await api.signInTarget(target, targetPasswords[target] ?? '');
+			if (!signedIn.ok) return { ok: false, message: `Target ${target}: ${refusalText(signedIn.error)}` };
+			targetCredentials.push({ target, refreshToken: signedIn.value.refreshToken });
+		}
+		const result = await api.dispatch(this.id!, credential, confirmations, targetCredentials);
 		if (result.ok) return { ok: true, guid: result.value.guid };
 		if (result.error.kind === 'validation') this.report = result.error.report;
 		return { ok: false, message: `Not dispatched: ${describeError(result.error)}` };
