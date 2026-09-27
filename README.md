@@ -496,8 +496,13 @@ it never starts real platform jobs through the admin API.
 Some tests ask the Work Queue Manager for a category that does not exist, on purpose, to check
 that the step fails with the platform's own message. IRIS logs each of those refusals at severity
 2, which puts the instance in the *alert* state, so Docker then reports the container as
-`unhealthy` (its healthcheck accepts only `ok` and `warn`). After running the suite on an instance
-you keep using, clear the state:
+`unhealthy` (its healthcheck accepts only `ok` and `warn`). **Cancelling a running step does the
+same:** SentaiTask forwards the cancel to the platform (`async-result/cancel`), and IRIS 2026.2 ends
+the job's worker, which its Work Queue Manager logs as `ERROR #7802 … unexpectedly shut down`
+(severity 2) — a plain IRIS with nothing installed logs it too
+([evidence](specs/008-distributed-targets/evidence/t0-summary.md)). SentaiTask does not clear the
+alert itself, since that would hide real ones. After running the suite, or cancelling steps, on an
+instance you keep using, clear the state:
 
 ```objectscript
 %SYS>do $SYSTEM.Monitor.Clear()

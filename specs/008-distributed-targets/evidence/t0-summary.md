@@ -29,3 +29,13 @@ polled again, but T009 must not rely on polling to see a cancel.
 `{"refresh_token": …}`, returns 200 with a new `access_token`, `refresh_token`, `sub`, `iat`,
 `exp`; the old refresh token is then refused (401, rotated). So dispatch can redeem a target
 refresh token on its own, as research R-7 assumed.
+
+## Addendum (2026-09-27, alert after cancel)
+
+The cancel in `08c-cancel` (09:57:50 on `iris-target`, a plain IRIS) is followed in its
+`messages.log`, at the same second, by `WorkMgr appendError … ERROR #7802: Worker job/s '725:28'
+unexpectedly shut down in group '#Default:(…)'` at severity 2: the platform's own cancel ends the
+worker and logs it as an alert. The same message appears on the primary each time a running step is
+cancelled (reproduced with e2e us4 "Cancel wave" and "cancelling one step"); it puts the instance in
+the *alert* state, which the image's healthcheck reports as `unhealthy`.
+
