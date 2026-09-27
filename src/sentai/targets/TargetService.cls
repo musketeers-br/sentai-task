@@ -75,6 +75,79 @@ ClassMethod SetOnline(name As %String, payload As %DynamicObject, user As %Strin
     Quit {"httpStatus": 200, "body": (target.ToJSON())}
 }
 
+/// FR-022 (Clarifications Q1 = A): signs the operator in to the target and returns the target's
+/// own credential pair. The password is read into a local variable, sent once, and kept nowhere;
+/// the pair is returned to the caller and kept nowhere either.
+ClassMethod SignIn(name As %String, payload As %DynamicObject) As %DynamicObject
+{
+    Set target = ..Open(name)
+    Quit:'$IsObject(target) ..NotFound(name)
+    If 'target.online Quit ..Problem(409, "Conflict", "TARGET_OFFLINE: target '"_name_"' is offline")
+    Set user = $S($IsObject(payload):payload.user, 1:""), password = $S($IsObject(payload):payload.password, 1:"")
+    If (user = "") || (password = "") Quit ..Problem(400, "Bad Request", "user and password are required")
+
+    Set pair = ##class(sentai.dispatch.AdminApiClient).Login(target.baseUrl, user, password, .httpStatus, .transportError)
+    Set password = ""
+    If (transportError '= "") Quit ..Problem(502, "Bad Gateway", "TARGET_UNREACHABLE: "_transportError)
+    If (httpStatus '= 200) || '$IsObject(pair) || (pair."access_token" = "") Quit ..Refused(httpStatus, pair)
+    Set out = {"target": (name), "accessToken": (pair."access_token"), "refreshToken": (pair."refresh_token"), "sub": (pair.sub)}
+    If (pair.exp '= "") && (pair.iat '= "") {
+        Do out.%Set("expiresIn", pair.exp - pair.iat, "number")
+    } Else {
+        Do out.%Set("expiresIn", "", "null")
+    }
+    Quit {"httpStatus": 200, "body": (out)}
+}
+
+/// FR-005/FR-006: what the target reports right now, read with the operator's credential for it
+/// (`targetToken`). Nothing is cached, estimated or taken from the primary; a target that does not
+/// answer, or refuses, is a 200 whose body says so (the read happened).
+ClassMethod Status(name As %String, targetToken As %String) As %DynamicObject
+{
+    Set target = ..Open(name)
+    Quit:'$IsObject(target) ..NotFound(name)
+    If (targetToken = "") Quit ..Problem(400, "Bad Request", "a credential for the target is required (header X-Sentai-Target-Authorization: Bearer <token>)")
+
+    Set out = {"target": (name), "readAt": ($ZDATETIME($HOROLOG, 3))}
+    Set info = ##class(sentai.dispatch.AdminApiClient).Get("/api/admin/info", targetToken, .httpStatus, .location, target.baseUrl, .transportError)
+    If (transportError '= "") {
+        Do out.%Set("reachable", 0, "boolean")
+        Set out.unreachable = {"transportError": (transportError)}
+        Quit {"httpStatus": 200, "body": (out)}
+    }
+    Do out.%Set("reachable", 1, "boolean")
+    If (httpStatus '= 200) || '$IsObject(info) {
+        Set out.refused = ..Refused(httpStatus, info).problem
+        Quit {"httpStatus": 200, "body": (out)}
+    }
+    Set out.version = info.result.serverVersion, out.user = info.result.username
+
+    // Worker configuration as reported; the platform reports no queue length (T001, research R-2).
+    Set categories = ##class(sentai.dispatch.AdminApiClient).Get("/api/admin/v2/wqm-categories", targetToken, .httpStatus, .location, target.baseUrl, .transportError)
+    If (transportError = "") && (httpStatus = 200) && $IsObject(categories) && $IsObject(categories.result) {
+        Set out.categories = categories.result
+    } Else {
+        Set out.categoriesRefused = $S(transportError '= "":{"transportError": (transportError)}, 1:..Refused(httpStatus, categories).problem)
+    }
+    Quit {"httpStatus": 200, "body": (out)}
+}
+
+/// A target's refusal, verbatim: its HTTP status, its `errors[].error` joined (or ""), and its
+/// status object as `platformStatus` when it sent one (the spec 006 convention).
+ClassMethod Refused(httpStatus As %Integer, body) As %DynamicObject
+{
+    Set status = $S($IsObject(body) && $IsObject(body."status"):body."status", $IsObject(body) && $IsObject(body.errors):body, 1:"")
+    Set detail = ""
+    If $IsObject(status) && $IsObject(status.errors) {
+        Set iter = status.errors.%GetIterator()
+        While iter.%GetNext(.k, .e) { Set detail = detail_$S(detail = "":"", 1:"; ")_$S($IsObject(e):e.error, 1:e) }
+    }
+    Set outcome = ..Problem($S(httpStatus > 0:httpStatus, 1:502), $S(httpStatus = 401:"Unauthorized", httpStatus = 403:"Forbidden", 1:"Refused"), detail)
+    Set outcome.problem.httpStatus = httpStatus
+    Set:$IsObject(status) outcome.problem.platformStatus = status
+    Quit outcome
+}
+
 ClassMethod Open(name As %String, concurrency As %Integer = 0) As sentai.model.Target
 {
     Quit:(name = "") ""

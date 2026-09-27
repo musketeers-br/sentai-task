@@ -52,6 +52,8 @@ XData UrlMap [ XMLNamespace = "http://www.intersystems.com/urlmap" ]
     <Route Url="/targets/:name" Method="PUT" Call="UpdateTarget"/>
     <Route Url="/targets/:name" Method="DELETE" Call="DeleteTarget"/>
     <Route Url="/targets/:name/online" Method="POST" Call="SetTargetOnline"/>
+    <Route Url="/targets/:name/sign-in" Method="POST" Call="SignInToTarget"/>
+    <Route Url="/targets/:name/status" Method="GET" Call="ReadTargetStatus"/>
 </Routes>
 }
 
@@ -716,6 +718,21 @@ ClassMethod DeleteTarget(name As %String) As %Status
 ClassMethod SetTargetOnline(name As %String) As %Status
 {
     Quit ..WriteOutcome(##class(sentai.targets.TargetService).SetOnline(name, ..ReadJSONBody(), ..CurrentUser()))
+}
+
+/// FR-022: the body carries the operator's user and password for the target; neither is kept.
+ClassMethod SignInToTarget(name As %String) As %Status
+{
+    Quit ..WriteOutcome(##class(sentai.targets.TargetService).SignIn(name, ..ReadJSONBody()))
+}
+
+/// The request's own Authorization carries the primary token; the target's travels in
+/// X-Sentai-Target-Authorization (research R-7).
+ClassMethod ReadTargetStatus(name As %String) As %Status
+{
+    Set header = $G(%request.CgiEnvs("HTTP_X_SENTAI_TARGET_AUTHORIZATION"))
+    Set token = $S($ZCVT($E(header, 1, 7), "L") = "bearer ":$E(header, 8, *), 1:"")
+    Quit ..WriteOutcome(##class(sentai.targets.TargetService).Status(name, token))
 }
 
 ClassMethod ReadJSONBody() As %DynamicObject

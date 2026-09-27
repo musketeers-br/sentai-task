@@ -121,7 +121,7 @@ removed.
   Implement `src/sentai/model/Target.cls`, `src/sentai/targets/TargetService.cls`, routes in
   `src/sentai/rest/Dispatcher.cls`. Run the frontend suites once (routes added, nothing else).
 
-- [ ] T005 [US1] Sign-in and status (FR-005, FR-006, FR-022, D-1). **Tests first** in
+- [X] T005 [US1] Sign-in and status (FR-005, FR-006, FR-022, D-1). **Tests first** in
   `TargetServiceTest` / `TargetRestTest`:
   - sign-in returns exactly `{target, accessToken, refreshToken, sub, expiresIn}` from the double;
     a 401 from the target → 401 with its text verbatim and `platformStatus`; down → 502
