@@ -20,7 +20,7 @@ Captured on 2026-09-27 on the compose stack: `iris` (SentaiTask) and `iris-targe
 | SC-005 no secret stored or logged | **Met.** 153 passwords and tokens used during the quickstart were searched in `^sentai`, `^sentaiRun`, the target registry, `^IRIS.Temp.sentaiTargetCred` and `messages.log`: 0 hits; the run credentials of both runs were erased |
 | SC-006 status read < 3 s when reachable | **Met.** 0.07 s (unreachable: 7.96 s, the connection timeout) |
 | SC-007 existing suites green, none removed | **Met.** Backend 268/268 (225 before 008); frontend unit 73/73, e2e 21 passed + `us14` skipped before master's spec 005 T016 was merged in; after that merge `us14` passes and the backend is still 268/268 |
-| SC-008 a clean checkout brings both up with one command | **Not verified** from a clean checkout: `iris-target` was built with `docker compose up -d --build iris-target`; the main image was not rebuilt in this session |
+| SC-008 a clean checkout brings both up with one command | **Met (2026-09-27, master `d7b488a`).** A fresh `git clone` of the repository, built with `docker compose build --no-cache` and started with `docker compose up -d` (other host ports, so the dev stack kept running): both containers healthy; a 12-check smoke test passed (public page, catalog, targets, sign-in and status, the demo flow completed with step 03 on `iris-target`); the full e2e suite passed 31/31 against the image's own canvas build; the backend suite passed 268/268 inside the clean container |
 
 ## Deviations recorded during implementation
 
