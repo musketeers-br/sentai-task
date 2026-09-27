@@ -1,0 +1,20 @@
+{
+  "evidence_id": "us18-open-flow",
+  "captured_at": "2026-09-27T23:01:37.618Z",
+  "request": {
+    "method": "GET",
+    "path": "/flows"
+  },
+  "response": {
+    "order": [
+      "us18-1790550095031-beta",
+      "us18-1790550095031-alpha"
+    ],
+    "picked": "5403",
+    "actions": 3
+  },
+  "notes": [
+    "Open flow… listed the newer flow first; the filter matched case-insensitively.",
+    "SC-002: 3 actions from the canvas (open list, filter, pick)."
+  ]
+}

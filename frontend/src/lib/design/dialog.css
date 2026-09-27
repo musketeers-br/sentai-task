@@ -1,0 +1,103 @@
+/* Hand-authored (not generated). Spec 010: the shared look of the modal dialogs built on
+   lib/shell/Modal.svelte (Save as, Open flow, unsaved changes, Getting started). Tokens only.
+   Global and namespaced by `.modal`, so each dialog does not repeat ~80 lines of the same CSS. */
+
+dialog.modal {
+	width: 440px;
+	max-width: calc(100vw - 32px);
+	padding: 0;
+	color: var(--color-text);
+	background: var(--color-card);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-panel);
+	box-shadow: var(--color-card-shadow);
+}
+
+dialog.modal::backdrop {
+	background: color-mix(in srgb, var(--color-ground) 70%, transparent);
+}
+
+.modal .modal-body {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding: 22px;
+}
+
+.modal h2 {
+	margin: 0;
+	font-size: var(--size-sectionTitle);
+	font-weight: 600;
+}
+
+.modal .lead,
+.modal .error {
+	margin: 0;
+	font-size: var(--size-body);
+	line-height: 1.5;
+}
+
+.modal .lead {
+	margin-bottom: 8px;
+	color: var(--color-text-muted);
+}
+
+.modal .error {
+	color: var(--destructive-text);
+}
+
+.modal label {
+	font-size: var(--size-caption);
+	color: var(--color-text-muted);
+}
+
+.modal input:not([type='checkbox']) {
+	font: inherit;
+	font-size: var(--size-body);
+	color: var(--color-text);
+	background: var(--color-ground);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-control);
+	padding: 8px 9px;
+}
+
+.modal .actions {
+	display: flex;
+	justify-content: flex-end;
+	align-items: center;
+	gap: 8px;
+	margin-top: 8px;
+}
+
+.modal button {
+	font: inherit;
+	font-size: var(--size-body);
+	border-radius: var(--radius-control);
+	padding: 7px 14px;
+	cursor: pointer;
+}
+
+.modal button.primary {
+	font-weight: 600;
+	color: var(--color-ground);
+	background: var(--color-text);
+	border: 1px solid var(--color-text);
+}
+
+.modal button.secondary {
+	font-weight: 500;
+	color: var(--color-text);
+	background: var(--color-card);
+	border: 1px solid var(--color-border);
+}
+
+.modal button.quiet {
+	color: var(--color-text-muted);
+	background: transparent;
+	border: 1px solid var(--color-border);
+}
+
+.modal button:disabled {
+	opacity: 0.45;
+	cursor: default;
+}

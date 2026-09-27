@@ -3,6 +3,7 @@
 // (numbers as strings, "" for absent objects, booleans as "0"/"1"); this is the only module
 // that knows about that.
 import type { FlowDocument, FlowStep, ParameterSpec, Position, StepCategory, StepTypeInfo } from '$lib/flow/document';
+import type { FlowSummaryView } from '$lib/flows/list';
 
 export interface WireStepType {
 	type: string;
@@ -50,6 +51,8 @@ export interface WireFlowSummary {
 	name: string;
 	revision: number | string;
 	savedAt?: string | null;
+	savedBy?: string;
+	nextRun?: string | null;
 }
 
 function toNumberOrNull(value: unknown): number | null {
@@ -73,6 +76,16 @@ export function fromWireStep(w: WireStep): FlowStep {
 		parameters: w.parameters && typeof w.parameters === 'object' ? { ...w.parameters } : {},
 		// Spec 008: only a remote step carries `target`; a local one reads exactly as before.
 		...(w.target ? { target: w.target } : {})
+	};
+}
+
+/** Spec 010 FR-002: one row of GET /flows; `savedAt` stays in the platform's own format. */
+export function fromWireFlowSummary(w: WireFlowSummary): FlowSummaryView {
+	return {
+		id: String(w.id),
+		name: w.name,
+		revision: toNumberOrNull(w.revision) ?? 0,
+		savedAt: w.savedAt || null
 	};
 }
 

@@ -1,0 +1,20 @@
+{
+  "evidence_id": "us21-guide",
+  "captured_at": "2026-09-27T23:05:17.154Z",
+  "request": {
+    "ui": "Getting started"
+  },
+  "response": {
+    "steps": [
+      "Welcome",
+      "Open the example",
+      "Build a flow",
+      "Validate and run",
+      "Save, Save as, Open",
+      "Schedule and explore"
+    ]
+  },
+  "notes": [
+    "Titles in the order Story 5 lists them."
+  ]
+}

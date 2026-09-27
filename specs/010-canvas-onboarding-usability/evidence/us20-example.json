@@ -1,0 +1,24 @@
+{
+  "evidence_id": "us20-example",
+  "captured_at": "2026-09-27T23:05:11.988Z",
+  "request": {
+    "method": "POST",
+    "path": "/flows/{id}/dispatch"
+  },
+  "response": {
+    "validation": {
+      "errors": [],
+      "warnings": []
+    },
+    "steps": {
+      "01": "completed",
+      "02": "completed"
+    },
+    "run": "completed",
+    "elapsedMs": 1670
+  },
+  "notes": [
+    "Scripted path from \"Open example flow\" to the run finishing (the automated part of SC-004; the 2-minute SC is timed manually, quickstart §4).",
+    "No typed-confirmation fieldset was shown: neither step type is destructive (SC-005)."
+  ]
+}

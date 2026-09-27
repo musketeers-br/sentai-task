@@ -1,7 +1,10 @@
 // One 60-second JWT pair authenticates every call — SysAdmin and SENTAI.REST.Dispatcher alike
 // (spec 002 Clarifications 2026-09-21). Refresh is proactive, before expiry, never a reaction
-// to a 401 (FR-034). Tokens live in memory only; nothing about permissions is cached
-// (Constitution III) — the platform decides on every request.
+// to a 401 (FR-034). The access token lives in memory only. Spec 010 US3: the refresh token is
+// also kept in this tab's sessionStorage (kept-sign-in.ts), so a reload redeems it instead of
+// asking for the password; nothing about permissions is stored or cached (Constitution III) —
+// the platform decides on every request.
+import { eraseKept, handOver, readKept, reclaim, writeKept, type KeptStorage } from './kept-sign-in';
 
 const ADMIN_BASE = '/api/admin';
 const REFRESH_MARGIN_SECONDS = 15;
@@ -14,7 +17,22 @@ interface TokenPair {
 	exp: number;
 }
 
-export type SessionStatus = 'signed-out' | 'signed-in' | 'expired';
+/** `restoring`: a kept sign-in is being redeemed on load (spec 010); no sign-in form yet. */
+export type SessionStatus = 'signed-out' | 'restoring' | 'signed-in' | 'expired';
+/** How this page's sign-in began: typed with the password, or redeemed from the kept one. */
+export type SessionOrigin = 'password' | 'restored';
+
+const ENDED = 'Your session ended — sign in again.';
+const COPIED = 'Sign in to continue in this tab.';
+
+/** This tab's sessionStorage, or null where there is none (prerendering) or it is refused. */
+function tabStorage(): KeptStorage | null {
+	try {
+		return typeof sessionStorage === 'undefined' ? null : sessionStorage;
+	} catch {
+		return null;
+	}
+}
 export type LoginResult = { ok: true } | { ok: false; message: string };
 
 function basicCredentials(user: string, password: string): string {
@@ -22,10 +40,21 @@ function basicCredentials(user: string, password: string): string {
 	return btoa(String.fromCharCode(...bytes));
 }
 
-class Session {
+export class Session {
 	status = $state<SessionStatus>('signed-out');
 	user = $state<string | null>(null);
 	refreshCount = $state(0);
+	origin = $state<SessionOrigin | null>(null);
+	/** Why the sign-in form is shown after a load: the kept sign-in ended, or this tab is a copy. */
+	ended = $state<string | null>(null);
+
+	#storage: () => KeptStorage | null;
+
+	constructor(storage: () => KeptStorage | null = tabStorage) {
+		this.#storage = storage;
+		// Decided before the first render, so a reload never flashes the sign-in form (SC-003).
+		if (readKept(storage()).kind === 'kept') this.status = 'restoring';
+	}
 
 	#access: string | null = null;
 	#refresh: string | null = null;
@@ -54,23 +83,83 @@ class Session {
 						: `Login failed: HTTP ${res.status} ${res.statusText}`
 			};
 		}
+		this.origin = 'password';
+		this.ended = null;
 		this.#accept((await res.json()) as TokenPair);
 		return { ok: true };
 	}
 
+	/**
+	 * Spec 010 FR-009/FR-012/FR-013, once per page load: redeem the tab's kept refresh token (the
+	 * refresh token alone is accepted — research R-3.1). A copy made by duplicating a live tab is
+	 * dropped without a request; any failure to redeem erases it and says the session ended.
+	 */
+	async restore(): Promise<void> {
+		const kept = readKept(this.#storage());
+		if (kept.kind === 'copied') {
+			eraseKept(this.#storage());
+			this.status = 'signed-out';
+			this.ended = COPIED;
+			return;
+		}
+		if (kept.kind === 'none') {
+			if (this.status === 'restoring') this.status = 'signed-out';
+			return;
+		}
+		this.status = 'restoring';
+		let res: Response;
+		try {
+			res = await fetch(`${ADMIN_BASE}/refresh`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ refresh_token: kept.refreshToken })
+			});
+		} catch (e) {
+			this.#endKept(`${ENDED} Could not reach the IRIS instance: ${(e as Error).message}`);
+			return;
+		}
+		if (!res.ok) {
+			this.#endKept(ENDED);
+			return;
+		}
+		this.origin = 'restored';
+		this.ended = null;
+		this.#accept((await res.json()) as TokenPair);
+	}
+
+	/** `pagehide` hands the kept token to the tab's next document; bfcache `pageshow` takes it back. */
+	attachPageLifecycle(win: Window): void {
+		win.addEventListener('pagehide', () => {
+			if (this.status === 'signed-in') handOver(this.#storage());
+		});
+		win.addEventListener('pageshow', (event) => {
+			if ((event as PageTransitionEvent).persisted && this.status === 'signed-in') reclaim(this.#storage());
+		});
+	}
+
 	logout(): void {
 		clearTimeout(this.#timer);
+		eraseKept(this.#storage());
 		this.#access = null;
 		this.#refresh = null;
 		this.user = null;
+		this.origin = null;
+		this.ended = null;
 		this.status = 'signed-out';
 	}
 
 	/** Called when the platform answers 401 to an authenticated call. */
 	expire(): void {
 		clearTimeout(this.#timer);
+		eraseKept(this.#storage());
 		this.#access = null;
 		this.status = 'expired';
+	}
+
+	#endKept(message: string): void {
+		eraseKept(this.#storage());
+		this.status = 'signed-out';
+		this.ended = message;
 	}
 
 	authorization(): string | null {
@@ -113,6 +202,7 @@ class Session {
 		this.#refresh = pair.refresh_token;
 		this.user = pair.sub;
 		this.status = 'signed-in';
+		writeKept(this.#storage(), pair.refresh_token);
 		// exp - iat, not exp - Date.now(): immune to clock skew between browser and IRIS.
 		const lifetime = pair.exp - Math.floor(pair.iat);
 		const delay = Math.max(5, lifetime - REFRESH_MARGIN_SECONDS) * 1000;

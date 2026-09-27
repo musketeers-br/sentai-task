@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fromWireFlow, fromWireStepTypes, type WireFlow } from './wire';
+import { fromWireFlow, fromWireFlowSummary, fromWireStepTypes, type WireFlow } from './wire';
 
 // Shapes copied from specs/003-backend-objectscript/evidence/quickstart-http-20260923.json
 const wireFlow: WireFlow = {
@@ -89,5 +89,24 @@ describe('fromWireStepTypes', () => {
 		]);
 		expect(ic.available).toBe(true);
 		expect(legacy.available).toBe(false);
+	});
+});
+
+describe('fromWireFlowSummary (spec 010 FR-002)', () => {
+	it('keeps id, name, revision and savedAt as GET /flows reports them', () => {
+		// Shape probed on 2026-09-27 (spec 010 research R-1).
+		expect(
+			fromWireFlowSummary({ id: '95', name: 'A', revision: 1, savedAt: '2026-09-26 09:29:13', savedBy: 'tester', nextRun: '' })
+		).toEqual({ id: '95', name: 'A', revision: 1, savedAt: '2026-09-26 09:29:13' });
+	});
+
+	it('tolerates a string revision and an empty or absent savedAt', () => {
+		expect(fromWireFlowSummary({ id: '3', name: 'B', revision: '4', savedAt: '' })).toEqual({
+			id: '3',
+			name: 'B',
+			revision: 4,
+			savedAt: null
+		});
+		expect(fromWireFlowSummary({ id: '3', name: 'B', revision: '' })).toEqual({ id: '3', name: 'B', revision: 0, savedAt: null });
 	});
 });

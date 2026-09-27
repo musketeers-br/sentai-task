@@ -31,6 +31,7 @@
 	{#if editor.notice}
 		<span class={`notice ${editor.notice.tone}`} role="status">
 			{editor.notice.text}
+			{#if editor.conflictHint}<span class="hint">Use Save as… to keep your version.</span>{/if}
 			<button type="button" aria-label="Dismiss message" onclick={() => (editor.notice = null)}>×</button>
 		</span>
 	{/if}
@@ -78,6 +79,10 @@
 	.finding.error,
 	.notice.error {
 		color: var(--destructive-text);
+	}
+
+	.notice .hint {
+		color: var(--color-text-muted);
 	}
 
 	.notice {

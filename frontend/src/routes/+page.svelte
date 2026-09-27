@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, untrack } from 'svelte';
-	import { goto } from '$app/navigation';
+	import { beforeNavigate, goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { SvelteFlowProvider } from '@xyflow/svelte';
 	import { api, describeError } from '$lib/api/client';
@@ -10,6 +10,15 @@
 	import FlowCanvas from '$lib/canvas/FlowCanvas.svelte';
 	import type { FlowDocument } from '$lib/flow/document';
 	import { FlowEditor } from '$lib/flow/editor.svelte';
+	import { afterSave, decide, needsGuard, type GuardChoice, type PendingSwitch } from '$lib/flows/guard';
+	import { defaultFlowName } from '$lib/flows/list';
+	import EmptyCanvasInvitation from '$lib/flows/EmptyCanvasInvitation.svelte';
+	import { exampleAvailable, openExample } from '$lib/flows/example';
+	import OpenFlowDialog from '$lib/flows/OpenFlowDialog.svelte';
+	import GettingStartedDialog from '$lib/guide/GettingStartedDialog.svelte';
+	import { guide, shouldAutoOpen } from '$lib/guide/guide.svelte';
+	import SaveAsDialog from '$lib/flows/SaveAsDialog.svelte';
+	import UnsavedChangesDialog from '$lib/flows/UnsavedChangesDialog.svelte';
 	import Inspector from '$lib/inspector/Inspector.svelte';
 	import Palette from '$lib/palette/Palette.svelte';
 	import RunScreen from '$lib/run/RunScreen.svelte';
@@ -31,7 +40,12 @@
 	/** Derived from the address, so back/forward, deep links and reloads all agree (FR-002). */
 	const screen = $derived(screenOf(page.url));
 
-	onMount(() => theme.init());
+	onMount(() => {
+		theme.init();
+		// Spec 010 US3: keep the tab's sign-in across reloads; the address then restores the place.
+		session.attachPageLifecycle(window);
+		void session.restore();
+	});
 
 	$effect(() => {
 		if (session.status === 'signed-in' && phase.name === 'idle') void boot();
@@ -53,13 +67,19 @@
 		if (categories.ok) editor.wqmCategories = categories.value;
 		// Spec 009: the targets *Run on* offers; an unreadable list offers none.
 		await loadTargets();
+		// Spec 010 R-4.4: a refused list is not "no flows" — nothing is offered on a guess.
+		const flows = await api.listFlows();
+		noFlows = flows.ok && flows.value.length === 0;
 
 		const params = new URLSearchParams(location.search);
 		const flowId = params.get('flow');
 		if (flowId) {
 			const flow = await api.getFlow(flowId);
 			if (!flow.ok) {
-				phase = { name: 'failed', message: describeError(flow.error) };
+				// Spec 010 D-8: not a blank failure — the platform's reason, and Open flow… / New flow.
+				editor.notice = { tone: 'error', text: describeError(flow.error) };
+				unreadable = flowId;
+				phase = { name: 'ready' };
 				return;
 			}
 			editor.load(flow.value);
@@ -121,7 +141,7 @@
 	// history), that flow is loaded into the one editor.
 	$effect(() => {
 		const flowId = page.url.searchParams.get('flow');
-		if (phase.name !== 'ready' || screen !== 'flows' || !flowId) return;
+		if (phase.name !== 'ready' || screen !== 'flows' || !flowId || flowId === unreadable) return;
 		untrack(() => {
 			if (flowId !== editor.id) void switchFlow(flowId);
 		});
@@ -134,10 +154,116 @@
 			return;
 		}
 		watching = null;
+		unreadable = null;
 		editor.load(flow.value);
 	}
 
 	let dispatchOpen = $state(false);
+	let saveAsOpen = $state(false);
+	let openListOpen = $state(false);
+	/** Spec 010 D-8: the flow the address named could not be read; the canvas offers a way on. */
+	let unreadable = $state<string | null>(null);
+	/** Spec 010 FR-016(a): the boot-time fact "this instance has no saved flows" (false if unreadable). */
+	let noFlows = $state(false);
+	let invitationDismissed = $state(false);
+	const showExample = $derived(exampleAvailable(editor.registry));
+	const showInvitation = $derived(
+		noFlows && !invitationDismissed && unreadable === null && editor.id === null && editor.steps.length === 0
+	);
+
+	// --- Spec 010 FR-006: the one unsaved-changes guard --------------------------------------
+	// Every switch away from the open flow goes through `guarded`: New flow, Open flow…, Open
+	// example flow, and (via beforeNavigate) back/forward or a link that changes `flow`.
+	let guard = $state<{ pending: PendingSwitch; busy: boolean; message: string | null } | null>(null);
+	let guardOpen = $state(false);
+	/** Set just before a navigation the guard already approved, so it is not asked twice. */
+	let bypassGuard = false;
+
+	async function guarded(pending: PendingSwitch) {
+		if (!needsGuard(editor.dirty)) return perform(pending);
+		guard = { pending, busy: false, message: null };
+		guardOpen = true;
+	}
+
+	async function onGuardChoice(choice: GuardChoice) {
+		if (!guard) return;
+		let step = decide(choice);
+		if (step.next === 'save-then-proceed') {
+			guard.busy = true;
+			const ok = await editor.save();
+			guard.busy = false;
+			step = afterSave(ok);
+			// A refused save keeps the operator here, with the platform's words (FR-008).
+			if (step.next === 'stay') {
+				guard.message = editor.notice?.text ?? 'The flow could not be saved.';
+				return;
+			}
+		}
+		const pending = guard.pending;
+		guard = null;
+		guardOpen = false;
+		if (step.next === 'proceed') await perform(pending);
+	}
+
+	async function perform(pending: PendingSwitch) {
+		switch (pending.kind) {
+			case 'new':
+				return newFlowNow();
+			case 'open':
+				return navigateApproved(flowHref(pending.flowId));
+			case 'example':
+				return openExampleNow();
+			case 'address':
+				return navigateApproved(pending.url);
+		}
+	}
+
+	async function navigateApproved(to: string | URL) {
+		bypassGuard = true;
+		try {
+			await goto(to, { noScroll: true });
+		} finally {
+			bypassGuard = false;
+		}
+	}
+
+	beforeNavigate((navigation) => {
+		if (bypassGuard || !navigation.to || navigation.type === 'leave' || phase.name !== 'ready') return;
+		const from = page.url.searchParams.get('flow');
+		const to = navigation.to.url.searchParams.get('flow');
+		if (from === to || !needsGuard(editor.dirty)) return;
+		navigation.cancel();
+		void guarded({ kind: 'address', url: navigation.to.url });
+	});
+
+	/** Spec 010 FR-007: an empty draft with a fresh unique name; the address drops the old flow. */
+	async function newFlowNow() {
+		unreadable = null;
+		const flows = await api.listFlows();
+		editor.reset(defaultFlowName(new Date(), flows.ok ? flows.value.map((f) => f.name) : []));
+		watching = null;
+		const url = new URL(page.url);
+		url.searchParams.delete('flow');
+		url.searchParams.delete('run');
+		await goto(url, { keepFocus: true, noScroll: true });
+	}
+
+	/** Spec 010 FR-017: the existing example, or a new one — never a duplicate. */
+	async function openExampleNow() {
+		const result = await openExample(api);
+		if (!result.ok) {
+			editor.notice = { tone: 'error', text: describeError(result.error) };
+			return;
+		}
+		invitationDismissed = true;
+		unreadable = null;
+		await navigateApproved(flowHref(result.value));
+	}
+
+	/** Spec 010 FR-004: the new flow is open; pushing its address lets Back return to the original. */
+	function onSavedAs(flowId: string) {
+		void goto(flowHref(flowId), { keepFocus: true, noScroll: true });
+	}
 
 	function onDispatched(guid: string) {
 		watching = { guid, flow: editor.toDocument() };
@@ -164,13 +290,42 @@
 	}
 
 	function onkeydown(event: KeyboardEvent) {
-		if ((event.ctrlKey || event.metaKey) && event.key === 's' && phase.name === 'ready') {
+		const command = event.ctrlKey || event.metaKey;
+		if (command && event.shiftKey && event.key.toLowerCase() === 's' && phase.name === 'ready' && screen === 'flows') {
+			event.preventDefault();
+			saveAsOpen = true;
+			return;
+		}
+		if (command && !event.shiftKey && event.key.toLowerCase() === 'o' && phase.name === 'ready' && screen === 'flows' && !watching) {
+			event.preventDefault();
+			openListOpen = true;
+			return;
+		}
+		if (command && event.key === 's' && phase.name === 'ready') {
 			event.preventDefault();
 			void save();
 		}
 	}
 
+	// Spec 010 FR-020: once the canvas is ready after a sign-in typed with the password — never after
+	// a reload that kept the sign-in — unless dismissed in this browser or already shown this visit.
+	$effect(() => {
+		if (phase.name !== 'ready') return;
+		untrack(() => {
+			if (shouldAutoOpen({ origin: session.origin, dismissed: guide.dismissed(), shownThisVisit: guide.shownThisVisit })) {
+				guide.autoOpen();
+			}
+		});
+	});
+
+	function openExampleFromGuide() {
+		guide.close();
+		void guarded({ kind: 'example' });
+	}
+
 	function signOut() {
+		guide.close();
+		guide.resetVisit();
 		session.logout();
 		phase = { name: 'idle' };
 	}
@@ -187,9 +342,13 @@
 			onnavigate={navigate}
 			user={session.user}
 			onsave={save}
+			onsaveas={() => (saveAsOpen = true)}
+			onnew={() => void guarded({ kind: 'new' })}
+			onopen={() => (openListOpen = true)}
 			onvalidate={validate}
 			onrun={() => (dispatchOpen = true)}
 			onschedule={() => (scheduling = true)}
+			onhelp={() => guide.openFromHelp()}
 			onsignout={signOut}
 		/>
 		<TargetsScreen targetParam={page.url.searchParams.get('target')} onselect={selectTarget} onchanged={loadTargets} />
@@ -205,9 +364,13 @@
 			onnavigate={navigate}
 			user={session.user}
 			onsave={save}
+			onsaveas={() => (saveAsOpen = true)}
+			onnew={() => void guarded({ kind: 'new' })}
+			onopen={() => (openListOpen = true)}
 			onvalidate={validate}
 			onrun={() => (dispatchOpen = true)}
 			onschedule={() => (scheduling = true)}
+			onhelp={() => guide.openFromHelp()}
 			onsignout={signOut}
 		/>
 		<CatalogScreen taskParam={page.url.searchParams.get('task')} {flowHref} onselect={selectTask} onopenflow={openFlow} />
@@ -230,9 +393,13 @@
 			onnavigate={navigate}
 			user={session.user}
 			onsave={save}
+			onsaveas={() => (saveAsOpen = true)}
+			onnew={() => void guarded({ kind: 'new' })}
+			onopen={() => (openListOpen = true)}
 			onvalidate={validate}
 			onrun={() => (dispatchOpen = true)}
 			onschedule={() => (scheduling = true)}
+			onhelp={() => guide.openFromHelp()}
 			onsignout={signOut}
 		/>
 		<div class="workspace">
@@ -241,12 +408,44 @@
 				<SvelteFlowProvider>
 					<FlowCanvas {editor} />
 				</SvelteFlowProvider>
+				{#if showInvitation}
+					<EmptyCanvasInvitation
+						{showExample}
+						onexample={() => void guarded({ kind: 'example' })}
+						ondismiss={() => (invitationDismissed = true)}
+					/>
+				{/if}
+				{#if unreadable !== null && editor.id === null && editor.steps.length === 0}
+					<div class="canvas-panel" data-testid="flow-unreadable">
+						<p>This flow could not be opened. The reason is in the status bar.</p>
+						<div class="panel-actions">
+							<button type="button" onclick={() => (openListOpen = true)}>Open flow…</button>
+							<button type="button" onclick={() => void guarded({ kind: 'new' })}>New flow</button>
+						</div>
+					</div>
+				{/if}
 			</div>
 			<Inspector {editor} />
 		</div>
 		<StatusBar {editor} />
 	</div>
 	<ScheduleDialog {editor} bind:open={scheduling} />
+	<SaveAsDialog {editor} bind:open={saveAsOpen} onsaved={onSavedAs} />
+	<OpenFlowDialog
+		bind:open={openListOpen}
+		currentId={editor.id}
+		onpick={(flowId) => void guarded({ kind: 'open', flowId })}
+		onnew={() => void guarded({ kind: 'new' })}
+		{showExample}
+		onexample={() => void guarded({ kind: 'example' })}
+	/>
+	<UnsavedChangesDialog
+		bind:open={guardOpen}
+		name={editor.name}
+		busy={guard?.busy ?? false}
+		message={guard?.message ?? null}
+		onchoose={(choice) => void onGuardChoice(choice)}
+	/>
 	<DispatchDialog {editor} bind:open={dispatchOpen} ondispatched={onDispatched} />
 	<datalist id="wqm-categories">
 		{#each editor.wqmCategories as name (name)}<option value={name}></option>{/each}
@@ -254,8 +453,10 @@
 	{#if session.status === 'expired'}
 		<div class="overlay"><SignIn expired /></div>
 	{/if}
+{:else if session.status === 'restoring'}
+	<main class="message" role="status"><p>Signing you back in…</p></main>
 {:else if session.status !== 'signed-in'}
-	<SignIn expired={session.status === 'expired'} />
+	<SignIn expired={session.status === 'expired'} notice={session.ended} />
 {:else if phase.name === 'failed'}
 	<main class="message" role="alert">
 		<p>{phase.message}</p>
@@ -263,6 +464,10 @@
 	</main>
 {:else}
 	<main class="message"><p>Loading the step catalog…</p></main>
+{/if}
+
+{#if phase.name === 'ready' && session.status === 'signed-in'}
+	<GettingStartedDialog {showExample} onexample={openExampleFromGuide} />
 {/if}
 
 <style>
@@ -279,8 +484,49 @@
 	}
 
 	.canvas-area {
+		position: relative;
 		flex-grow: 1;
 		min-width: 0;
+	}
+
+	/* Spec 010: a card over the empty canvas (the unreadable-flow panel; later the invitation). */
+	.canvas-panel {
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		z-index: 4;
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+		max-width: 360px;
+		padding: 20px 22px;
+		transform: translate(-50%, -50%);
+		font-size: var(--size-body);
+		color: var(--color-text);
+		background: var(--color-card);
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-panel);
+		box-shadow: var(--color-card-shadow);
+	}
+
+	.canvas-panel p {
+		margin: 0;
+		line-height: 1.5;
+	}
+
+	.panel-actions {
+		display: flex;
+		gap: 8px;
+	}
+
+	.panel-actions button {
+		font: inherit;
+		color: var(--color-text);
+		background: var(--color-card);
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-control);
+		padding: 7px 12px;
+		cursor: pointer;
 	}
 
 	.overlay {
