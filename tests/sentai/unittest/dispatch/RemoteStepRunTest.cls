@@ -222,4 +222,37 @@ Method TestTargetRefusalWhilePollingIsPermanent()
     Do $$$AssertTrue(..StepRun(run, "03").failureReason [ "HTTP 401: ERROR #822: Access Denied", ..StepRun(run, "03").failureReason)
 }
 
+/// Quickstart (e) finding: a target that does not answer must not hold the run. After a transport
+/// failure the loop leaves that target alone for a while (polls and renewals), so local steps and
+/// the timeout sweep keep their pace.
+Method TestADownTargetIsLeftAloneForAWhile()
+{
+    Set run = ..DemoRun()
+    Do ##class(sentai.dispatch.WaveDispatcher).StartStep(run, "03")
+    Do ##class(sentai.unittest.AdminApiDouble).ScriptDown(..#BASE, "ERROR #6059: Unable to open TCP/IP socket to server remote.example:52773")
+    Do ##class(sentai.dispatch.WaveDispatcher).PollInFlightSteps(run, "LOCAL-A")
+    Do ##class(sentai.dispatch.WaveDispatcher).PollInFlightSteps(run, "LOCAL-A")
+    Set $LIST(^IRIS.Temp.sentaiTargetCred(run.guid, ..Name), 3) = ##class(sentai.dispatch.WaveDispatcher).NowSeconds() - 41
+    Do ##class(sentai.dispatch.WaveDispatcher).RenewTargetCredentialsIfDue(run.guid)
+    Do $$$AssertEquals(^sentaiTestDouble("downcalls", ..#BASE), 1, "one call, then back-off")
+
+    // Once the back-off has passed, the target is tried again.
+    Set ^IRIS.Temp.sentaiTargetCred(run.guid, "%failAt", ..Name) = ##class(sentai.dispatch.WaveDispatcher).NowSeconds() - 31
+    Do ##class(sentai.dispatch.WaveDispatcher).PollInFlightSteps(run, "LOCAL-A")
+    Do $$$AssertEquals(^sentaiTestDouble("downcalls", ..#BASE), 2)
+}
+
+/// Quickstart (e) finding: the local run credential is renewed right before a local poll, so a
+/// slow pass can never let it expire under a running local step.
+Method TestLocalCredentialIsRenewedBeforeALocalPoll()
+{
+    Set run = ..DemoRun()
+    Do ##class(sentai.dispatch.WaveDispatcher).StoreRunCredential(run.guid, "LOCAL-OLD", "LOCAL-REF")
+    Do ##class(sentai.dispatch.WaveDispatcher).StartStep(run, "01")
+    Set ^sentaiRun(run.guid, "%tokenAt") = ##class(sentai.dispatch.WaveDispatcher).NowSeconds() - 50
+    Do ##class(sentai.unittest.AdminApiDouble).Script("/api/admin/refresh", "POST", 200, "", {"access_token": "LOCAL-NEW", "refresh_token": "LOCAL-REF2"}.%ToJSON())
+    Do ##class(sentai.dispatch.WaveDispatcher).PollInFlightSteps(run, "LOCAL-OLD")
+    Do $$$AssertEquals($G(^sentaiTestDouble("gets", "/api/admin/v1/async-result?id=L1")), "LOCAL-NEW")
+}
+
 }

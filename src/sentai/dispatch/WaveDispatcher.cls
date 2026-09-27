@@ -226,6 +226,19 @@ ClassMethod RenewRunCredentialIfDue(runGuid As %String) As %String
     Quit body."access_token"
 }
 
+/// Seconds a target is left alone after it failed to answer (research R-12; quickstart (e)).
+Parameter TARGETBACKOFFSECONDS = 30;
+
+ClassMethod MarkTargetFailed(runGuid As %String, target As %String)
+{
+    Set ^IRIS.Temp.sentaiTargetCred(runGuid, "%failAt", target) = ..NowSeconds()
+}
+
+ClassMethod TargetBackingOff(runGuid As %String, target As %String) As %Boolean
+{
+    Quit (..NowSeconds() - $G(^IRIS.Temp.sentaiTargetCred(runGuid, "%failAt", target), 0)) < ..#TARGETBACKOFFSECONDS
+}
+
 ClassMethod EraseRunCredential(runGuid As %String)
 {
     Kill ^sentaiRun(runGuid, "%token"), ^sentaiRun(runGuid, "%refresh"), ^sentaiRun(runGuid, "%tokenAt")
@@ -281,10 +294,12 @@ ClassMethod RenewTargetCredentialsIfDue(runGuid As %String)
     For {
         Set name = $O(^IRIS.Temp.sentaiTargetCred(runGuid, name))
         Quit:(name = "")
-        Continue:(name = "%lastError")
+        Continue:($EXTRACT(name) = "%")
+        Continue:..TargetBackingOff(runGuid, name)
         Set entry = ^IRIS.Temp.sentaiTargetCred(runGuid, name)
         Continue:((..NowSeconds() - $LG(entry, 3)) < ..#RENEWAFTERSECONDS)
         Set body = ##class(sentai.dispatch.AdminApiClient).Post("/api/admin/refresh", "", {"refresh_token": ($LG(entry, 2))}, .httpStatus, .location, $LG(entry, 5), .transportError)
+        Do:(transportError '= "") ..MarkTargetFailed(runGuid, name)
         Continue:((transportError '= "") || (httpStatus '= 200) || '$IsObject(body) || (body."access_token" = ""))
         Set ^IRIS.Temp.sentaiTargetCred(runGuid, name) = $LB(body."access_token", body."refresh_token", ..NowSeconds(), $LG(entry, 4), $LG(entry, 5))
     }
@@ -501,6 +516,7 @@ ClassMethod ExecuteStepAsync(stepRunGuid As %String) As %Status
     Do ##class(sentai.dispatch.AdminApiClient).Post(endpoint, token, {}, .httpStatus, .location, base, .transportError)
 
     If (transportError '= "") {
+        Do:(base '= "") ..MarkTargetFailed(run.guid, target)
         Do stepRun.TransitionTo("failed", $S(base '= "":"Target '"_target_"' did not answer: ", 1:"")_transportError)
     } ElseIf (httpStatus = 202) && (location '= "") {
         Set stepRun.adminJobId = location
@@ -526,14 +542,23 @@ ClassMethod PollInFlightSteps(run As sentai.model.Run, bearerToken As %String) A
         Continue:(stepRun.adminJobId = "")
 
         Set httpStatus = 0, location = "", transportError = ""
-        // Spec 008: a remote job is read on its target, with the run's credential for it.
+        // Spec 008: a remote job is read on its target, with the run's credential for it — unless
+        // that target just failed to answer (back-off: it must not hold the run). A local job is
+        // read with the run credential renewed right now if due, so a slow pass can never let it
+        // expire under a running step (quickstart (e) finding).
         Set base = stepRun.targetBaseUrl
-        Set token = $S(base '= "":..TargetToken(run.guid, stepRun.executedOn), 1:bearerToken)
+        If (base '= "") {
+            Continue:..TargetBackingOff(run.guid, stepRun.executedOn)
+            Set token = ..TargetToken(run.guid, stepRun.executedOn)
+        } Else {
+            Set token = $S(..RunToken(run.guid) '= "":..RenewRunCredentialIfDue(run.guid), 1:bearerToken)
+        }
         Set body = ##class(sentai.dispatch.AdminApiClient).Get(stepRun.adminJobId, token, .httpStatus, .location, base, .transportError)
         // No answer: keep polling, remembering why; SweepTimeouts bounds it by the step's
         // timeout and reports this text (spec 008 FR-016, research R-12).
         If (transportError '= "") {
             Set ^IRIS.Temp.sentaiTargetCred(run.guid, "%lastError", stepRun.guid) = transportError
+            Do:(base '= "") ..MarkTargetFailed(run.guid, stepRun.executedOn)
             Continue
         }
         Kill ^IRIS.Temp.sentaiTargetCred(run.guid, "%lastError", stepRun.guid)

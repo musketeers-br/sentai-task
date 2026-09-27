@@ -12,8 +12,9 @@ ClassMethod Get(urlPath As %String, bearerToken As %String, ByRef httpStatus As 
 {
     Quit:..IsDown(baseUrl, .httpStatus, .locationHeader, .transportError) ""
     Set urlPath = baseUrl_urlPath
-    // Recorded with the credential used, so tests can assert who read what.
+    // Recorded with the credential used, so tests can assert who read what, and how often.
     Set ^sentaiTestDouble("gets", urlPath) = bearerToken
+    Set ^sentaiTestDouble("getcount", urlPath) = $G(^sentaiTestDouble("getcount", urlPath)) + 1
     Quit ..Respond(urlPath, "GET", .httpStatus, .locationHeader)
 }
 
@@ -82,6 +83,7 @@ ClassMethod IsDown(baseUrl As %String, ByRef httpStatus As %Integer, ByRef locat
     Set transportError = ""
     Quit:(baseUrl = "") 0
     Quit:'$D(^sentaiTestDouble("down", baseUrl)) 0
+    Set ^sentaiTestDouble("downcalls", baseUrl) = $G(^sentaiTestDouble("downcalls", baseUrl)) + 1
     Set httpStatus = 0, locationHeader = "", transportError = ^sentaiTestDouble("down", baseUrl)
     Quit 1
 }
