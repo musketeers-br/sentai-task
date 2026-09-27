@@ -5,6 +5,8 @@ export interface Finding {
 	stepId: string | null;
 	code: string;
 	message: string;
+	/** Spec 005 BD-1: the parameter a PARAM_* finding is about, when the API names one. */
+	parameter?: string;
 }
 
 export interface ValidationReport {

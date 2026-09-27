@@ -115,7 +115,8 @@
 	.top-bar {
 		display: flex;
 		align-items: center;
-		gap: var(--space-section);
+		/* Three tabs plus the flow actions must fit 1440 px without clipping (spec 009). */
+		gap: 10px;
 		height: var(--chrome-top-bar-height);
 		flex-shrink: 0;
 		box-sizing: border-box;
@@ -163,7 +164,10 @@
 	}
 
 	.flow-name {
-		min-width: 220px;
+		/* Spec 009 added a third tab: the name gives way first, so nothing else wraps or clips. */
+		flex: 0 1 220px;
+		min-width: 96px;
+		text-overflow: ellipsis;
 		font: inherit;
 		font-size: var(--size-bodyStrong);
 		font-weight: 600;
@@ -201,7 +205,17 @@
 	button {
 		font: inherit;
 		font-size: var(--size-body);
+		white-space: nowrap;
+		flex-shrink: 0;
 		cursor: pointer;
+	}
+
+	.tabs,
+	.theme-switch,
+	.meta,
+	.user {
+		flex-shrink: 0;
+		white-space: nowrap;
 	}
 
 	.theme-switch button {
@@ -225,7 +239,7 @@
 		background: var(--color-text);
 		border: 1px solid var(--color-text);
 		border-radius: var(--radius-control);
-		padding: 7px 14px;
+		padding: 7px 10px;
 	}
 
 	.secondary {
@@ -234,7 +248,7 @@
 		background: var(--color-card);
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius-control);
-		padding: 7px 12px;
+		padding: 7px 10px;
 	}
 
 	.primary:disabled,

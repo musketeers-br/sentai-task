@@ -1,10 +1,8 @@
 <script lang="ts">
 	import { STEP_TYPE_MIME } from '$lib/canvas/dnd';
-	import { stepLabel, type StepCategory, type StepTypeInfo } from '$lib/flow/document';
+	import { paletteGroups, typeLabel, type StepTypeInfo } from '$lib/flow/document';
 
 	let { registry, onadd }: { registry: StepTypeInfo[]; onadd: (type: string) => void } = $props();
-
-	const ORDER: StepCategory[] = ['verification', 'storage', 'journal', 'purge', 'backup', 'custom'];
 
 	let query = $state('');
 
@@ -14,13 +12,11 @@
 			(t) =>
 				!q ||
 				t.type.includes(q) ||
-				stepLabel(t.type).toLowerCase().includes(q) ||
+				typeLabel(t).toLowerCase().includes(q) ||
 				t.className.toLowerCase().includes(q)
 		);
-		return ORDER.map((category) => ({
-			category,
-			types: matches.filter((t) => t.category === category)
-		})).filter((g) => g.types.length > 0);
+		// Spec 007 D-6: in-process types and legacy custom under Custom; the rest by category.
+		return paletteGroups(matches).map((g) => ({ category: g.id, types: g.types }));
 	});
 
 	function ondragstart(event: DragEvent, type: string) {
@@ -66,7 +62,7 @@
 						onclick={() => onadd(t.type)}
 					>
 						<span class="entry-text">
-							<span class="entry-name">{stepLabel(t.type)}</span>
+							<span class="entry-name">{typeLabel(t)}</span>
 							<span class="entry-class">{t.className || 'subclass of %SYS.Task.Definition'}</span>
 							{#if !t.available}<span class="entry-unavailable">not supported in v1</span>{/if}
 						</span>

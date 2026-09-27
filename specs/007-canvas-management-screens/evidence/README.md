@@ -5,10 +5,10 @@ Captured on 2026-09-27 against the dev container (IRIS 2026.2), canvas build pub
 
 ## Status
 
-**Part A (task catalog) and T009 (typed confirmation) are done.** Part B (T001 prototype, T007,
-T008, T010 and the Part B half of T011) is not started: it waits on the design prototype (gate
-G-B). The backend dependencies BD-1 (structured `parameter` on findings) and BD-2 (declared
-`purge-audit-records` schema) are delivered in spec 005.
+**Everything is done.** Part A (task catalog) and T009 (typed confirmation) first; Part B (T007,
+T008, T010 and the Part B half of T011) on 2026-09-27, built in the existing visual system — spec
+009 Clarifications Q1 = A replaced the T001 prototype with paired dark/light screenshots
+(`sc008-params-*.png`). BD-1 and BD-2 are delivered in spec 005.
 
 ## Test counts
 
@@ -32,10 +32,10 @@ assertions are unchanged.
 | SC-002 N marked rows, flow in ≤ 2 clicks | **Met.** A scheduled 3-step flow gives exactly 3 rows marked `flow <id> · step 01/02/03`; row click + origin link opens the flow; a deleted flow reads *flow not found*, no link | `us2-origin.json` (us8) |
 | SC-003 < 3 s first rows, < 2 s filter | **Met** with 151 tasks: first rows about 1.4 s, filter update about 1.37 s including the 300 ms debounce, over 3 runs | `sc003-timing.txt` (us9) |
 | SC-004 suspend/resume confirmed; refusals show the status | **Met.** Suspend and resume on a task the test scheduled, each confirmed by a fresh read; an operator without `%Admin_Task` sees `HTTP 403 — no reason given` (list and detail) | `us4-suspend.json` (us10, us7) |
-| SC-005 parameter form | **Not started** (Part B) | — |
-| SC-006 three destructive signals | **Partly met.** The missing third signal (typed confirmation before dispatch) exists and is proven; the declared-node visuals are Part B | `us6-typed-confirmation.json` (us14) |
+| SC-005 parameter form | **Met.** `storage-headroom-check` shows exactly its one declared field (number, 0–100, placeholder `default: 10`, the API description); `db-size-report` "takes no parameters"; `PARAM_OUT_OF_RANGE` carried `parameter` and was shown on its field, verbatim; clearing the field removes the key | `us5-params.json` (us11) |
+| SC-006 three destructive signals | **Met.** `purge-task-history` from the Custom group carries the hazard band, the DESTRUCTIVE seal and the purge border (us12), and the typed confirmation (us14) | us12, `us6-typed-confirmation.json` |
 | SC-007 existing tests green, one e2e per story | **Met,** with the one adjustment above; US-1…US-4 and US-6's confirmation each have their own e2e | full run 2026-09-27 |
-| SC-008 paired theme screenshots | **Met for the catalog** (same structure and strings, every text ≥ 4.5:1). The parameter-form pair is Part B | `sc008-catalog-dark.png`, `sc008-catalog-light.png` (us13) |
+| SC-008 paired theme screenshots | **Met** for the catalog and the parameter form with a field in error (same strings, every text ≥ 4.5:1) | `sc008-catalog-*.png`, `sc008-params-*.png` (us13) |
 
 ## Gate G-C (typed confirmation e2e)
 
@@ -51,3 +51,11 @@ in `us6-typed-confirmation.json`. With T009 merged, spec 005 T016 may now commit
   `SentaiWebPage` role from `iris.script` was created so the static app matches `module.xml`.
 - The theming check found "—" (no value) below 4.5:1 in the dark theme; it now uses the muted
   text token.
+
+## Part B findings (2026-09-27)
+
+- The third top-bar tab (spec 009) made the bar overflow at 1440 px: "Task catalog" wrapped,
+  "Light" and later "Sign out" were clipped. The flow name now gives way first and the gaps are
+  tighter; no item passes 1440 px.
+- The inspector's "runs on this instance only" note (spec 009) took the destructive block's red
+  `.note` style; it has its own muted style now.

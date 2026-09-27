@@ -2,7 +2,7 @@
 // and the frontend's domain types. The response bodies deviate from openapi.yaml in small ways
 // (numbers as strings, "" for absent objects, booleans as "0"/"1"); this is the only module
 // that knows about that.
-import type { FlowDocument, FlowStep, Position, StepCategory, StepTypeInfo } from '$lib/flow/document';
+import type { FlowDocument, FlowStep, ParameterSpec, Position, StepCategory, StepTypeInfo } from '$lib/flow/document';
 
 export interface WireStepType {
 	type: string;
@@ -12,6 +12,9 @@ export interface WireStepType {
 	pausable: boolean;
 	available?: boolean;
 	remoteCapable?: boolean;
+	label?: string;
+	executor?: string;
+	parameters?: Array<{ name: string; property?: string; type: string; required?: boolean; default?: unknown; min?: number; max?: number; description?: string }>;
 }
 
 export interface WireStep {
@@ -97,6 +100,22 @@ export function fromWireStepTypes(list: WireStepType[]): StepTypeInfo[] {
 		// Fail closed: a catalog without the field is treated as "not proven executable".
 		available: t.available === true,
 		// Spec 008: present only when the API says so; absent reads as "not remote-capable".
-		...(t.remoteCapable === true ? { remoteCapable: true } : {})
+		...(t.remoteCapable === true ? { remoteCapable: true } : {}),
+		// Spec 005 (spec 007 T007): absent in a pre-005 catalog, so a pre-005 entry maps as before.
+		...(t.label ? { label: t.label } : {}),
+		...(t.executor === 'in-process' || t.executor === 'platform-api' ? { executor: t.executor } : {}),
+		...(Array.isArray(t.parameters)
+			? {
+					parameters: t.parameters.map((p) => ({
+						name: p.name,
+						type: p.type as ParameterSpec['type'],
+						required: p.required === true,
+						...(p.default !== undefined ? { default: p.default } : {}),
+						...(p.min !== undefined ? { min: p.min } : {}),
+						...(p.max !== undefined ? { max: p.max } : {}),
+						description: p.description ?? ''
+					}))
+				}
+			: {})
 	}));
 }

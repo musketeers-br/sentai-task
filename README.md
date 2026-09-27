@@ -164,6 +164,10 @@ USER>zpm "install sentai-task"
    Drag from a step's right handle to another step's left handle to connect them; edges that would
    create a cycle are refused as you draw. Several edges into one step meet at a single diamond:
    that step waits for all of them. Click a step to edit it in the inspector, then **Save flow**.
+   Declared steps (*Switch journal*, *Purge task history*, *Storage headroom check*, *Database size
+   report*) sit in the palette's **Custom** group; their inspector form is generated from the
+   parameter schema the API declares, shows each default as a placeholder, and puts a validation
+   error on the field it concerns.
 2. **Validate flow.** Errors (unknown namespace or category, unsupported type, missing parameter)
    appear on the affected node and block running; warnings, such as a read-only database, are
    shown but do not block.
@@ -547,12 +551,12 @@ sentai-task/
 * [x] **005**: Declared in-process steps: storage headroom (Embedded Python), database size report, journal switch
 * [x] **006**: Task catalog API: the native Task Manager as the platform reports it, with suspend and resume
 * [x] **007 (part A)**: Task catalog screen (list, filters, detail, SentaiTask origin, suspend/resume) and the typed confirmation before dispatching a destructive step
+* [x] **007 (part B)**: declared custom steps in the canvas: a *Custom* palette group and an inspector form generated from the API schema, with errors on their field
 * [x] **008**: Distributed targets — implements [DPI-I-588](https://ideas.intersystems.com/ideas/DPI-I-588) (API)
 * [x] **009**: Target servers in the canvas: Targets screen, *Run on*, target passwords at *Run now*, where each step runs
 
 ### 🚧 Next
 
-* [ ] **007 (part B)**: declared custom steps in the canvas (*Custom* palette group, parameter form from the API schema). Waiting on its design prototype; the backend side (structured `parameter` on findings, declared `purge-audit-records` schema) is already in 005
 * [ ] WQM category screen and run history in the canvas (the API already has them)
 * [ ] A credential for scheduled runs (unblocks scheduling)
 * [ ] Prove and enable the remaining step types, one at a time
