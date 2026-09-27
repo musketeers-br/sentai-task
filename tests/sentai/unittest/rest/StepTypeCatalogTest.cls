@@ -57,9 +57,10 @@ Method TestCatalogCarriesLabelExecutorAndParameters()
 }
 
 /// The types proven on the real instance (spec 004 D-1, spec 005 FR-007), comma-delimited.
+/// purge-task-history is released by spec 005 T016, after spec 007 T009's typed confirmation.
 ClassMethod AvailableTypes() As %String
 {
-    Quit ",integrity-check,switch-journal,storage-headroom-check,db-size-report,"
+    Quit ",integrity-check,switch-journal,storage-headroom-check,db-size-report,purge-task-history,"
 }
 
 }

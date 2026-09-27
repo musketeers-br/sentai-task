@@ -2,10 +2,10 @@
 
 SentaiTask v1 only promises what was proven on IRIS 2026.2 (spec `004-backend-hardening`):
 
-- **Available step types:** `integrity-check`, `switch-journal`, `storage-headroom-check` and
-  `db-size-report` (spec `005-declared-custom-steps`, see [Declared step types](../README.md#declared-step-types)).
-  The others (`compact-globals`, `defragment-globals`, `purge-audit-records`,
-  `purge-task-history`, `custom`) are still listed in `GET /catalog/step-types` with
+- **Available step types:** `integrity-check`, `switch-journal`, `storage-headroom-check`,
+  `db-size-report` and `purge-task-history` (spec `005-declared-custom-steps`, see
+  [Declared step types](../README.md#declared-step-types)). The others (`compact-globals`,
+  `defragment-globals`, `purge-audit-records`, `custom`) are still listed in `GET /catalog/step-types` with
   `available: false`, and saved flows that use them still load. Validate, dispatch, schedule and
   rerun refuse them with `STEP_TYPE_NOT_SUPPORTED_ON_TARGET`.
 - **Operators who validate need `%Admin_Manage:USE` and read on IRISSYS.** Validation reads the
@@ -27,9 +27,10 @@ SentaiTask v1 only promises what was proven on IRIS 2026.2 (spec `004-backend-ha
 - **Flows must name an existing WQM category.** Validation refuses an unknown category with
   `CATEGORY_NOT_FOUND`. The default for new flows, `SENTAI.DEFAULT`, does not exist on a stock
   instance, so set a category such as `Default`.
-- No v1-available step type is destructive or pausable, so typed confirmation and pause are
-  implemented but cannot be reached over HTTP (the first destructive one, `purge-task-history`,
-  becomes available with the canvas's typed-confirmation dialog, spec 007).
+- **Destructive steps need a typed confirmation; nothing is pausable.** `purge-task-history` is
+  the one available destructive type: dispatch refuses it (428) until the operator types its
+  database directory or namespace, which the canvas asks for at *Run now* (spec 007 T009). No
+  v1-available type is pausable, so pause is implemented but cannot be reached over HTTP.
 - **Step-type classes that do not exist on 2026.2.** `compact-globals` (`%SYS.Task.CompactGlobals`)
   and `defragment-globals` (`%SYS.Task.Defragment`) name classes that are not installed. They are
   unavailable anyway. The audit purge's class was corrected to the platform's

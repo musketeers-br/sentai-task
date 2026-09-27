@@ -21,9 +21,10 @@ Method TestAvailabilityIsIntegrityCheckOnly()
     Do $$$AssertEquals(##class(sentai.registry.StepType).IsAvailable("db-size-report"), 1)
     Do $$$AssertEquals(##class(sentai.registry.StepType).IsAvailable("storage-headroom-check"), 1)
     Do $$$AssertEquals(##class(sentai.registry.StepType).IsAvailable("switch-journal"), 1)
-    // purge-task-history: proven (evidence/e-native-types.json) but held until spec 007 T009 ships
-    // the typed-confirmation dialog (spec 005 T016).
-    For type = "compact-globals", "defragment-globals", "purge-audit-records", "purge-task-history", "custom" {
+    // purge-task-history: proven (evidence/e-native-types.json) and released by spec 005 T016 once
+    // spec 007 T009 shipped the typed-confirmation dialog (007 evidence/us6-typed-confirmation.json).
+    Do $$$AssertEquals(##class(sentai.registry.StepType).IsAvailable("purge-task-history"), 1)
+    For type = "compact-globals", "defragment-globals", "purge-audit-records", "custom" {
         Do $$$AssertEquals(##class(sentai.registry.StepType).IsAvailable(type), 0, type_" is not available in v1")
     }
     Do $$$AssertEquals(##class(sentai.registry.StepType).IsAvailable("bogus"), 0)

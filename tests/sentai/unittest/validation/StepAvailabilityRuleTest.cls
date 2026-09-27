@@ -2,8 +2,8 @@
 /// (D-1: only integrity-check is) is refused on every execution path — validate, dispatch,
 /// schedule and rerun — with STEP_TYPE_NOT_SUPPORTED_ON_TARGET, and nothing reaches the
 /// administrative API (SC-001: 6 types x 4 paths = 24 refusals). Spec 005: switch-journal is
-/// available (evidence/e-native-types.json) → 5 types, 20 refusals; → 4 types, 16 refusals once
-/// purge-task-history is flipped after spec 007 T009.
+/// available (evidence/e-native-types.json) → 5 types, 20 refusals; spec 005 T016 releases
+/// purge-task-history after spec 007 T009 → 4 types, 16 refusals.
 Class sentai.unittest.validation.StepAvailabilityRuleTest Extends sentai.unittest.SentaiTestCase
 {
 
@@ -49,7 +49,7 @@ ClassMethod RunCountFor(flowId As %String) As %Integer
 Method TestEveryUnavailableTypeIsRefusedOnAllFourPaths()
 {
     Set refusals = 0
-    For type = "compact-globals", "defragment-globals", "purge-audit-records", "purge-task-history", "custom" {
+    For type = "compact-globals", "defragment-globals", "purge-audit-records", "custom" {
         Set id = ..SingleStepFlow(type)
 
         // 1. validate
@@ -94,7 +94,7 @@ Method TestEveryUnavailableTypeIsRefusedOnAllFourPaths()
         Do $$$AssertEquals(srCount, 1, type_": no new StepRun")
         Set refusals = refusals + 1
     }
-    Do $$$AssertEquals(refusals, 20)
+    Do $$$AssertEquals(refusals, 16)
 
     // Nothing reached the administrative API on any path.
     Do $$$AssertEquals($D(^sentaiTestDouble("posted")), 0)
