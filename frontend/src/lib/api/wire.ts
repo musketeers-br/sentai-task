@@ -11,6 +11,7 @@ export interface WireStepType {
 	destructive: boolean;
 	pausable: boolean;
 	available?: boolean;
+	remoteCapable?: boolean;
 }
 
 export interface WireStep {
@@ -25,6 +26,7 @@ export interface WireStep {
 	customClass?: string;
 	parameters?: Record<string, unknown>;
 	isDestructive?: unknown;
+	target?: string;
 }
 
 export interface WireFlow {
@@ -65,7 +67,9 @@ export function fromWireStep(w: WireStep): FlowStep {
 		timeoutMinutes: toNumberOrNull(w.timeoutMinutes) || null,
 		wqmCategory: w.wqmCategory ?? '',
 		customClass: w.customClass ?? '',
-		parameters: w.parameters && typeof w.parameters === 'object' ? { ...w.parameters } : {}
+		parameters: w.parameters && typeof w.parameters === 'object' ? { ...w.parameters } : {},
+		// Spec 008: only a remote step carries `target`; a local one reads exactly as before.
+		...(w.target ? { target: w.target } : {})
 	};
 }
 
@@ -91,6 +95,8 @@ export function fromWireStepTypes(list: WireStepType[]): StepTypeInfo[] {
 		destructive: t.destructive === true,
 		pausable: t.pausable === true,
 		// Fail closed: a catalog without the field is treated as "not proven executable".
-		available: t.available === true
+		available: t.available === true,
+		// Spec 008: present only when the API says so; absent reads as "not remote-capable".
+		...(t.remoteCapable === true ? { remoteCapable: true } : {})
 	}));
 }

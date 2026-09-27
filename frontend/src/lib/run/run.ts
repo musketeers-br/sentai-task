@@ -18,6 +18,9 @@ export interface StepRunView {
 	failureReason: string | null;
 	progressCurrent: number | null;
 	progressTotal: number | null;
+	/** Spec 008: "local" or the target server's name, as the run read says. */
+	executedOn: string;
+	executedAs: string;
 }
 
 export interface LogEntry {
@@ -67,7 +70,9 @@ export function fromWireRun(w: Wire): RunView {
 			timeFinished: text(s.timeFinished),
 			failureReason: text(s.failureReason),
 			progressCurrent: num(s.progressCurrent),
-			progressTotal: num(s.progressTotal)
+			progressTotal: num(s.progressTotal),
+			executedOn: text(s.executedOn) ?? 'local',
+			executedAs: text(s.executedAs) ?? ''
 		})
 	);
 	const latest = new Map<string, StepRunView>();

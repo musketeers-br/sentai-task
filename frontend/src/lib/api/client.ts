@@ -12,6 +12,14 @@ import {
 	type WireCatalogTask
 } from '$lib/catalog/catalog';
 import type { FlowDefinition, FlowDocument, StepTypeInfo } from '$lib/flow/document';
+import {
+	fromWireTarget,
+	fromWireTargetStatus,
+	type TargetStatusView,
+	type TargetView,
+	type WireTarget,
+	type WireTargetStatus
+} from '$lib/targets/targets';
 import type { ValidationReport } from '$lib/flow/report';
 import { fromWireRun, type RunView } from '$lib/run/run';
 import { session } from './session.svelte';
@@ -68,7 +76,8 @@ async function request<T>(
 	method: string,
 	path: string,
 	body?: unknown,
-	authorizationOverride?: string
+	authorizationOverride?: string,
+	extraHeaders: Record<string, string> = {}
 ): Promise<ApiResult<T>> {
 	const authorization = authorizationOverride ?? session.authorization();
 	if (!authorization) return { ok: false, error: { kind: 'unauthorized' } };
@@ -79,6 +88,7 @@ async function request<T>(
 			method,
 			headers: {
 				Authorization: authorization,
+				...extraHeaders,
 				...(body === undefined ? {} : { 'Content-Type': 'application/json' })
 			},
 			body: body === undefined ? undefined : JSON.stringify(body)
@@ -168,13 +178,19 @@ export const api = {
 	async dispatch(
 		flowId: string,
 		run: { authorization: string; refreshToken: string },
-		confirmations: Array<{ stepId: string; typedName: string }> = []
+		confirmations: Array<{ stepId: string; typedName: string }> = [],
+		targetCredentials: Array<{ target: string; refreshToken: string }> = []
 	): Promise<ApiResult<{ guid: string }>> {
 		return map(
 			await request<{ guid: string }>(
 				'POST',
 				`/flows/${encodeURIComponent(flowId)}/dispatch`,
-				{ confirmations, runCredential: { refreshToken: run.refreshToken } },
+				{
+					confirmations,
+					runCredential: { refreshToken: run.refreshToken },
+					// Spec 008 FR-010: only a flow that uses targets sends them (spec 009 FR-010).
+					...(targetCredentials.length > 0 ? { targetCredentials } : {})
+				},
 				run.authorization
 			),
 			(r) => ({ guid: String(r.guid) })
@@ -212,6 +228,53 @@ export const api = {
 		return map(
 			await request<WireCatalogTask>('POST', `/catalog/tasks/${taskId}/suspend`, { suspended }),
 			fromWireCatalogTask
+		);
+	},
+
+	// --- Target servers (spec 008 API, spec 009 screens) ---
+
+	async listTargets(): Promise<ApiResult<TargetView[]>> {
+		return map(await request<WireTarget[]>('GET', '/targets'), (list) => list.map(fromWireTarget));
+	},
+
+	async createTarget(body: { name: string; baseUrl: string; description: string }): Promise<ApiResult<TargetView>> {
+		return map(await request<WireTarget>('POST', '/targets', body), fromWireTarget);
+	},
+
+	async updateTarget(name: string, body: { baseUrl: string; description: string }): Promise<ApiResult<TargetView>> {
+		return map(await request<WireTarget>('PUT', `/targets/${encodeURIComponent(name)}`, body), fromWireTarget);
+	},
+
+	async deleteTarget(name: string): Promise<ApiResult<unknown>> {
+		return request('DELETE', `/targets/${encodeURIComponent(name)}`);
+	},
+
+	async setTargetOnline(name: string, online: boolean): Promise<ApiResult<TargetView>> {
+		return map(await request<WireTarget>('POST', `/targets/${encodeURIComponent(name)}/online`, { online }), fromWireTarget);
+	},
+
+	/**
+	 * Spec 008 FR-022: signs the operator in to a target through the primary, as the signed-in user.
+	 * The password goes in this one request and is not kept; the pair is the caller's to drop.
+	 */
+	async signInTarget(name: string, password: string): Promise<ApiResult<{ accessToken: string; refreshToken: string; sub: string }>> {
+		return map(
+			await request<{ accessToken: string; refreshToken: string; sub: string }>(
+				'POST',
+				`/targets/${encodeURIComponent(name)}/sign-in`,
+				{ user: session.user ?? '', password }
+			),
+			(r) => ({ accessToken: r.accessToken, refreshToken: r.refreshToken, sub: r.sub })
+		);
+	},
+
+	/** What the target reports now, read with the operator's credential for it. */
+	async targetStatus(name: string, accessToken: string): Promise<ApiResult<TargetStatusView>> {
+		return map(
+			await request<WireTargetStatus>('GET', `/targets/${encodeURIComponent(name)}/status`, undefined, undefined, {
+				'X-Sentai-Target-Authorization': `Bearer ${accessToken}`
+			}),
+			fromWireTargetStatus
 		);
 	},
 

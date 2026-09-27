@@ -13,7 +13,7 @@ storage/cookies/URL; components never call `fetch` (only `client.ts`/`session.sv
 
 ## Phase 1: Foundational
 
-- [ ] T001 View models and API client (plan D-2, D-3, D-4). **Unit first** in
+- [X] T001 View models and API client (plan D-2, D-3, D-4). **Unit first** in
   `src/lib/targets/targets.test.ts` and `src/lib/api/wire.test.ts`: `fromWireTarget`;
   `fromWireTargetStatus` for reachable / unreachable / refused answers (values as returned, nothing
   computed); `targetsUsedBy(steps)` distinct in step-id order; `targetChoices` empty when
