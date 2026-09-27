@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { SvelteFlowProvider } from '@xyflow/svelte';
@@ -80,6 +80,46 @@
 		if (to !== screen) void goto(urlForScreen(page.url, to), { keepFocus: true, noScroll: true });
 	}
 
+	/** The catalog detail is addressable too (`task=<id>`), so back closes it. */
+	function selectTask(taskId: number | null) {
+		const url = new URL(page.url);
+		if (taskId === null) url.searchParams.delete('task');
+		else url.searchParams.set('task', String(taskId));
+		void goto(url, { keepFocus: true, noScroll: true });
+	}
+
+	/** The canvas with only that flow open (FR-009). */
+	function flowHref(flowId: string): string {
+		const url = new URL(page.url);
+		url.search = '';
+		url.searchParams.set('flow', flowId);
+		return `${url.pathname}${url.search}`;
+	}
+
+	function openFlow(flowId: string) {
+		void goto(flowHref(flowId), { noScroll: true });
+	}
+
+	// The address names the open flow: when it names another one (a catalog origin link, or
+	// history), that flow is loaded into the one editor.
+	$effect(() => {
+		const flowId = page.url.searchParams.get('flow');
+		if (phase.name !== 'ready' || screen !== 'flows' || !flowId) return;
+		untrack(() => {
+			if (flowId !== editor.id) void switchFlow(flowId);
+		});
+	});
+
+	async function switchFlow(flowId: string) {
+		const flow = await api.getFlow(flowId);
+		if (!flow.ok) {
+			editor.notice = { tone: 'error', text: describeError(flow.error) };
+			return;
+		}
+		watching = null;
+		editor.load(flow.value);
+	}
+
 	let dispatchOpen = $state(false);
 
 	function onDispatched(guid: string) {
@@ -135,7 +175,7 @@
 			onschedule={() => (scheduling = true)}
 			onsignout={signOut}
 		/>
-		<CatalogScreen />
+		<CatalogScreen taskParam={page.url.searchParams.get('task')} {flowHref} onselect={selectTask} onopenflow={openFlow} />
 	</div>
 	{#if session.status === 'expired'}
 		<div class="overlay"><SignIn expired /></div>

@@ -6,17 +6,16 @@ import {
 	orderByNextRun,
 	statusLabel,
 	type CatalogTaskView,
-	type Value,
 	type WireCatalogPage
 } from '../src/lib/catalog/catalog';
-import { createOperatorWithoutTaskPrivilege, deleteOperator } from './operators';
+import { apiTask, catalog, detail, expectDetail, valueText as cellText } from './catalog-support';
+import { createOperatorWithoutTaskPrivilege, deleteOperator } from './iris';
 import { envelope, seedFlow, signIn, signInAt, submitSignIn, token, v1Flow } from './support';
 
 const EVIDENCE = '../specs/007-canvas-management-screens/evidence';
 
 // spec 007 User Story 1 — See the platform's scheduled tasks (FR-001, FR-002).
 
-const catalog = (page: Page) => page.getByRole('region', { name: 'Task catalog' });
 
 test('us7-catalog navigation — reachable from the top bar, addressable, back keeps the open flow', async ({ page }) => {
 	const id = await seedFlow(page.request, v1Flow(`us7 navigation ${Date.now()}`));
@@ -65,13 +64,6 @@ test('us7-catalog navigation — reachable from the top bar, addressable, back k
 	await expect(fresh).toHaveURL(/[?&]view=catalog/);
 	await fresh.close();
 });
-
-/** What a cell must read for a value, per data-model.md (value, "unavailable — …", or "—"). */
-function cellText(value: Value<string>, format: (v: string) => string = (v) => v): string {
-	if (value.kind === 'unavailable') return `unavailable — HTTP ${value.reason.httpStatus} — ${value.reason.text}`;
-	if (value.kind === 'absent' || value.value === '') return '—';
-	return format(value.value);
-}
 
 test('us7-catalog values — every row and value equals the API (SC-001); a refused read shows no rows (FR-010)', async ({ page }) => {
 	await signInAt(page, '?view=catalog');
@@ -122,6 +114,36 @@ test('us7-catalog values — every row and value equals the API (SC-001); a refu
 			`Rendered rows, in display order (orderByNextRun), compared cell by cell with the body: ${JSON.stringify(rendered)}`
 		])
 	);
+
+	// FR-006 detail: every field equals the item read, for task 4 and a task whose last run left
+	// an error text (shown in full, US-1.4).
+	const withError = expected.find((t) => t.lastError.kind === 'value' && t.lastError.value !== '' && t.lastError.value !== 'Success');
+	const details: Record<string, Record<string, string>> = {};
+	for (const taskId of [4, ...(withError ? [withError.taskId] : [])]) {
+		await rows.and(page.locator(`[data-task-id="${taskId}"]`)).click();
+		await expect(page).toHaveURL(new RegExp(`[?&]task=${taskId}(&|$)`));
+		details[taskId] = await expectDetail(page, (await apiTask(page.request, taskId)).view);
+	}
+	writeFileSync(
+		`${EVIDENCE}/us1-details.json`,
+		envelope('us1-details', { method: 'GET', path: '/csp/sentai/api/v1/catalog/tasks/{id}' }, { status: 200, body: details }, [
+			'Detail pane text per FR-006 field, equal to the item read of each task.'
+		])
+	);
+
+	// Deep link to a task's detail, and a non-numeric id answered locally with no call.
+	const deep = await page.context().newPage();
+	await signInAt(deep, '?view=catalog&task=4');
+	await expectDetail(deep, (await apiTask(page.request, 4)).view);
+	const itemReads: string[] = [];
+	deep.on('request', (r) => {
+		if (/\/catalog\/tasks\/[^/?]+/.test(r.url())) itemReads.push(r.url());
+	});
+	await deep.goto('index.html?view=catalog&task=abc');
+	await submitSignIn(deep);
+	await expect(detail(deep)).toContainText('Task not found');
+	expect(itemReads).toEqual([]);
+	await deep.close();
 
 	// FR-010: an operator without a task privilege sees the platform's refusal and no rows.
 	const operator = createOperatorWithoutTaskPrivilege();

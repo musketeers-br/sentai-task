@@ -2,9 +2,11 @@
 import { execFileSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 
-// Temporary operators for refusal tests (spec 007 tasks.md, "Credentials"). The password is
-// generated here, handed to IRIS on stdin only, and never logged; the user and its role are
-// deleted by the caller in `finally`.
+// Test setup that has no product endpoint, done in the dev container's IRIS session:
+// - temporary operators for refusal tests (spec 007 tasks.md, "Credentials"). The password is
+//   generated here, handed to IRIS on stdin only, and never logged; the user and its role are
+//   deleted by the caller in `finally`;
+// - deleting a flow (the product API has no DELETE /flows/{id}).
 const CONTAINER = process.env.SENTAI_CONTAINER ?? 'sentai-task-iris-1';
 const NO_TASK_ROLE = 'SentaiE2ENoTask';
 
@@ -13,8 +15,8 @@ export interface Operator {
 	password: string;
 }
 
-function irisSys(script: string): string {
-	return execFileSync('docker', ['exec', '-i', CONTAINER, 'iris', 'session', 'iris', '-U', '%SYS'], {
+function irisSys(script: string, namespace = '%SYS'): string {
+	return execFileSync('docker', ['exec', '-i', CONTAINER, 'iris', 'session', 'iris', '-U', namespace], {
 		input: `${script}\nhalt\n`,
 		encoding: 'utf8',
 		env: { ...process.env, MSYS_NO_PATHCONV: '1' }
@@ -47,4 +49,19 @@ export function deleteOperator(operator: Operator): void {
 			`if ##class(Security.Roles).Exists("${NO_TASK_ROLE}") { set sc=##class(Security.Roles).Delete("${NO_TASK_ROLE}") }`
 		].join('\n')
 	);
+}
+
+/** Deletes a flow the way no product call can, so its tasks' origin reads `flowExists: false`. */
+export function deleteFlow(flowId: string): void {
+	const id = Number(flowId);
+	// Children first (steps, edges and joins reference the flow); test flows never have runs.
+	const children = ['sentai_model.Edge', 'sentai_model.Join', 'sentai_model.Step']
+		.map((table) => `do ##class(%SQL.Statement).%ExecDirect(,"DELETE FROM ${table} WHERE flow = ?",${id})`)
+		.join('\n');
+	const out = irisSys(
+		`${children}\nset sc=##class(sentai.model.Flow).%DeleteId(${id}) write "RESULT:",$select(sc=1:"OK",1:$system.Status.GetErrorText(sc)),!`,
+		'IRISAPP'
+	);
+	const result = /RESULT:(.*)/.exec(out)?.[1]?.trim();
+	if (result !== 'OK') throw new Error(`could not delete flow ${flowId}: ${result ?? 'no answer'}`);
 }

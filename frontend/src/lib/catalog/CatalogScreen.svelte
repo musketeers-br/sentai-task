@@ -1,35 +1,96 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { api } from '$lib/api/client';
 	import StateShape from '$lib/design/StateShape.svelte';
-	import { orderByNextRun, refusalText, statusLabel, type CatalogPage } from './catalog';
+	import {
+		catalogQuery,
+		createSequence,
+		namespaceOptions,
+		NO_FILTERS,
+		orderByNextRun,
+		originMark,
+		refusalText,
+		statusLabel,
+		type CatalogFilters,
+		type CatalogPage
+	} from './catalog';
+	import CatalogDetail from './CatalogDetail.svelte';
 	import CatalogValue from './CatalogValue.svelte';
 
-	// The platform's Task Manager as the spec 006 API reports it (US-1). Rows, counts and every
-	// value come from the API; this screen only orders them for display (FR-004) and re-reads on
-	// request (FR-011). There is no background polling.
+	let {
+		taskParam,
+		flowHref,
+		onselect,
+		onopenflow
+	}: {
+		/** The `task` query value (FR-002): the detail shown, or null for none. */
+		taskParam: string | null;
+		flowHref: (flowId: string) => string;
+		onselect: (taskId: number | null) => void;
+		onopenflow: (flowId: string) => void;
+	} = $props();
+
+	// The platform's Task Manager as the spec 006 API reports it (US-1, US-3). Rows, counts,
+	// filtering and every value come from the API; this screen only orders them for display
+	// (FR-004) and re-reads on request (FR-011). There is no background polling.
 	type Screen =
 		| { name: 'loading' }
-		| { name: 'ready'; page: CatalogPage; readAt: number }
+		| { name: 'ready'; page: CatalogPage; readAt: number; banner: string | null }
 		| { name: 'refused'; message: string };
+
+	const STATES = [
+		['all', 'All'],
+		['scheduled', 'Scheduled'],
+		['suspended', 'Suspended']
+	] as const;
 
 	let screen = $state<Screen>({ name: 'loading' });
 	let now = $state(Date.now());
+	let filters = $state<CatalogFilters>({ ...NO_FILTERS });
+	/** Typed text; copied into `filters.q` 300 ms after the last keystroke. */
+	let searchText = $state('');
+	let namespaces = $state<string[]>(['all']);
+	let reading = $state(false);
 
+	const sequence = createSequence();
 	const rows = $derived(screen.name === 'ready' ? orderByNextRun(screen.page.items) : []);
 	const age = $derived(screen.name === 'ready' ? Math.max(0, Math.round((now - screen.readAt) / 1000)) : 0);
 
 	$effect(() => {
-		void load();
 		// A local clock for "updated N s ago" only; it never calls the API.
 		const tick = setInterval(() => (now = Date.now()), 1000);
 		return () => clearInterval(tick);
 	});
 
-	async function load() {
-		screen = { name: 'loading' };
-		const result = await api.catalogTasks();
+	// Every filter change is one API read; the latest request wins. Only the filters are
+	// tracked: a token renewal inside the call must not re-read the list (no polling).
+	$effect(() => {
+		const query = { ...filters };
+		untrack(() => void load(query));
+	});
+
+	$effect(() => {
+		const text = searchText;
+		const debounce = setTimeout(() => (filters.q = text), 300);
+		return () => clearTimeout(debounce);
+	});
+
+	async function load(query: CatalogFilters = { ...filters }) {
+		const n = sequence.next();
+		reading = true;
+		const result = await api.catalogTasks(query);
+		if (!sequence.isLatest(n)) return;
+		reading = false;
 		now = Date.now();
-		screen = result.ok ? { name: 'ready', page: result.value, readAt: now } : { name: 'refused', message: refusalText(result.error) };
+		if (result.ok) {
+			if (catalogQuery(query) === '') namespaces = namespaceOptions(result.value);
+			screen = { name: 'ready', page: result.value, readAt: now, banner: null };
+		} else if (screen.name === 'ready' && result.error.kind === 'problem' && result.error.status === 400) {
+			// An invalid filter keeps the previous rows (contracts/api-consumption.md).
+			screen = { ...screen, banner: refusalText(result.error) };
+		} else {
+			screen = { name: 'refused', message: refusalText(result.error) };
+		}
 	}
 </script>
 
@@ -40,14 +101,57 @@
 			<span class="count" data-testid="catalog-count">{screen.page.matched} of {screen.page.total} tasks</span>
 		{/if}
 		<span class="spacer"></span>
-		<button type="button" class="secondary" disabled={screen.name === 'loading'} onclick={load}>Refresh</button>
+		<button type="button" class="secondary" disabled={reading} onclick={() => load()}>Refresh</button>
 	</header>
+
+	<div class="filters">
+		<label class="field">
+			<span class="field-label">Search tasks</span>
+			<input type="search" bind:value={searchText} spellcheck="false" placeholder="name, class or user" />
+		</label>
+		<label class="field">
+			<span class="field-label">Namespace</span>
+			<select bind:value={filters.namespace}>
+				{#each namespaces as ns (ns)}
+					<option value={ns}>{ns === 'all' ? 'All namespaces' : ns}</option>
+				{/each}
+			</select>
+		</label>
+		<fieldset class="segmented">
+			<legend class="visually-hidden">State</legend>
+			{#each STATES as [value, label] (value)}
+				<label class:checked={filters.state === value}>
+					<input type="radio" name="catalog-state" {value} bind:group={filters.state} />
+					{label}
+				</label>
+			{/each}
+		</fieldset>
+		<label class="toggle" class:checked={filters.destructiveOnly}>
+			<input type="checkbox" bind:checked={filters.destructiveOnly} />
+			<svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
+				<path d="M5 0.8 L9.4 8.8 L0.6 8.8 Z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" />
+				<path d="M5 3.6 L5 6.2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" />
+			</svg>
+			Destructive only
+		</label>
+	</div>
+
+	{#if screen.name === 'ready' && screen.banner}
+		<p class="banner" role="alert">{screen.banner}</p>
+	{/if}
 
 	{#if screen.name === 'loading'}
 		<p class="message">Reading the platform's tasks…</p>
 	{:else if screen.name === 'refused'}
-		<p class="message refused" role="alert" data-testid="catalog-refusal">{screen.message}</p>
+		<!-- A refused list shows no rows (FR-010); an addressed detail still asks for itself. -->
+		<div class="body">
+			<p class="message refused" role="alert" data-testid="catalog-refusal">{screen.message}</p>
+			{#if taskParam !== null}
+				<CatalogDetail {taskParam} {flowHref} {onopenflow} onchanged={() => load()} onclose={() => onselect(null)} />
+			{/if}
+		</div>
 	{:else}
+		<div class="body">
 		<div class="table-wrap">
 			<table>
 				<thead>
@@ -64,8 +168,24 @@
 				</thead>
 				<tbody>
 					{#each rows as task (task.taskId)}
-						<tr data-testid="catalog-row" data-task-id={task.taskId}>
-							<td data-col="name">{task.name}</td>
+						{@const origin = originMark(task)}
+						<tr
+							data-testid="catalog-row"
+							data-task-id={task.taskId}
+							class:selected={taskParam === String(task.taskId)}
+							onclick={() => onselect(task.taskId)}
+						>
+							<td data-col="name">
+								<button
+									type="button"
+									class="row-open"
+									aria-current={taskParam === String(task.taskId) ? 'true' : undefined}
+									onclick={(e) => {
+										e.stopPropagation();
+										onselect(task.taskId);
+									}}>{task.name}</button
+								>
+							</td>
 							<td data-col="namespace" class="mono">{task.namespace}</td>
 							<td data-col="class" class="mono"><CatalogValue value={task.className} /></td>
 							<td data-col="nextRun" class="mono"><CatalogValue value={task.nextRun} /></td>
@@ -89,11 +209,18 @@
 								{:else if task.destructive === 'unknown'}
 									<span class="mark muted" data-testid="destructive-unknown">destructiveness unknown</span>
 								{/if}
+								{#if origin}
+									<span class="mark sentai" data-testid="origin-mark" title={'title' in origin ? origin.title : undefined}>SentaiTask · {origin.label}</span>
+								{/if}
 							</div></td>
 						</tr>
 					{/each}
 				</tbody>
 			</table>
+		</div>
+		{#if taskParam !== null}
+			<CatalogDetail {taskParam} {flowHref} {onopenflow} onchanged={() => load()} onclose={() => onselect(null)} />
+		{/if}
 		</div>
 		<footer class="foot">
 			<span>sorted by next run</span>
@@ -155,6 +282,106 @@
 		cursor: default;
 	}
 
+	.filters {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: var(--space-section);
+		padding: 8px var(--space-section);
+		background: var(--color-surface);
+		border-bottom: 1px solid var(--color-border-faint);
+		font-size: var(--size-body);
+	}
+
+	.field {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+	}
+
+	.field-label {
+		font-size: var(--size-caption);
+		color: var(--color-text-muted);
+	}
+
+	input[type='search'],
+	select {
+		font: inherit;
+		color: var(--color-text);
+		background: var(--color-card);
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-control);
+		padding: 5px 8px;
+	}
+
+	input[type='search'] {
+		width: 240px;
+	}
+
+	.segmented {
+		display: flex;
+		margin: 0;
+		padding: 0;
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-control);
+		overflow: hidden;
+	}
+
+	.segmented label,
+	.toggle {
+		position: relative;
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		font-size: var(--size-caption);
+		font-weight: 500;
+		color: var(--color-text-muted);
+		padding: 6px 10px;
+		cursor: pointer;
+	}
+
+	.segmented label.checked {
+		font-weight: 600;
+		color: var(--color-ground);
+		background: var(--color-text);
+	}
+
+	.segmented input,
+	.toggle input {
+		position: absolute;
+		inset: 0;
+		margin: 0;
+		opacity: 0;
+		cursor: pointer;
+	}
+
+	.segmented label:has(input:focus-visible),
+	.toggle:has(input:focus-visible) {
+		outline: 2px solid var(--color-focus-ring);
+		outline-offset: -2px;
+	}
+
+	.toggle {
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-control);
+	}
+
+	.toggle.checked {
+		font-weight: 600;
+		color: var(--destructive-text);
+		background: var(--destructive-surface);
+		border-color: var(--destructive-accent);
+	}
+
+	.banner {
+		margin: 0;
+		padding: 8px var(--space-section);
+		font-size: var(--size-body);
+		color: var(--destructive-text);
+		background: var(--destructive-surface);
+		border-bottom: 1px solid var(--destructive-accent);
+	}
+
 	.message {
 		padding: var(--space-section);
 		font-size: var(--size-body);
@@ -162,7 +389,44 @@
 	}
 
 	.refused {
+		flex-grow: 1;
+		margin: 0;
 		color: var(--color-text);
+	}
+
+	.body {
+		display: flex;
+		flex-grow: 1;
+		min-height: 0;
+	}
+
+	tbody tr {
+		cursor: pointer;
+	}
+
+	tbody tr:hover {
+		background: var(--color-card-raised);
+	}
+
+	tr.selected {
+		background: var(--color-card-raised);
+		box-shadow: inset 3px 0 0 var(--color-text);
+	}
+
+	.row-open {
+		font: inherit;
+		color: inherit;
+		background: none;
+		border: 0;
+		padding: 0;
+		text-align: left;
+		cursor: pointer;
+	}
+
+	.mark.sentai {
+		letter-spacing: 0;
+		color: var(--color-link);
+		border-color: var(--color-link);
 	}
 
 	.table-wrap {

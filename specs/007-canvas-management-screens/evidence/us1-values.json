@@ -1,6 +1,6 @@
 {
   "evidence_id": "us1-values",
-  "captured_at": "2026-09-27T04:17:53.193Z",
+  "captured_at": "2026-09-27T04:39:10.997Z",
   "request": {
     "method": "GET",
     "path": "/csp/sentai/api/v1/catalog/tasks"

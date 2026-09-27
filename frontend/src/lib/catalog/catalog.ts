@@ -30,11 +30,38 @@ export interface WireCatalogTask {
 	suspended?: boolean;
 	destructive?: boolean;
 	destructiveUnknown?: boolean;
-	origin?: { flowId: string; stepId: string; flowExists: boolean };
+	origin?: TaskOrigin;
+	recentRuns?: WireRecentRun[];
 	unavailable?: WireUnavailable[];
 	className?: string;
 	isDestructive?: boolean;
 	lastRun?: string;
+}
+
+/** One row of the platform's task history, as spec 006 R-4 passes it through. */
+export interface WireRecentRun {
+	LastStart: string;
+	Completed: string;
+	Status: string;
+	Result: string;
+	Username: string;
+	LogDatetime: string;
+}
+
+/** Present only on tasks whose name follows `SentaiTask: <flowId>#<stepId>` (spec 006). */
+export interface TaskOrigin {
+	flowId: string;
+	stepId: string;
+	flowExists: boolean;
+}
+
+export interface RecentRun {
+	start: string;
+	completed: string;
+	status: string;
+	result: string;
+	user: string;
+	loggedAt: string;
 }
 
 export interface WireCatalogPage {
@@ -68,6 +95,9 @@ export interface CatalogTaskView {
 	lastError: Value<string>;
 	suspended: Value<boolean>;
 	destructive: 'yes' | 'no' | 'unknown';
+	origin?: TaskOrigin;
+	/** Item read only: absent → no section, [] → "No runs reported" (US-1.7). */
+	recentRuns?: RecentRun[];
 }
 
 export interface CatalogPage {
@@ -111,9 +141,49 @@ export function fromWireCatalogTask(w: WireCatalogTask): CatalogTaskView {
 		status: value('status'),
 		lastError: value('lastError'),
 		suspended: value('suspended'),
-		destructive: w.destructiveUnknown || w.destructive === undefined ? 'unknown' : w.destructive ? 'yes' : 'no'
+		destructive: w.destructiveUnknown || w.destructive === undefined ? 'unknown' : w.destructive ? 'yes' : 'no',
+		...(w.origin ? { origin: { ...w.origin } } : {}),
+		...(Array.isArray(w.recentRuns)
+			? {
+					recentRuns: w.recentRuns.map((r) => ({
+						start: r.LastStart,
+						completed: r.Completed,
+						status: r.Status,
+						result: r.Result,
+						user: r.Username,
+						loggedAt: r.LogDatetime
+					}))
+				}
+			: {})
 	};
 }
+
+export type OriginMark = { label: string; flowId: string } | { label: 'flow not found'; flowId: null; title: string };
+
+/** FR-009: the SentaiTask mark, a link to the flow only when the API says it still exists. */
+export function originMark(task: CatalogTaskView): OriginMark | null {
+	if (!task.origin) return null;
+	const label = `flow ${task.origin.flowId} · step ${task.origin.stepId}`;
+	return task.origin.flowExists ? { label, flowId: task.origin.flowId } : { label: 'flow not found', flowId: null, title: label };
+}
+
+/** The detail's fields (FR-006), in the order shown; recent runs follow as their own section. */
+export const DETAIL_FIELDS = [
+	{ key: 'name', label: 'Name' },
+	{ key: 'taskId', label: 'ID' },
+	{ key: 'namespace', label: 'Namespace' },
+	{ key: 'className', label: 'Class' },
+	{ key: 'runAsUser', label: 'Run as user' },
+	{ key: 'timePeriod', label: 'Time period' },
+	{ key: 'nextRun', label: 'Next run' },
+	{ key: 'lastStarted', label: 'Last started' },
+	{ key: 'lastFinished', label: 'Last finished' },
+	{ key: 'status', label: 'Status' },
+	{ key: 'lastError', label: 'Last error' },
+	{ key: 'suspended', label: 'Suspended' },
+	{ key: 'destructive', label: 'Destructiveness' },
+	{ key: 'origin', label: 'Origin' }
+] as const;
 
 export function fromWireCatalogPage(w: WireCatalogPage): CatalogPage {
 	return {
@@ -164,4 +234,80 @@ export function refusalText(error: ApiError): string {
 /** The platform's status verbatim; "1" is its success code, labelled so it reads as one. */
 export function statusLabel(status: string): string {
 	return status === '1' ? 'OK (1)' : status;
+}
+
+export interface CatalogFilters {
+	q: string;
+	namespace: string;
+	state: 'all' | 'scheduled' | 'suspended';
+	destructiveOnly: boolean;
+}
+
+export const NO_FILTERS: CatalogFilters = { q: '', namespace: 'all', state: 'all', destructiveOnly: false };
+
+/**
+ * The query the API filters with (FR-005): defaults are omitted, so an unfiltered read is a bare
+ * `GET /catalog/tasks`. The screen never filters or counts on its own.
+ */
+export function catalogQuery(filters: CatalogFilters): string {
+	const params = new URLSearchParams();
+	if (filters.q.trim()) params.set('q', filters.q.trim());
+	if (filters.namespace !== 'all') params.set('namespace', filters.namespace);
+	if (filters.state !== 'all') params.set('filter', filters.state);
+	if (filters.destructiveOnly) params.set('destructiveOnly', '1');
+	const query = params.toString();
+	return query ? `?${query}` : '';
+}
+
+/** Research R-2: "all" plus the namespaces an unfiltered read returned, in the order it did. */
+export function namespaceOptions(page: CatalogPage): string[] {
+	return ['all', ...new Set(page.items.map((t) => t.namespace))];
+}
+
+/** Latest-request-wins: a slower, older answer never overwrites a newer one. */
+export function createSequence() {
+	let latest = 0;
+	return {
+		next: () => ++latest,
+		isLatest: (n: number) => n === latest
+	};
+}
+
+/**
+ * FR-008: exactly one of Suspend or Resume, chosen from the API's `suspended`; none when the
+ * value is unavailable or absent (its reason is shown instead). No permission is guessed: the
+ * button shows, and the platform decides.
+ */
+export function suspendActionFor(task: CatalogTaskView): 'suspend' | 'resume' | null {
+	if (task.suspended.kind !== 'value') return null;
+	return task.suspended.value ? 'resume' : 'suspend';
+}
+
+export type SuspendActionState =
+	| { name: 'idle' }
+	| { name: 'pending'; suspended: boolean }
+	| { name: 'error'; message: string };
+
+export type SuspendActionEvent =
+	| { type: 'send'; suspended: boolean }
+	| { type: 'ok'; task: CatalogTaskView }
+	| { type: 'fail'; error: ApiError };
+
+/**
+ * Data-model §CatalogScreen state. After any answer the shown state is the API's: a success
+ * carries the re-read task and the list is re-read (FR-011); a failure is shown verbatim and both
+ * the item and the list are re-read. Nothing is retried on the operator's behalf (R-5).
+ */
+export function reduceSuspendAction(
+	state: SuspendActionState,
+	event: SuspendActionEvent
+): { state: SuspendActionState; task?: CatalogTaskView; reread: Array<'item' | 'list'> } {
+	switch (event.type) {
+		case 'send':
+			return state.name === 'pending' ? { state, reread: [] } : { state: { name: 'pending', suspended: event.suspended }, reread: [] };
+		case 'ok':
+			return { state: { name: 'idle' }, task: event.task, reread: ['list'] };
+		case 'fail':
+			return { state: { name: 'error', message: refusalText(event.error) }, reread: ['item', 'list'] };
+	}
 }

@@ -1,6 +1,16 @@
 // Typed calls to SENTAI.REST.Dispatcher (contracts/openapi.yaml). Every predictable failure
 // comes back as a value, and the platform's own words are kept verbatim (Constitution III, IV).
-import { fromWireCatalogPage, type CatalogPage, type WireCatalogPage } from '$lib/catalog/catalog';
+import {
+	catalogQuery,
+	fromWireCatalogPage,
+	NO_FILTERS,
+	fromWireCatalogTask,
+	type CatalogFilters,
+	type CatalogPage,
+	type CatalogTaskView,
+	type WireCatalogPage,
+	type WireCatalogTask
+} from '$lib/catalog/catalog';
 import type { FlowDefinition, FlowDocument, StepTypeInfo } from '$lib/flow/document';
 import type { ValidationReport } from '$lib/flow/report';
 import { fromWireRun, type RunView } from '$lib/run/run';
@@ -186,8 +196,21 @@ export const api = {
 	},
 
 	/** Spec 006: the platform's Task Manager tasks, every value as the platform reported it. */
-	async catalogTasks(): Promise<ApiResult<CatalogPage>> {
-		return map(await request<WireCatalogPage>('GET', '/catalog/tasks'), fromWireCatalogPage);
+	async catalogTasks(filters: CatalogFilters = NO_FILTERS): Promise<ApiResult<CatalogPage>> {
+		return map(await request<WireCatalogPage>('GET', `/catalog/tasks${catalogQuery(filters)}`), fromWireCatalogPage);
+	},
+
+	/** One task's item read (spec 006): the list's fields plus `recentRuns`. */
+	async catalogTask(taskId: number): Promise<ApiResult<CatalogTaskView>> {
+		return map(await request<WireCatalogTask>('GET', `/catalog/tasks/${taskId}`), fromWireCatalogTask);
+	},
+
+	/** Spec 006: suspend or resume; a 200 carries the task as re-read after the call. */
+	async setSuspended(taskId: number, suspended: boolean): Promise<ApiResult<CatalogTaskView>> {
+		return map(
+			await request<WireCatalogTask>('POST', `/catalog/tasks/${taskId}/suspend`, { suspended }),
+			fromWireCatalogTask
+		);
 	},
 
 	async wqmCategoryNames(): Promise<ApiResult<string[]>> {

@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import type { ApiError } from '$lib/api/client';
 import {
+	catalogQuery,
+	createSequence,
+	DETAIL_FIELDS,
+	originMark,
+	reduceSuspendAction,
+	suspendActionFor,
 	fromWireCatalogPage,
+	namespaceOptions,
 	fromWireCatalogTask,
 	orderByNextRun,
 	refusalText,
@@ -166,5 +173,87 @@ describe('refusalText and statusLabel', () => {
 		expect(statusLabel('1')).toBe('OK (1)');
 		expect(statusLabel('-1')).toBe('-1');
 		expect(statusLabel('ERROR #5001: x')).toBe('ERROR #5001: x');
+	});
+});
+
+describe('filters (US-3)', () => {
+	it('offers "all" plus the distinct namespaces of an unfiltered page, as returned', () => {
+		const page = fromWireCatalogPage({
+			total: 4, matched: 4,
+			items: [task4, task1000, { ...task4, taskId: 5, namespace: 'USER' }, { ...task1000, taskId: 1001 }]
+		});
+		expect(namespaceOptions(page)).toEqual(['all', '%SYS', 'IRISAPP', 'USER']);
+	});
+
+	it('sends only the filters that differ from their default', () => {
+		const defaults = { q: '', namespace: 'all', state: 'all', destructiveOnly: false } as const;
+		expect(catalogQuery(defaults)).toBe('');
+		expect(catalogQuery({ ...defaults, q: '  ' })).toBe('');
+		expect(catalogQuery({ q: 'SentaiTask: 1#', namespace: '%SYS', state: 'suspended', destructiveOnly: true })).toBe(
+			'?q=SentaiTask%3A+1%23&namespace=%25SYS&filter=suspended&destructiveOnly=1'
+		);
+		expect(catalogQuery({ ...defaults, state: 'scheduled' })).toBe('?filter=scheduled');
+	});
+
+	it('lets only the latest request apply, whatever order the answers arrive in', () => {
+		const sequence = createSequence();
+		const first = sequence.next();
+		const second = sequence.next();
+		expect(sequence.isLatest(second)).toBe(true);
+		expect(sequence.isLatest(first)).toBe(false);
+	});
+});
+
+describe('detail (US-1.4-7, US-2)', () => {
+	it('marks a SentaiTask task with its flow and step, linking only when the flow exists', () => {
+		expect(originMark(fromWireCatalogTask(task1000))).toEqual({ label: 'flow 1 · step 01', flowId: '1' });
+		expect(
+			originMark(fromWireCatalogTask({ ...task1000, origin: { flowId: '1', stepId: '01', flowExists: false } }))
+		).toEqual({ label: 'flow not found', flowId: null, title: 'flow 1 · step 01' });
+		// No origin in the API, no mark: whatever the name says.
+		const { origin: _, ...unmarked } = task1000;
+		expect(originMark(fromWireCatalogTask(unmarked))).toBeNull();
+	});
+
+	it('keeps recent runs absent, empty or verbatim, with no computed duration', () => {
+		expect(fromWireCatalogTask(task4).recentRuns).toBeUndefined();
+		expect(fromWireCatalogTask({ ...task4, recentRuns: [] }).recentRuns).toEqual([]);
+		const row = { LastStart: '2026-09-26 00:00:00', Completed: '2026-09-26 00:00:00', Status: '1', Result: 'Success', Username: '_SYSTEM', LogDatetime: '2026-09-26 00:00:01' };
+		expect(fromWireCatalogTask({ ...task4, recentRuns: [row] }).recentRuns).toEqual([
+			{ start: '2026-09-26 00:00:00', completed: '2026-09-26 00:00:00', status: '1', result: 'Success', user: '_SYSTEM', loggedAt: '2026-09-26 00:00:01' }
+		]);
+	});
+
+	it('shows exactly the FR-006 fields, in order', () => {
+		expect(DETAIL_FIELDS.map((f) => f.label)).toEqual([
+			'Name', 'ID', 'Namespace', 'Class', 'Run as user', 'Time period', 'Next run', 'Last started',
+			'Last finished', 'Status', 'Last error', 'Suspended', 'Destructiveness', 'Origin'
+		]);
+	});
+});
+
+describe('suspend / resume action (US-4)', () => {
+	it('goes idle → pending (disabled) → idle, taking the task from the answer and re-reading the list', () => {
+		const task = fromWireCatalogTask(task1000);
+		expect(suspendActionFor(task)).toBe('suspend');
+		const pending = reduceSuspendAction({ name: 'idle' }, { type: 'send', suspended: true });
+		expect(pending).toEqual({ state: { name: 'pending', suspended: true }, reread: [] });
+		const answered = fromWireCatalogTask({ ...task1000, suspended: true });
+		expect(reduceSuspendAction(pending.state, { type: 'ok', task: answered })).toEqual({
+			state: { name: 'idle' },
+			task: answered,
+			reread: ['list']
+		});
+		expect(suspendActionFor(answered)).toBe('resume');
+	});
+
+	it('shows a refusal verbatim and re-reads item and list; offers nothing when suspended is unavailable', () => {
+		const pending = reduceSuspendAction({ name: 'idle' }, { type: 'send', suspended: false }).state;
+		const error: ApiError = { kind: 'problem', status: 403, title: 'Forbidden', detail: '', platformStatus: { errors: [], summary: '' } };
+		expect(reduceSuspendAction(pending, { type: 'fail', error })).toEqual({
+			state: { name: 'error', message: 'HTTP 403 — no reason given' },
+			reread: ['item', 'list']
+		});
+		expect(suspendActionFor(fromWireCatalogTask(task1003))).toBeNull();
 	});
 });

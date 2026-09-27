@@ -1,0 +1,74 @@
+{
+  "evidence_id": "us4-suspend",
+  "captured_at": "2026-09-27T04:33:31.881Z",
+  "request": {
+    "method": "POST",
+    "path": "/csp/sentai/api/v1/catalog/tasks/1036/suspend",
+    "bodies": [
+      {
+        "suspended": true
+      },
+      {
+        "suspended": false
+      }
+    ]
+  },
+  "response": {
+    "statuses": [
+      200,
+      200
+    ],
+    "bodies": [
+      {
+        "taskId": 1036,
+        "name": "SentaiTask: 172#01",
+        "namespace": "IRISAPP",
+        "origin": {
+          "flowId": "172",
+          "stepId": "01",
+          "flowExists": true
+        },
+        "class": "sentai.dispatch.ScheduledFlowTask",
+        "runAsUser": "_SYSTEM",
+        "timePeriod": "Daily",
+        "nextRun": "2026-09-28 00:00:00",
+        "lastStarted": "",
+        "lastFinished": "",
+        "status": "1",
+        "lastError": "",
+        "suspended": true,
+        "lastRun": "",
+        "destructive": false,
+        "destructiveUnknown": false,
+        "isDestructive": false
+      },
+      {
+        "taskId": 1036,
+        "name": "SentaiTask: 172#01",
+        "namespace": "IRISAPP",
+        "origin": {
+          "flowId": "172",
+          "stepId": "01",
+          "flowExists": true
+        },
+        "class": "sentai.dispatch.ScheduledFlowTask",
+        "runAsUser": "_SYSTEM",
+        "timePeriod": "Daily",
+        "nextRun": "2026-09-28 00:00:00",
+        "lastStarted": "",
+        "lastFinished": "",
+        "status": "1",
+        "lastError": "",
+        "suspended": false,
+        "lastRun": "",
+        "destructive": false,
+        "destructiveUnknown": false,
+        "isDestructive": false
+      }
+    ]
+  },
+  "notes": [
+    "Task 1036 was created by scheduling test flow 172; it and the flow were deleted afterwards.",
+    "Each button was disabled while its call was pending; detail and row then showed the state in the answer, and a fresh GET agreed."
+  ]
+}

@@ -261,7 +261,7 @@ API, and the header shows "N of M tasks".
 **Independent test**: `us9-catalog-filters.spec.ts`. For each filter, the rows and counts equal
 the API's answer for the same query.
 
-- [ ] T004 [US3] Filters and count (plan row 3; depends on T003). **Gate: e2e needs G-A.**
+- [X] T004 [US3] Filters and count (plan row 3; depends on T003). **Gate: e2e needs G-A.**
 
   **Unit first**, in `frontend/src/lib/catalog/catalog.test.ts`. Three tests:
   1. `namespaceOptions(page)`: the distinct namespaces of an unfiltered page, plus `all`.
@@ -298,7 +298,7 @@ This phase follows plan row 4, which also completes US-1's detail (US-1.4–7).
 **Independent test**: `us8-catalog-origin.spec.ts`. A scheduled 3-step flow gives exactly 3
 marked rows, and the link opens the flow.
 
-- [ ] T005 [US2] Detail, origin and link (plan row 4; depends on T003). Not [P] with T004, because
+- [X] T005 [US2] Detail, origin and link (plan row 4; depends on T003). Not [P] with T004, because
   both edit `catalog.ts`. **Gate: e2e needs G-A.**
 
   **Unit first**, in `frontend/src/lib/catalog/catalog.test.ts`. Three tests:
@@ -338,7 +338,7 @@ re-read and refusals shown verbatim.
 
 **Independent test**: `us10-catalog-suspend.spec.ts`.
 
-- [ ] T006 [US4] Suspend/resume (plan row 5; depends on T005). **Gate: e2e needs G-A.**
+- [X] T006 [US4] Suspend/resume (plan row 5; depends on T005). **Gate: e2e needs G-A.**
 
   **Unit first**, in `frontend/src/lib/catalog/catalog.test.ts`. Two tests on the action reducer:
   1. idle → pending (button disabled) → ok (task from body, list re-read requested);
