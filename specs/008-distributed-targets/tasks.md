@@ -187,7 +187,7 @@ removed.
 
 ## Phase 6: Control and failure mid-run
 
-- [ ] T009 [US2] Cancel/pause forwarding (FR-017, D-6; closes spec 003 T075 for local steps).
+- [X] T009 [US2] Cancel/pause forwarding (FR-017, D-6; closes spec 003 T075 for local steps).
   **Tests first** in `RemoteStepRunTest` and `tests/sentai/unittest/dispatch/` existing control
   tests (added methods): cancelling a running remote step posts `async-result/cancel?id=` to its
   target with the target token, then transitions; a target refusal is recorded verbatim as the

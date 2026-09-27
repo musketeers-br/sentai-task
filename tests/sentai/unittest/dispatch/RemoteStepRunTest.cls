@@ -130,4 +130,56 @@ Method TestAddressIsFrozenForTheRun()
     Do $$$AssertEquals(..BearersPostedTo(..#BASE_..#START), "TGT-A,")
 }
 
+/// T009 (FR-017): cancelling a running remote step asks its target first, with the run's
+/// credential for it; the step is cancelled once the target accepted.
+Method TestCancelIsForwardedToTheTarget()
+{
+    Set run = ..DemoRun()
+    Do ##class(sentai.dispatch.WaveDispatcher).StartStep(run, "03")
+    Set sr = ..StepRun(run, "03")
+    Do $$$AssertStatusOK(##class(sentai.dispatch.WaveDispatcher).CancelStep(run.guid, sr.guid))
+    Do $$$AssertEquals(..StepRun(run, "03").state, "cancelled")
+    Do $$$AssertEquals(..BearersPostedTo(..#BASE_"/api/admin/v2/async-result/cancel?id=R1"), "TGT-A,")
+}
+
+/// A refusal from the target leaves the step as it is and comes back verbatim.
+Method TestRefusedCancelLeavesTheStepRunning()
+{
+    Set run = ..DemoRun()
+    Do ##class(sentai.dispatch.WaveDispatcher).StartStep(run, "03")
+    Do ##class(sentai.unittest.AdminApiDouble).Script(..#BASE_"/api/admin/v2/async-result/cancel", "POST", 403, "", {"status": {"errors": [{"error": "ERROR #822: Access Denied"}], "summary": "ERROR #822: Access Denied"}}.%ToJSON())
+    Set sc = ##class(sentai.dispatch.WaveDispatcher).CancelStep(run.guid, ..StepRun(run, "03").guid)
+    Do $$$AssertStatusNotOK(sc)
+    Do $$$AssertTrue($SYSTEM.Status.GetErrorText(sc) [ "CONTROL_REFUSED: target '"_..Name_"' answered HTTP 403: ERROR #822: Access Denied", $SYSTEM.Status.GetErrorText(sc))
+    Do $$$AssertEquals(..StepRun(run, "03").state, "running")
+
+    // Over the route: 502 with that text.
+    Do ##class(sentai.unittest.targets.TargetRestTest).Request()
+    Do ##class(sentai.rest.Dispatcher).CancelStep(run.guid, ..StepRun(run, "03").guid)
+    Do $$$AssertEquals(%response.Status, 502)
+}
+
+/// A local running platform step is now cancelled on the platform too (spec 003 F-2 / T075).
+Method TestLocalCancelIsForwardedToo()
+{
+    Set run = ..DemoRun()
+    Do ##class(sentai.dispatch.WaveDispatcher).StartStep(run, "01")
+    Do $$$AssertStatusOK(##class(sentai.dispatch.WaveDispatcher).CancelStep(run.guid, ..StepRun(run, "01").guid))
+    Do $$$AssertEquals(..StepRun(run, "01").state, "cancelled")
+    Do $$$AssertEquals(..BearersPostedTo("/api/admin/v2/async-result/cancel?id=L1"), "LOCAL-A,")
+}
+
+/// Cancelling the whole run forwards to every running job, on its own instance.
+Method TestRunCancelForwardsToEachJob()
+{
+    Set run = ..DemoRun()
+    Do ##class(sentai.dispatch.WaveDispatcher).StartStep(run, "01")
+    Do ##class(sentai.dispatch.WaveDispatcher).StartStep(run, "03")
+    Do ##class(sentai.dispatch.WaveDispatcher).CancelRun(run.guid)
+    Do $$$AssertEquals(..BearersPostedTo(..#BASE_"/api/admin/v2/async-result/cancel?id=R1"), "TGT-A,")
+    Do $$$AssertEquals(..BearersPostedTo("/api/admin/v2/async-result/cancel?id=L1"), "LOCAL-A,")
+    Do $$$AssertEquals(..StepRun(run, "03").state, "cancelled")
+    Do $$$AssertEquals(..StepRun(run, "04").state, "cancelled")
+}
+
 }

@@ -602,6 +602,10 @@ ClassMethod CancelRun(runGuid As %String) As %Status
     Set result = rs.%Execute(run.%Id())
     While result.%Next() {
         Set stepRun = ##class(sentai.model.StepRun).%OpenId(result.%Get("rowId"), 4)
+        // Spec 008 FR-017: each running job is asked to stop on its own instance. The run is
+        // cancelled whatever they answer — the operator stopped it; a job that refused may keep
+        // running there, as after any cancel (spec 003 F-2).
+        Do ..ForwardJobControl(stepRun, "cancel")
         Do stepRun.TransitionTo("cancelled")
     }
     Quit $$$OK
@@ -613,7 +617,28 @@ ClassMethod CancelStep(runGuid As %String, stepGuid As %String) As %Status
 {
     Set stepRun = ##class(sentai.model.StepRun).GuidIndexOpen(stepGuid, 4, .sc)
     If '$IsObject(stepRun) Quit $$$ERROR($$$GeneralError, "SentaiNotFound")
+    // Spec 008 FR-017 (and spec 003 T075 locally): the job is asked to stop where it runs; a
+    // refusal leaves the step as it is and comes back to the operator verbatim.
+    Set sc = ..ForwardJobControl(stepRun, "cancel")
+    Quit:$$$ISERR(sc) sc
     Quit stepRun.TransitionTo("cancelled")
+}
+
+/// Spec 008 FR-017: asks the instance running `stepRun`'s job — this one, or its target — to
+/// `action` it (`cancel` / `pause`; spec 001 evidence 08), with the run's credential for that
+/// instance. $$$OK when there is no job yet, when it accepted, or when it did not answer (nothing
+/// more can be asked of it); CONTROL_REFUSED with its answer verbatim otherwise.
+ClassMethod ForwardJobControl(stepRun As sentai.model.StepRun, action As %String) As %Status
+{
+    Quit:((stepRun.adminJobId = "") || (stepRun.state '= "running")) $$$OK
+    Set runGuid = stepRun.run.guid, base = stepRun.targetBaseUrl
+    Set token = $S(base '= "":..TargetToken(runGuid, stepRun.executedOn), 1:$G(^sentaiRun(runGuid, "%token")))
+    Set jobId = $PIECE(stepRun.adminJobId, "id=", 2)
+    Set body = ##class(sentai.dispatch.AdminApiClient).Post("/api/admin/v2/async-result/"_action_"?id="_jobId, token, {}, .httpStatus, .location, base, .transportError)
+    Quit:((transportError '= "") || ((httpStatus >= 200) && (httpStatus < 300))) $$$OK
+    Set refused = ##class(sentai.targets.TargetService).Refused(httpStatus, body).problem
+    Set where = $S(base '= "":"target '"_stepRun.executedOn_"'", 1:"the platform")
+    Quit $$$ERROR($$$GeneralError, "CONTROL_REFUSED: "_where_" answered HTTP "_httpStatus_$S(refused.detail '= "":": "_refused.detail, 1:""))
 }
 
 /// Individual-step pause — refused (409) for any type outside the purge family (FR-029).
@@ -631,12 +656,10 @@ ClassMethod PauseStep(runGuid As %String, stepGuid As %String) As %Status
         Quit $$$ERROR($$$GeneralError, "SentaiNotPausable: step type '"_step.type_"' does not support pause in v1")
     }
 
-    If (stepRun.adminJobId '= "") {
-        Set httpStatus = 0, location = ""
-        // spec 001 evidence/08a-async-result-pause.json: POST /api/admin/v2/async-result/pause?id=<id>
-        Set jobId = $PIECE(stepRun.adminJobId, "id=", 2)
-        Do ##class(sentai.dispatch.AdminApiClient).Post("/api/admin/v2/async-result/pause?id="_jobId, $G(^sentaiRun(runGuid, "%token")), {}, .httpStatus, .location)
-    }
+    // spec 001 evidence/08a-async-result-pause.json: POST /api/admin/v2/async-result/pause?id=<id>,
+    // on the instance running the job (spec 008).
+    Set sc = ..ForwardJobControl(stepRun, "pause")
+    Quit:$$$ISERR(sc) sc
     Quit stepRun.TransitionTo("paused")
 }
 

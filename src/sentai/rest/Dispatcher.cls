@@ -573,7 +573,11 @@ ClassMethod PauseRun(runGuid As %String) As %Status
 ClassMethod CancelStep(runGuid As %String, stepGuid As %String) As %Status
 {
     Set sc = ##class(sentai.dispatch.WaveDispatcher).CancelStep(runGuid, stepGuid)
-    If $$$ISERR(sc) Quit ..WriteProblem(404, "Not Found", $SYSTEM.Status.GetErrorText(sc))
+    If $$$ISERR(sc) {
+        Set text = $SYSTEM.Status.GetErrorText(sc)
+        If (text [ "CONTROL_REFUSED") Quit ..WriteProblem(502, "Bad Gateway", text)
+        Quit ..WriteProblem(404, "Not Found", text)
+    }
     Quit ..WriteJSON(202, {})
 }
 
@@ -583,6 +587,7 @@ ClassMethod PauseStep(runGuid As %String, stepGuid As %String) As %Status
     If $$$ISERR(sc) {
         Set text = $SYSTEM.Status.GetErrorText(sc)
         If (text [ "SentaiNotPausable") Quit ..WriteProblem(409, "Conflict", text)
+        If (text [ "CONTROL_REFUSED") Quit ..WriteProblem(502, "Bad Gateway", text)
         Quit ..WriteProblem(404, "Not Found", text)
     }
     Quit ..WriteJSON(202, {})
