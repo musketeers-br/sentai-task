@@ -1,8 +1,10 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { replaceState } from '$app/navigation';
+	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 	import { SvelteFlowProvider } from '@xyflow/svelte';
 	import { api, describeError } from '$lib/api/client';
+	import CatalogScreen from '$lib/catalog/CatalogScreen.svelte';
 	import { session } from '$lib/api/session.svelte';
 	import FlowCanvas from '$lib/canvas/FlowCanvas.svelte';
 	import type { FlowDocument } from '$lib/flow/document';
@@ -15,6 +17,7 @@
 	import SignIn from '$lib/shell/SignIn.svelte';
 	import StatusBar from '$lib/shell/StatusBar.svelte';
 	import TopBar from '$lib/shell/TopBar.svelte';
+	import { screenOf, urlForScreen, type Screen } from '$lib/shell/screen';
 	import { theme } from '$lib/shell/theme.svelte';
 
 	const editor = new FlowEditor();
@@ -24,6 +27,8 @@
 	let scheduling = $state(false);
 	/** The live-run view (UI-002): the run GUID plus the flow snapshot it draws. */
 	let watching = $state<{ guid: string; flow: FlowDocument } | null>(null);
+	/** Derived from the address, so back/forward, deep links and reloads all agree (FR-002). */
+	const screen = $derived(screenOf(page.url));
 
 	onMount(() => theme.init());
 
@@ -62,11 +67,17 @@
 	}
 
 	function syncUrl() {
-		const url = new URL(location.href);
+		const url = new URL(page.url);
 		if (editor.id) url.searchParams.set('flow', editor.id);
 		if (watching) url.searchParams.set('run', watching.guid);
 		else url.searchParams.delete('run');
-		if (url.search !== location.search) replaceState(url, {});
+		if (url.search !== page.url.search) void goto(url, { replaceState: true, keepFocus: true, noScroll: true });
+	}
+
+	// The one FlowEditor instance stays alive across screens, so the open flow and its unsaved
+	// edits survive a trip to the catalog.
+	function navigate(to: Screen) {
+		if (to !== screen) void goto(urlForScreen(page.url, to), { keepFocus: true, noScroll: true });
 	}
 
 	let dispatchOpen = $state(false);
@@ -111,7 +122,25 @@
 <svelte:window {onkeydown} />
 <svelte:head><title>{editor.name} — SentaiTask</title></svelte:head>
 
-{#if phase.name === 'ready' && watching}
+{#if phase.name === 'ready' && screen === 'catalog'}
+	<div class="app">
+		<TopBar
+			{editor}
+			{screen}
+			onnavigate={navigate}
+			user={session.user}
+			onsave={save}
+			onvalidate={validate}
+			onrun={() => (dispatchOpen = true)}
+			onschedule={() => (scheduling = true)}
+			onsignout={signOut}
+		/>
+		<CatalogScreen />
+	</div>
+	{#if session.status === 'expired'}
+		<div class="overlay"><SignIn expired /></div>
+	{/if}
+{:else if phase.name === 'ready' && watching}
 	{#key watching.guid}
 		<RunScreen guid={watching.guid} flow={watching.flow} registry={editor.registry} onback={backToFlow} />
 	{/key}
@@ -122,6 +151,8 @@
 	<div class="app">
 		<TopBar
 			{editor}
+			{screen}
+			onnavigate={navigate}
 			user={session.user}
 			onsave={save}
 			onvalidate={validate}

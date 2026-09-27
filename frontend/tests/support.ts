@@ -7,11 +7,21 @@ const ENTRY = process.env.APP_ENTRY ?? 'index.html';
 export const EVIDENCE_DIR = '../specs/002-canvas-ui/evidence';
 
 export async function signIn(page: Page, query = ''): Promise<void> {
+	await signInAt(page, query);
+	await expect(page.getByRole('heading', { name: 'STEP TYPES' })).toBeVisible();
+}
+
+/** Signs in on the page `query` addresses, without assuming it opens on the flow editor. */
+export async function signInAt(page: Page, query = ''): Promise<void> {
 	await page.goto(`${ENTRY}${query}`);
+	await submitSignIn(page);
+}
+
+/** Fills the canvas sign-in form already on screen (after a reload, tokens are in memory only). */
+export async function submitSignIn(page: Page): Promise<void> {
 	await page.getByLabel('User').fill(USER);
 	await page.getByLabel('Password').fill(PASSWORD);
 	await page.getByRole('button', { name: 'Sign in' }).click();
-	await expect(page.getByRole('heading', { name: 'STEP TYPES' })).toBeVisible();
 }
 
 export async function token(request: APIRequestContext): Promise<string> {

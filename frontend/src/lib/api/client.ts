@@ -1,5 +1,6 @@
 // Typed calls to SENTAI.REST.Dispatcher (contracts/openapi.yaml). Every predictable failure
 // comes back as a value, and the platform's own words are kept verbatim (Constitution III, IV).
+import { fromWireCatalogPage, type CatalogPage, type WireCatalogPage } from '$lib/catalog/catalog';
 import type { FlowDefinition, FlowDocument, StepTypeInfo } from '$lib/flow/document';
 import type { ValidationReport } from '$lib/flow/report';
 import { fromWireRun, type RunView } from '$lib/run/run';
@@ -167,6 +168,11 @@ export const api = {
 			`/runs/${encodeURIComponent(runGuid)}/steps/${encodeURIComponent(stepGuid)}/${action}`,
 			{}
 		);
+	},
+
+	/** Spec 006: the platform's Task Manager tasks, every value as the platform reported it. */
+	async catalogTasks(): Promise<ApiResult<CatalogPage>> {
+		return map(await request<WireCatalogPage>('GET', '/catalog/tasks'), fromWireCatalogPage);
 	},
 
 	async wqmCategoryNames(): Promise<ApiResult<string[]>> {

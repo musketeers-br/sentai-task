@@ -2,9 +2,12 @@
 	import Mark from './Mark.svelte';
 	import { theme } from './theme.svelte';
 	import type { FlowEditor } from '$lib/flow/editor.svelte';
+	import type { Screen } from './screen';
 
 	let {
 		editor,
+		screen,
+		onnavigate,
 		user,
 		onsave,
 		onvalidate,
@@ -13,6 +16,8 @@
 		onsignout
 	}: {
 		editor: FlowEditor;
+		screen: Screen;
+		onnavigate: (screen: Screen) => void;
 		user: string | null;
 		onsave: () => void;
 		onvalidate: () => void;
@@ -31,22 +36,34 @@
 	<Mark />
 	<span class="separator" aria-hidden="true"></span>
 
-	<span class="ns-chip" title="Task Manager namespace">%SYS</span>
-	<label for="flow-name" class="visually-hidden">Flow name</label>
-	<input
-		id="flow-name"
-		class="flow-name"
-		bind:value={editor.name}
-		oninput={() => editor.touch('cosmetic')}
-		spellcheck="false"
-	/>
-	<span class="meta" data-testid="flow-meta">
-		{#if editor.id === null}
-			not saved yet
-		{:else}
-			rev {editor.revision} · saved {savedTime}{editor.dirty ? ' · edited' : ''}
-		{/if}
-	</span>
+	<nav class="tabs" aria-label="Screens">
+		<button type="button" aria-current={screen === 'flows' ? 'page' : undefined} onclick={() => onnavigate('flows')}>
+			Flows
+		</button>
+		<button type="button" aria-current={screen === 'catalog' ? 'page' : undefined} onclick={() => onnavigate('catalog')}>
+			Task catalog
+		</button>
+	</nav>
+
+	{#if screen === 'flows'}
+		<span class="separator" aria-hidden="true"></span>
+		<span class="ns-chip" title="Task Manager namespace">%SYS</span>
+		<label for="flow-name" class="visually-hidden">Flow name</label>
+		<input
+			id="flow-name"
+			class="flow-name"
+			bind:value={editor.name}
+			oninput={() => editor.touch('cosmetic')}
+			spellcheck="false"
+		/>
+		<span class="meta" data-testid="flow-meta">
+			{#if editor.id === null}
+				not saved yet
+			{:else}
+				rev {editor.revision} · saved {savedTime}{editor.dirty ? ' · edited' : ''}
+			{/if}
+		</span>
+	{/if}
 
 	<span class="spacer"></span>
 
@@ -55,35 +72,37 @@
 		<button type="button" aria-pressed={theme.current === 'light'} onclick={() => theme.set('light')}>Light</button>
 	</div>
 
-	<button type="button" class="secondary" disabled={!canSave} onclick={onsave}>
-		{editor.saving ? 'Saving…' : 'Save flow'}
-	</button>
-	<button
-		type="button"
-		class="secondary"
-		disabled={editor.validating || editor.steps.length === 0}
-		onclick={onvalidate}
-	>
-		{editor.validating ? 'Validating…' : 'Validate flow'}
-	</button>
-	<button
-		type="button"
-		class="primary"
-		disabled={editor.scheduleBlocked || editor.steps.length === 0}
-		title={editor.scheduleBlocked ? 'Fix the validation errors listed in the status bar first' : 'Dispatch this flow now'}
-		onclick={onrun}
-	>
-		Run now
-	</button>
-	<button
-		type="button"
-		class="secondary"
-		disabled={editor.scheduleBlocked || editor.steps.length === 0}
-		title={editor.scheduleBlocked ? 'Fix the validation errors listed in the status bar first' : undefined}
-		onclick={onschedule}
-	>
-		Schedule in Task Manager
-	</button>
+	{#if screen === 'flows'}
+		<button type="button" class="secondary" disabled={!canSave} onclick={onsave}>
+			{editor.saving ? 'Saving…' : 'Save flow'}
+		</button>
+		<button
+			type="button"
+			class="secondary"
+			disabled={editor.validating || editor.steps.length === 0}
+			onclick={onvalidate}
+		>
+			{editor.validating ? 'Validating…' : 'Validate flow'}
+		</button>
+		<button
+			type="button"
+			class="primary"
+			disabled={editor.scheduleBlocked || editor.steps.length === 0}
+			title={editor.scheduleBlocked ? 'Fix the validation errors listed in the status bar first' : 'Dispatch this flow now'}
+			onclick={onrun}
+		>
+			Run now
+		</button>
+		<button
+			type="button"
+			class="secondary"
+			disabled={editor.scheduleBlocked || editor.steps.length === 0}
+			title={editor.scheduleBlocked ? 'Fix the validation errors listed in the status bar first' : undefined}
+			onclick={onschedule}
+		>
+			Schedule in Task Manager
+		</button>
+	{/if}
 
 	<span class="user">{user}</span>
 	<button type="button" class="quiet" onclick={onsignout}>Sign out</button>
@@ -100,6 +119,27 @@
 		padding: 0 var(--space-section);
 		background: var(--color-surface);
 		border-bottom: 1px solid var(--color-border-faint);
+	}
+
+	.tabs {
+		display: flex;
+		gap: 4px;
+	}
+
+	.tabs button {
+		font-weight: 500;
+		color: var(--color-text-muted);
+		background: transparent;
+		border: 1px solid transparent;
+		border-radius: var(--radius-control);
+		padding: 6px 10px;
+	}
+
+	.tabs button[aria-current='page'] {
+		font-weight: 600;
+		color: var(--color-text);
+		background: var(--color-card);
+		border-color: var(--color-border);
 	}
 
 	.separator {

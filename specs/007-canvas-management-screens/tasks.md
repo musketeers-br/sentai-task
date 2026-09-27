@@ -186,7 +186,7 @@ only API values, and handles unavailable values and refusals.
 **Independent test**: `us7-catalog.spec.ts`. Every row and value equals `GET
 /csp/sentai/api/v1/catalog/tasks` (SC-001). Deep link, back and reload all work.
 
-- [ ] T002 [US1] Navigation and routing (plan row 1). **Gate: e2e needs G-A.**
+- [X] T002 [US1] Navigation and routing (plan row 1). **Gate: e2e needs G-A.**
 
   **Test first**, in `frontend/tests/us7-catalog.spec.ts`, test 1 "navigation":
   1. sign in and open a seeded flow (`seedFlow`);
