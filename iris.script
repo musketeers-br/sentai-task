@@ -40,7 +40,19 @@
     // canvas app (and only it, via MatchRoles in module.xml) gets exactly that: read-only.
     set sc = ##class(Security.Roles).Create("SentaiWebPage", "Anonymous canvas page: enter IRISAPP (read on its default globals database) - nothing else", "%DB_IRISAPP_DATA:R")
 
+    // Spec 008: TLS client configuration for https target servers (peer verified against the
+    // system CA bundle).
+    kill sslProps
+    set sslProps("Description") = "SentaiTask: client TLS for target servers (spec 008)"
+    set sslProps("Type") = 0, sslProps("VerifyPeer") = 1, sslProps("CAFile") = "/etc/ssl/certs/ca-certificates.crt"
+    set sc = ##class(Security.SSLConfigs).Create("SentaiTargets", .sslProps)
+
     zn "IRISAPP"
+
+    // Spec 008, demo network only: allow plain-http target servers (the compose service
+    // iris-target). Without this flag, http is accepted only for loopback targets. Remove it
+    // for any real deployment.
+    set ^sentai("config", "allowInsecureTargets") = 1
 
     // Create /_vscode web app to support intersystems-community.testingmanager VS Code extension
     zpm "install vscode-per-namespace-settings"

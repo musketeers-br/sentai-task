@@ -63,12 +63,12 @@ ClassMethod ResolveRunStep(stepRunGuid As %String, ByRef runGuid As %String, ByR
 ///   "CONFIRMATION_REQUIRED"   — errorDetail names the pending stepId (FR-017, HTTP 428)
 /// `bearerToken` is passed to validation (category existence, spec 004 FR-006); the scheduled
 /// path has none.
-ClassMethod Dispatch(flowId As %String, confirmationsArray As %DynamicArray, dispatchedBy As %String, ByRef errorCode As %String, ByRef errorDetail As %String, ByRef validationReport As %DynamicObject, bearerToken As %String = "") As %DynamicObject
+ClassMethod Dispatch(flowId As %String, confirmationsArray As %DynamicArray, dispatchedBy As %String, ByRef errorCode As %String, ByRef errorDetail As %String, ByRef validationReport As %DynamicObject, bearerToken As %String = "", targetTokens As %DynamicObject = "") As %DynamicObject
 {
     Set errorCode = "", errorDetail = ""
 
     // FR-018: structural validation blocks dispatch regardless of any earlier /validate call.
-    Set validationReport = ##class(sentai.validation.FlowValidator).Validate(flowId, bearerToken)
+    Set validationReport = ##class(sentai.validation.FlowValidator).Validate(flowId, bearerToken, targetTokens)
     If '##class(sentai.validation.FlowValidator).HasNoErrors(validationReport) {
         Set errorCode = "VALIDATION_FAILED"
         Return ""
@@ -149,7 +149,7 @@ ClassMethod CreateRun(flowId As %String, confirmationsArray As %DynamicArray, di
         Do ..IndexRun(run.guid, flowId, flow.revision, run.startedAt, dispatchedBy)
 
         Set stepRs2 = ##class(%SQL.Statement).%New()
-        Do stepRs2.%Prepare("SELECT id FROM sentai_model.Step WHERE flow = ?")
+        Do stepRs2.%Prepare("SELECT id, target FROM sentai_model.Step WHERE flow = ?")
         Set stepResult2 = stepRs2.%Execute(flowId)
         While stepResult2.%Next() {
             Set stepId = stepResult2.%Get("id")
@@ -157,6 +157,7 @@ ClassMethod CreateRun(flowId As %String, confirmationsArray As %DynamicArray, di
             Set stepRun.guid = $SYSTEM.Util.CreateGUID()
             Do stepRun.runSetObjectId(run.%Id())
             Set stepRun.stepId = stepId
+            Set stepRun.executedOn = $S(stepResult2.%Get("target") '= "":stepResult2.%Get("target"), 1:"local")
             Set stepRun.state = "queued"
             Set stepRun.timeQueued = $ZDATETIME($HOROLOG, 3)
             If $D(confirmed(stepId)) {
@@ -225,9 +226,83 @@ ClassMethod RenewRunCredentialIfDue(runGuid As %String) As %String
     Quit body."access_token"
 }
 
+/// Seconds a target is left alone after it failed to answer (research R-12; quickstart (e)).
+Parameter TARGETBACKOFFSECONDS = 30;
+
+ClassMethod MarkTargetFailed(runGuid As %String, target As %String)
+{
+    Set ^IRIS.Temp.sentaiTargetCred(runGuid, "%failAt", target) = ..NowSeconds()
+}
+
+ClassMethod TargetBackingOff(runGuid As %String, target As %String) As %Boolean
+{
+    Quit (..NowSeconds() - $G(^IRIS.Temp.sentaiTargetCred(runGuid, "%failAt", target), 0)) < ..#TARGETBACKOFFSECONDS
+}
+
 ClassMethod EraseRunCredential(runGuid As %String)
 {
     Kill ^sentaiRun(runGuid, "%token"), ^sentaiRun(runGuid, "%refresh"), ^sentaiRun(runGuid, "%tokenAt")
+    // Spec 008: the run's target credentials go with it.
+    Kill ^IRIS.Temp.sentaiTargetCred(runGuid)
+}
+
+/// --- Target credentials (spec 008 FR-011, research R-5) ---
+/// ^IRIS.Temp.sentaiTargetCred(runGuid, target) = $lb(access, refresh, issuedAt, sub, baseUrl):
+/// IRISTEMP — never journaled, gone on restart, shared by the run's processes. The address is
+/// the one frozen at dispatch (FR-018).
+ClassMethod StoreTargetCredentials(runGuid As %String, pairs As %DynamicObject) As %Status
+{
+    Quit:'$IsObject(pairs) $$$OK
+    Set iter = pairs.%GetIterator()
+    While iter.%GetNext(.name, .p) {
+        Set ^IRIS.Temp.sentaiTargetCred(runGuid, name) = $LB(p.accessToken, p.refreshToken, ..NowSeconds(), p.sub, p.baseUrl)
+    }
+    Quit $$$OK
+}
+
+/// {target: accessToken} for validation, from redeemed pairs.
+ClassMethod AccessTokens(pairs As %DynamicObject) As %DynamicObject
+{
+    Set out = {}
+    Quit:'$IsObject(pairs) out
+    Set iter = pairs.%GetIterator()
+    While iter.%GetNext(.name, .p) { Do out.%Set(name, p.accessToken) }
+    Quit out
+}
+
+ClassMethod TargetToken(runGuid As %String, target As %String) As %String
+{
+    Quit $LG($G(^IRIS.Temp.sentaiTargetCred(runGuid, target)), 1)
+}
+
+ClassMethod TargetSub(runGuid As %String, target As %String) As %String
+{
+    Quit $LG($G(^IRIS.Temp.sentaiTargetCred(runGuid, target)), 4)
+}
+
+ClassMethod TargetBaseUrl(runGuid As %String, target As %String) As %String
+{
+    Quit $LG($G(^IRIS.Temp.sentaiTargetCred(runGuid, target)), 5)
+}
+
+/// E-1 per target: renews a pair older than RENEWAFTERSECONDS from that target's own refresh
+/// token (no bearer). A refused renewal keeps the current token; the target's later 401 becomes
+/// the step's failure reason. Only the run loop calls this, so renewals never race.
+ClassMethod RenewTargetCredentialsIfDue(runGuid As %String)
+{
+    Set name = ""
+    For {
+        Set name = $O(^IRIS.Temp.sentaiTargetCred(runGuid, name))
+        Quit:(name = "")
+        Continue:($EXTRACT(name) = "%")
+        Continue:..TargetBackingOff(runGuid, name)
+        Set entry = ^IRIS.Temp.sentaiTargetCred(runGuid, name)
+        Continue:((..NowSeconds() - $LG(entry, 3)) < ..#RENEWAFTERSECONDS)
+        Set body = ##class(sentai.dispatch.AdminApiClient).Post("/api/admin/refresh", "", {"refresh_token": ($LG(entry, 2))}, .httpStatus, .location, $LG(entry, 5), .transportError)
+        Do:(transportError '= "") ..MarkTargetFailed(runGuid, name)
+        Continue:((transportError '= "") || (httpStatus '= 200) || '$IsObject(body) || (body."access_token" = ""))
+        Set ^IRIS.Temp.sentaiTargetCred(runGuid, name) = $LB(body."access_token", body."refresh_token", ..NowSeconds(), $LG(entry, 4), $LG(entry, 5))
+    }
 }
 
 /// Starts the background execution loop for `runGuid` as an IRIS job, right after the
@@ -252,6 +327,7 @@ ClassMethod RunLoop(runGuid As %String, bearerToken As %String) As %Status
         // E-1: keep the run's own credential alive (no-op without a refresh token).
         Set current = ..RenewRunCredentialIfDue(runGuid)
         Set:(current '= "") bearerToken = current
+        Do ..RenewTargetCredentialsIfDue(runGuid)
 
         Kill eligible
         Set n = ..ComputeEligibleSteps(runGuid, .anyFailed, .eligible)
@@ -338,6 +414,11 @@ ClassMethod StartStep(run As sentai.model.Run, stepId As %String) As %Status
     If '$IsObject(step) Return sc
 
     Set category = $S(step.wqmCategory '= "":step.wqmCategory, 1:run.flow.defaultCategory)
+    // Spec 008: a remote step uses the address frozen at dispatch with its credential (FR-018).
+    If (step.target '= "") && (stepRun.targetBaseUrl = "") {
+        Set stepRun.targetBaseUrl = ..TargetBaseUrl(run.guid, step.target)
+        Do stepRun.%Save()
+    }
     If (##class(sentai.registry.StepType).GetExecutor(step.type) = "in-process") {
         Quit ..StartInProcessStep(stepRun.guid, category)
     }
@@ -393,10 +474,13 @@ ClassMethod SweepTimeouts(run As sentai.model.Run) As %Status
     Set flowId = run.flowGetObjectId()
     Set now = $H
     Set rs = ##class(%SQL.Statement).%New()
-    Do rs.%Prepare("SELECT sr.guid, sr.stepId, sr.timeStarted, s.type, s.timeoutMinutes FROM sentai_model.StepRun sr, sentai_model.Step s WHERE sr.run = ? AND sr.state = 'running' AND s.flow = ? AND s.id = sr.stepId")
+    Do rs.%Prepare("SELECT sr.guid, sr.stepId, sr.timeStarted, sr.targetBaseUrl, s.type, s.timeoutMinutes FROM sentai_model.StepRun sr, sentai_model.Step s WHERE sr.run = ? AND sr.state = 'running' AND s.flow = ? AND s.id = sr.stepId")
     Set result = rs.%Execute(run.%Id(), flowId)
     While result.%Next() {
-        Continue:(##class(sentai.registry.StepType).GetExecutor(result.%Get("type")) '= "in-process")
+        // In-process steps (spec 005) and remote steps (spec 008 FR-016): a local platform job
+        // keeps today's behaviour, followed until the platform ends it.
+        Set remote = (result.%Get("targetBaseUrl") '= "")
+        Continue:('remote && (##class(sentai.registry.StepType).GetExecutor(result.%Get("type")) '= "in-process"))
         Set started = result.%Get("timeStarted")
         Continue:(started = "")
         Set minutes = +result.%Get("timeoutMinutes")
@@ -404,7 +488,8 @@ ClassMethod SweepTimeouts(run As sentai.model.Run) As %Status
         Set h = $ZDATETIMEH(started, 3)
         Set elapsed = ((+now - +h) * 86400) + ($P(now, ",", 2) - $P(h, ",", 2))
         Continue:(elapsed <= (minutes * 60))
-        Do ##class(sentai.model.StepRun).TransitionLocked(result.%Get("guid"), "failed", "timed out after "_minutes_" min")
+        Set lastError = $S(remote:$G(^IRIS.Temp.sentaiTargetCred(run.guid, "%lastError", result.%Get("guid"))), 1:"")
+        Do ##class(sentai.model.StepRun).TransitionLocked(result.%Get("guid"), "failed", "timed out after "_minutes_" min"_$S(lastError '= "":"; last transport error: "_lastError, 1:""))
     }
     Quit $$$OK
 }
@@ -422,13 +507,20 @@ ClassMethod ExecuteStepAsync(stepRunGuid As %String) As %Status
     Quit:'$IsObject(step) $$$OK
 
     Set endpoint = ..AdminEndpointFor(step.type)
-    Set httpStatus = 0, location = ""
+    Set httpStatus = 0, location = "", transportError = ""
+    // Spec 008: a remote step calls its target with the operator's credential for that target.
+    Set base = stepRun.targetBaseUrl, target = stepRun.executedOn
+    Set token = $S(base '= "":..TargetToken(run.guid, target), 1:$G(^sentaiRun(run.guid, "%token")))
     // The platform rejects an empty POST (400 "HTTP POST has no content"); the validated start
     // request carries an empty JSON object (spec 001 evidence/06-integrity-check-start.json).
-    Do ##class(sentai.dispatch.AdminApiClient).Post(endpoint, $G(^sentaiRun(run.guid, "%token")), {}, .httpStatus, .location)
+    Do ##class(sentai.dispatch.AdminApiClient).Post(endpoint, token, {}, .httpStatus, .location, base, .transportError)
 
-    If (httpStatus = 202) && (location '= "") {
+    If (transportError '= "") {
+        Do:(base '= "") ..MarkTargetFailed(run.guid, target)
+        Do stepRun.TransitionTo("failed", $S(base '= "":"Target '"_target_"' did not answer: ", 1:"")_transportError)
+    } ElseIf (httpStatus = 202) && (location '= "") {
         Set stepRun.adminJobId = location
+        Set:(base '= "") stepRun.executedAs = ..TargetSub(run.guid, target)
         Do stepRun.%Save()
         Do stepRun.TransitionTo("running")
     } Else {
@@ -449,8 +541,27 @@ ClassMethod PollInFlightSteps(run As sentai.model.Run, bearerToken As %String) A
         Set stepRun = ##class(sentai.model.StepRun).%OpenId(result.%Get("rowId"), 4)
         Continue:(stepRun.adminJobId = "")
 
-        Set httpStatus = 0, location = ""
-        Set body = ##class(sentai.dispatch.AdminApiClient).Get(stepRun.adminJobId, bearerToken, .httpStatus, .location)
+        Set httpStatus = 0, location = "", transportError = ""
+        // Spec 008: a remote job is read on its target, with the run's credential for it — unless
+        // that target just failed to answer (back-off: it must not hold the run). A local job is
+        // read with the run credential renewed right now if due, so a slow pass can never let it
+        // expire under a running step (quickstart (e) finding).
+        Set base = stepRun.targetBaseUrl
+        If (base '= "") {
+            Continue:..TargetBackingOff(run.guid, stepRun.executedOn)
+            Set token = ..TargetToken(run.guid, stepRun.executedOn)
+        } Else {
+            Set token = $S(..RunToken(run.guid) '= "":..RenewRunCredentialIfDue(run.guid), 1:bearerToken)
+        }
+        Set body = ##class(sentai.dispatch.AdminApiClient).Get(stepRun.adminJobId, token, .httpStatus, .location, base, .transportError)
+        // No answer: keep polling, remembering why; SweepTimeouts bounds it by the step's
+        // timeout and reports this text (spec 008 FR-016, research R-12).
+        If (transportError '= "") {
+            Set ^IRIS.Temp.sentaiTargetCred(run.guid, "%lastError", stepRun.guid) = transportError
+            Do:(base '= "") ..MarkTargetFailed(run.guid, stepRun.executedOn)
+            Continue
+        }
+        Kill ^IRIS.Temp.sentaiTargetCred(run.guid, "%lastError", stepRun.guid)
         // A 4xx is permanent for this run (e.g. 401 once the 60 s credential expired, E-1):
         // fail the step with the status recorded instead of polling a job we can no longer
         // read, which left the step — and the run — "running" forever. 5xx/network: retry.
@@ -463,6 +574,8 @@ ClassMethod PollInFlightSteps(run As sentai.model.Run, bearerToken As %String) A
 
         Set state = $S($IsObject(body."result"):body."result"."State", 1:"")
         If (state = "Finished") {
+            // Research R-10: the job's own report is the step's result, local and remote alike.
+            Set stepRun.result = ##class(sentai.dispatch.InProcessExecutor).FitResult(body."result".%ToJSON())
             Do stepRun.TransitionTo("completed")
         } ElseIf (state = "Error") || (state = "Failed") {
             Set reason = $S($IsObject(body."status") && (body."status"."summary" '= ""):body."status"."summary", 1:"Administrative job reported "_state)
@@ -523,6 +636,10 @@ ClassMethod CancelRun(runGuid As %String) As %Status
     Set result = rs.%Execute(run.%Id())
     While result.%Next() {
         Set stepRun = ##class(sentai.model.StepRun).%OpenId(result.%Get("rowId"), 4)
+        // Spec 008 FR-017: each running job is asked to stop on its own instance. The run is
+        // cancelled whatever they answer — the operator stopped it; a job that refused may keep
+        // running there, as after any cancel (spec 003 F-2).
+        Do ..ForwardJobControl(stepRun, "cancel")
         Do stepRun.TransitionTo("cancelled")
     }
     Quit $$$OK
@@ -534,7 +651,28 @@ ClassMethod CancelStep(runGuid As %String, stepGuid As %String) As %Status
 {
     Set stepRun = ##class(sentai.model.StepRun).GuidIndexOpen(stepGuid, 4, .sc)
     If '$IsObject(stepRun) Quit $$$ERROR($$$GeneralError, "SentaiNotFound")
+    // Spec 008 FR-017 (and spec 003 T075 locally): the job is asked to stop where it runs; a
+    // refusal leaves the step as it is and comes back to the operator verbatim.
+    Set sc = ..ForwardJobControl(stepRun, "cancel")
+    Quit:$$$ISERR(sc) sc
     Quit stepRun.TransitionTo("cancelled")
+}
+
+/// Spec 008 FR-017: asks the instance running `stepRun`'s job — this one, or its target — to
+/// `action` it (`cancel` / `pause`; spec 001 evidence 08), with the run's credential for that
+/// instance. $$$OK when there is no job yet, when it accepted, or when it did not answer (nothing
+/// more can be asked of it); CONTROL_REFUSED with its answer verbatim otherwise.
+ClassMethod ForwardJobControl(stepRun As sentai.model.StepRun, action As %String) As %Status
+{
+    Quit:((stepRun.adminJobId = "") || (stepRun.state '= "running")) $$$OK
+    Set runGuid = stepRun.run.guid, base = stepRun.targetBaseUrl
+    Set token = $S(base '= "":..TargetToken(runGuid, stepRun.executedOn), 1:$G(^sentaiRun(runGuid, "%token")))
+    Set jobId = $PIECE(stepRun.adminJobId, "id=", 2)
+    Set body = ##class(sentai.dispatch.AdminApiClient).Post("/api/admin/v2/async-result/"_action_"?id="_jobId, token, {}, .httpStatus, .location, base, .transportError)
+    Quit:((transportError '= "") || ((httpStatus >= 200) && (httpStatus < 300))) $$$OK
+    Set refused = ##class(sentai.targets.TargetService).Refused(httpStatus, body).problem
+    Set where = $S(base '= "":"target '"_stepRun.executedOn_"'", 1:"the platform")
+    Quit $$$ERROR($$$GeneralError, "CONTROL_REFUSED: "_where_" answered HTTP "_httpStatus_$S(refused.detail '= "":": "_refused.detail, 1:""))
 }
 
 /// Individual-step pause — refused (409) for any type outside the purge family (FR-029).
@@ -552,12 +690,10 @@ ClassMethod PauseStep(runGuid As %String, stepGuid As %String) As %Status
         Quit $$$ERROR($$$GeneralError, "SentaiNotPausable: step type '"_step.type_"' does not support pause in v1")
     }
 
-    If (stepRun.adminJobId '= "") {
-        Set httpStatus = 0, location = ""
-        // spec 001 evidence/08a-async-result-pause.json: POST /api/admin/v2/async-result/pause?id=<id>
-        Set jobId = $PIECE(stepRun.adminJobId, "id=", 2)
-        Do ##class(sentai.dispatch.AdminApiClient).Post("/api/admin/v2/async-result/pause?id="_jobId, $G(^sentaiRun(runGuid, "%token")), {}, .httpStatus, .location)
-    }
+    // spec 001 evidence/08a-async-result-pause.json: POST /api/admin/v2/async-result/pause?id=<id>,
+    // on the instance running the job (spec 008).
+    Set sc = ..ForwardJobControl(stepRun, "pause")
+    Quit:$$$ISERR(sc) sc
     Quit stepRun.TransitionTo("paused")
 }
 
@@ -581,6 +717,8 @@ ClassMethod RerunStep(runGuid As %String, stepGuid As %String, ByRef newStepRunG
     Set newStepRun.guid = $SYSTEM.Util.CreateGUID()
     Do newStepRun.runSetObjectId(oldStepRun.runGetObjectId())
     Set newStepRun.stepId = oldStepRun.stepId
+    Set newStepRun.executedOn = oldStepRun.executedOn
+    Set newStepRun.targetBaseUrl = oldStepRun.targetBaseUrl
     Set newStepRun.state = "queued"
     Set newStepRun.timeQueued = $ZDATETIME($HOROLOG, 3)
     Set sc = newStepRun.%Save()

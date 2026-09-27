@@ -47,6 +47,7 @@ Like a *sentai* squad, each step has its own role, and the flow decides when the
 | **Work Queue Manager** | Read and edit WQM categories, the worker pools every step runs on |
 | **Logs** | Each step's state, elapsed time and the platform's failure reason verbatim, streamed over SSE and kept per run |
 | **Permissions** | Every call runs with the operator's own IRIS credential; the platform's refusal is shown verbatim, never reinterpreted |
+| **Distributed work** | A flow step can run on another IRIS instance (a *target server*), tracked and with its result collected on the primary — see [DPI-I-588](#-implements-dpi-i-588-distributed-work-manager) |
 
 ---
 
@@ -261,6 +262,7 @@ run then renews its own credential and erases it when it ends. The canvas does t
 | Steps | `POST /runs/{guid}/steps/{stepGuid}/cancel` · `…/pause` · `…/rerun` |
 | Catalog | `GET /catalog/step-types` · `GET /catalog/tasks` · `GET /catalog/tasks/{id}` · `POST /catalog/tasks/{id}/suspend` |
 | WQM | `GET /wqm/categories` · `GET/PUT /wqm/categories/{name}` |
+| Targets | `GET/POST /targets` · `GET/PUT/DELETE /targets/{name}` · `POST /targets/{name}/online` · `POST /targets/{name}/sign-in` · `GET /targets/{name}/status` |
 
 Validation errors come back as `{"errors": [{"stepId", "code", "message"}], "warnings": [...]}`,
 with codes such as `CYCLE_DETECTED`, `STEP_TYPE_NOT_SUPPORTED_ON_TARGET`, `CATEGORY_NOT_FOUND`
@@ -376,6 +378,64 @@ was not proven.
 
 ---
 
+## 🌐 Implements DPI-I-588 (Distributed Work Manager)
+
+InterSystems Ideas [DPI-I-588 "Distributed Work Manager"](https://ideas.intersystems.com/ideas/DPI-I-588)
+asks for work dispatched in the background to any reachable IRIS server — for example an async or
+failover mirror member — with status checks, results collected on the primary, and management of
+each target. SentaiTask implements it inside its existing model (spec
+[`008-distributed-targets`](specs/008-distributed-targets/spec.md)): **a flow step can name a
+target server**, and the run follows it exactly as it follows a local step.
+
+```sh
+# 1. Register the target (the compose stack ships one: iris-target)
+curl -X POST -H "$H" -d '{"name":"iris-target","baseUrl":"http://iris-target:52773"}' $API/targets
+# 2. Sign in to it through the primary — returns the target's own token pair, keeps nothing
+curl -X POST -H "$H" -d '{"user":"_SYSTEM","password":"…"}' $API/targets/iris-target/sign-in
+# 3. Its state and load, as the target reports them
+curl -H "$H" -H "X-Sentai-Target-Authorization: Bearer <target access token>" $API/targets/iris-target/status
+# 4. A step with "target": "iris-target"; dispatch with one credential per target used
+#    ... "targetCredentials": [{"target": "iris-target", "refreshToken": "<target refresh token>"}]
+```
+
+**What is implemented**
+
+- **Remote dispatch.** A step on a target starts its job on that instance's management API and is
+  followed with the same states and live events; each step run says where it ran (`executedOn`).
+  Proven with the demo flow — two integrity checks on the primary and one on `iris-target`, fanning
+  in — whose remote report names the target machine
+  ([evidence](specs/008-distributed-targets/evidence/t008-demo-run.json)).
+- **Results on the primary.** The job's own report is kept as the step's `result`.
+- **Targets and their state.** Register, edit, delete; a live status read (reachable, IRIS version,
+  Work Queue Manager categories and their worker configuration, as the target reports them); an
+  operator-set *online/offline* flag — an offline target is refused at validation and dispatch.
+- **Control.** Cancel and pause are forwarded to the instance running the job.
+- **Failures as values.** `TARGET_NOT_FOUND`, `TARGET_OFFLINE`, `TARGET_UNREACHABLE` (transport
+  error verbatim), `TARGET_REFUSED`, `STEP_TYPE_NOT_REMOTE_CAPABLE`, `TARGET_CREDENTIAL_MISSING`,
+  `TARGET_CREDENTIAL_USER_MISMATCH`. A target that stops answering mid-run fails only its step,
+  after the step's timeout, with the last transport error.
+
+**What is deliberately different**
+
+- **A closed catalog, no arbitrary code.** The idea mentions calling any method or `$$` function
+  remotely. SentaiTask does not: only step types from its declared catalog run on a target, and no
+  code, method or class name is ever taken from input (Constitution II).
+- **The operator's own credential per target.** There is no service account and no stored
+  password: the operator signs in to each target used by a flow; the credential lives only for the
+  run, in non-persistent storage, and is erased at its end. The target alone decides what the
+  operator may do there.
+- **Placement is the operator's.** Each step names its target; nothing is placed automatically.
+
+**What is future**
+
+- Declared in-process steps on a target (they need SentaiTask installed there).
+- Discovering targets from the mirror configuration and their mirror role.
+- Callbacks from the target; load-based placement.
+- A queue length per category: the platform's management API does not report one today
+  ([T001 evidence](specs/008-distributed-targets/evidence/t0-summary.md)).
+
+---
+
 ## ⚠️ Known limitations (v1)
 
 SentaiTask v1 only promises what was proven on IRIS 2026.2 (spec `004-backend-hardening`). The
@@ -390,6 +450,8 @@ main points:
   without `runCredential` stops after the platform's 60-second token.
 - **Flows must name an existing WQM category**, such as `Default`.
 - **Validating needs `%Admin_Manage:USE` and read on IRISSYS**; the platform decides the rest.
+- **Remote steps (DPI-I-588):** only types run through the management API (`integrity-check`);
+  targets must be `https` unless loopback — the compose demo allows `http` on its own network only.
 
 The complete list, with the reasons behind each point, is in
 [`docs/limitations.md`](docs/limitations.md).
@@ -472,6 +534,7 @@ sentai-task/
 ### 🚧 Next
 
 * [ ] **007 (part B)**: declared custom steps in the canvas (*Custom* palette group, parameter form from the API schema). Waiting on its design prototype; the backend side (structured `parameter` on findings, declared `purge-audit-records` schema) is already in 005
+* [ ] **009**: canvas screens for target servers (spec 008's API is ready)
 * [ ] WQM category screen and run history in the canvas (the API already has them)
 * [ ] A credential for scheduled runs (unblocks scheduling)
 * [ ] Prove and enable the remaining step types, one at a time

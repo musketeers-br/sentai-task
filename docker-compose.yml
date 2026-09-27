@@ -19,3 +19,11 @@ services:
       - "53773:53773"
     volumes:
       - ./:/home/irisowner/dev
+
+  # Spec 008: a target server for remote steps. Not published on the host; the primary
+  # reaches it on the compose network as http://iris-target:52773.
+  iris-target:
+    build:
+      context: .
+      dockerfile: Dockerfile_target
+    restart: always

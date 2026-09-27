@@ -12,7 +12,7 @@ Class sentai.validation.FlowValidator Extends %RegisteredObject
 /// `bearerToken` is the operator's platform credential. With it, the WQM category-existence rule
 /// (spec 004 FR-006) reads the platform's category list once; without it (scheduled fire time,
 /// spec 004 D-2) that rule is skipped.
-ClassMethod Validate(flowId As %String, bearerToken As %String = "") As %DynamicObject
+ClassMethod Validate(flowId As %String, bearerToken As %String = "", targetTokens As %DynamicObject = "") As %DynamicObject
 {
     Set errors = []
     Set warnings = []
@@ -55,6 +55,9 @@ ClassMethod Validate(flowId As %String, bearerToken As %String = "") As %Dynamic
         Continue:'$IsObject(step)
         Set stepId = step.id
         Set type = step.type
+        // Spec 008: a remote step is judged by its target's answers, not by this instance.
+        Set isRemote = (step.target '= "")
+        Do:isRemote ..TargetFindings(step, targetTokens, .targetInfo, errors, warnings)
 
         // 2. custom-with-no-class is always an error, never a warning (FR-011).
         If (type = "custom") && (step.customClass = "") {
@@ -84,7 +87,7 @@ ClassMethod Validate(flowId As %String, bearerToken As %String = "") As %Dynamic
 
         // 4. Namespace existence on the active instance.
         Set ns = step.namespace
-        If (ns '= "") && '##class(%SYS.Namespace).Exists(ns) {
+        If 'isRemote && (ns '= "") && '##class(%SYS.Namespace).Exists(ns) {
             Do errors.%Push({"stepId": (stepId), "code": "NAMESPACE_NOT_FOUND", "message": ("Namespace '"_ns_"' does not exist on this instance")})
         }
 
@@ -108,7 +111,7 @@ ClassMethod Validate(flowId As %String, bearerToken As %String = "") As %Dynamic
 
         // 7. Fixed database-directory mount precondition — warning only, never an error (FR-014).
         Set dbDir = step.databaseDirectory
-        If (dbDir '= "") && ..IsMountedReadOnly(dbDir) {
+        If 'isRemote && (dbDir '= "") && ..IsMountedReadOnly(dbDir) {
             Do warnings.%Push({"stepId": (stepId), "code": "PRECONDITION_READ_ONLY", "message": "Database mounted read-only. This step type requires write access to the directory."})
         }
     }
@@ -201,6 +204,60 @@ ClassMethod ValidateForSchedule(flowId As %String, bearerToken As %String = "") 
 /// The single fixed precondition check (not a general engine, FR-014): is the database
 /// directory's underlying mount currently read-only? Reads the live filesystem/IRIS
 /// directory-manager state — never persisted, always evaluated fresh (FR-015).
+/// Spec 008 FR-009 (plan D-2, D-4): the findings of a step that names a target, stopping at the
+/// first that makes the rest meaningless — exists, online, remote-capable (no call is made for a
+/// type that cannot run there), then, with the operator's credential for the target, reachable
+/// and the target's own answers. Without a credential: the warning TARGET_NOT_VERIFIED only.
+/// `targetInfo` caches each target's info read for this validation.
+ClassMethod TargetFindings(step As sentai.model.Step, targetTokens As %DynamicObject, ByRef targetInfo, errors As %DynamicArray, warnings As %DynamicArray)
+{
+    Set stepId = step.id, name = step.target
+    Set target = ##class(sentai.targets.TargetService).Open(name)
+    If '$IsObject(target) {
+        Do errors.%Push({"stepId": (stepId), "target": (name), "code": "TARGET_NOT_FOUND", "message": ("Step '"_stepId_"' names target '"_name_"', which is not registered")})
+        Quit
+    }
+    If 'target.online {
+        Do errors.%Push({"stepId": (stepId), "target": (name), "code": "TARGET_OFFLINE", "message": ("Target '"_name_"' is offline")})
+        Quit
+    }
+    If '##class(sentai.registry.StepType).IsRemoteCapable(step.type) {
+        Do errors.%Push({"stepId": (stepId), "target": (name), "code": "STEP_TYPE_NOT_REMOTE_CAPABLE", "message": ("Step type '"_step.type_"' cannot run on a target server in v1 (only types executed through the management API can)")})
+        Quit
+    }
+    Set token = $S($IsObject(targetTokens):targetTokens.%Get(name), 1:"")
+    If (token = "") {
+        Do warnings.%Push({"stepId": (stepId), "target": (name), "code": "TARGET_NOT_VERIFIED", "message": ("Target '"_name_"' was not checked: validate with a credential for it (dispatch always checks)")})
+        Quit
+    }
+
+    If '$D(targetInfo(name)) {
+        Set body = ##class(sentai.dispatch.AdminApiClient).Get("/api/admin/info", token, .httpStatus, .location, target.baseUrl, .transportError)
+        Set targetInfo(name) = $LB(httpStatus, transportError, $S($IsObject(body):body.%ToJSON(), 1:""))
+    }
+    Set httpStatus = $LG(targetInfo(name), 1), transportError = $LG(targetInfo(name), 2), bodyText = $LG(targetInfo(name), 3)
+    If (transportError '= "") {
+        Do errors.%Push({"stepId": (stepId), "target": (name), "code": "TARGET_UNREACHABLE", "message": ("Target '"_name_"' did not answer: "_transportError)})
+        Quit
+    }
+    Set body = $S(bodyText '= "":##class(%DynamicAbstractObject).%FromJSON(bodyText), 1:"")
+    If (httpStatus '= 200) || '$IsObject(body) || '$IsObject(body.result) {
+        Set refused = ##class(sentai.targets.TargetService).Refused(httpStatus, body).problem
+        Do errors.%Push({"stepId": (stepId), "target": (name), "code": "TARGET_REFUSED", "message": ("Target '"_name_"' refused: HTTP "_httpStatus_$S(refused.detail '= "":" "_refused.detail, 1:""))})
+        Quit
+    }
+
+    // The step's namespace must exist on the target (t0-target-calls 00: info.namespaces).
+    Set ns = step.namespace, found = (ns = "")
+    If $IsObject(body.result.namespaces) {
+        Set iter = body.result.namespaces.%GetIterator()
+        While iter.%GetNext(.k, .n) { If ($ZCVT(n.name, "U") = $ZCVT(ns, "U")) Set found = 1 Quit }
+    }
+    If 'found {
+        Do errors.%Push({"stepId": (stepId), "target": (name), "code": "NAMESPACE_NOT_FOUND", "message": ("Namespace '"_ns_"' does not exist on target '"_name_"'")})
+    }
+}
+
 ClassMethod IsMountedReadOnly(databaseDirectory As %String) As %Boolean
 {
     // %Stream.FileCharacter.Write() only buffers — nothing touches the filesystem until

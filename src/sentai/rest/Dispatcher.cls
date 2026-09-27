@@ -46,6 +46,14 @@ XData UrlMap [ XMLNamespace = "http://www.intersystems.com/urlmap" ]
     <Route Url="/wqm/categories" Method="GET" Call="ListWqmCategories"/>
     <Route Url="/wqm/categories/:name" Method="GET" Call="ReadWqmCategory"/>
     <Route Url="/wqm/categories/:name" Method="PUT" Call="WriteWqmCategory"/>
+    <Route Url="/targets" Method="GET" Call="ListTargets"/>
+    <Route Url="/targets" Method="POST" Call="CreateTarget"/>
+    <Route Url="/targets/:name" Method="GET" Call="ReadTarget"/>
+    <Route Url="/targets/:name" Method="PUT" Call="UpdateTarget"/>
+    <Route Url="/targets/:name" Method="DELETE" Call="DeleteTarget"/>
+    <Route Url="/targets/:name/online" Method="POST" Call="SetTargetOnline"/>
+    <Route Url="/targets/:name/sign-in" Method="POST" Call="SignInToTarget"/>
+    <Route Url="/targets/:name/status" Method="GET" Call="ReadTargetStatus"/>
 </Routes>
 }
 
@@ -259,7 +267,7 @@ ClassMethod ShapeFlow(flow As sentai.model.Flow, includeGraph As %Boolean) As %D
 
     Set steps = []
     Set rs = ##class(%SQL.Statement).%New()
-    Do rs.%Prepare("SELECT %ID AS rowId, id, type, taskName, namespace, databaseDirectory, runAsUser, timeoutMinutes, wqmCategory, customClass FROM sentai_model.Step WHERE flow = ?")
+    Do rs.%Prepare("SELECT %ID AS rowId, id, type, taskName, namespace, databaseDirectory, runAsUser, timeoutMinutes, wqmCategory, customClass, target FROM sentai_model.Step WHERE flow = ?")
     Set result = rs.%Execute(flow.%Id())
     While result.%Next() {
         Set s = {}
@@ -272,6 +280,8 @@ ClassMethod ShapeFlow(flow As sentai.model.Flow, includeGraph As %Boolean) As %D
         Do s.%Set("timeoutMinutes", result.%Get("timeoutMinutes"))
         Do s.%Set("wqmCategory", result.%Get("wqmCategory"))
         Do s.%Set("customClass", result.%Get("customClass"))
+        // Spec 008: only a remote step carries `target`, so a local flow reads exactly as before.
+        Do:(result.%Get("target") '= "") s.%Set("target", result.%Get("target"))
         // %DynamicObject properties are not SQL-projected; read parameters from the object.
         Set stepObj = ##class(sentai.model.Step).%OpenId(result.%Get("rowId"), 0)
         Do s.%Set("parameters", $S($IsObject(stepObj) && $IsObject(stepObj.parameters):stepObj.parameters, 1:{}))
@@ -311,7 +321,15 @@ ClassMethod ShapeFlow(flow As sentai.model.Flow, includeGraph As %Boolean) As %D
 /// --- /flows/{id}/validate (FR-012–FR-015, User Story 2) ---
 ClassMethod ValidateFlow(flowId As %String) As %Status
 {
-    Quit ..WriteJSON(200, ##class(sentai.validation.FlowValidator).Validate(flowId, ..CurrentToken()))
+    // Spec 008 (research R-8): optional {"targetCredentials": [{"target", "accessToken"}]}.
+    Set payload = ..ReadJSONBody(), targetTokens = {}
+    If $IsObject(payload) && $IsObject(payload.targetCredentials) {
+        Set iter = payload.targetCredentials.%GetIterator()
+        While iter.%GetNext(.k, .c) {
+            Do:($IsObject(c) && (c.target '= "")) targetTokens.%Set(c.target, c.accessToken)
+        }
+    }
+    Quit ..WriteJSON(200, ##class(sentai.validation.FlowValidator).Validate(flowId, ..CurrentToken(), targetTokens))
 }
 
 /// --- /flows/{id}/dispatch (FR-016–FR-018, User Story 3) ---
@@ -338,7 +356,12 @@ ClassMethod DispatchFlow(flowId As %String) As %Status
         Set accessToken = pair."access_token", refreshToken = pair."refresh_token"
     }
 
-    Set run = ##class(sentai.dispatch.WaveDispatcher).Dispatch(flowId, confirmations, ..CurrentUser(), .errorCode, .errorDetail, .report, accessToken)
+    // Spec 008 FR-010: one credential per target the flow uses, redeemed and checked before any
+    // run exists; the fresh pairs validate the flow and are kept only for the run.
+    Set targetRefusal = ##class(sentai.targets.TargetService).RedeemForDispatch(flowId, $S($IsObject(payload):payload.targetCredentials, 1:""), ..CurrentUser(), .targetPairs)
+    If $IsObject(targetRefusal) Quit ..WriteOutcome(targetRefusal)
+
+    Set run = ##class(sentai.dispatch.WaveDispatcher).Dispatch(flowId, confirmations, ..CurrentUser(), .errorCode, .errorDetail, .report, accessToken, ##class(sentai.dispatch.WaveDispatcher).AccessTokens(targetPairs))
 
     If (errorCode = "VALIDATION_FAILED") Quit ..WriteJSON(422, report)
     If (errorCode = "CONFIRMATION_REQUIRED") Quit ..WriteProblem(428, "Confirmation Required", "Step '"_errorDetail_"' requires a matching typed confirmation before dispatch")
@@ -347,6 +370,7 @@ ClassMethod DispatchFlow(flowId As %String) As %Status
     // E-1: with a run credential the run holds its fresh pair and renews it; otherwise it uses
     // the request's own token.
     Do ##class(sentai.dispatch.WaveDispatcher).StoreRunCredential(run.guid, accessToken, refreshToken)
+    Do ##class(sentai.dispatch.WaveDispatcher).StoreTargetCredentials(run.guid, targetPairs)
     Do ##class(sentai.dispatch.WaveDispatcher).StartBackgroundLoop(run.guid, accessToken)
 
     Quit ..WriteJSON(202, ..ShapeRun(run, 0))
@@ -436,6 +460,8 @@ ClassMethod ShapeStepRun(sr As sentai.model.StepRun) As %DynamicObject
     Do out.%Set("confirmedAt", sr.confirmedAt)
     // Spec 005: who ran an in-process step, and the report it produced ({} when none).
     Do out.%Set("executedAs", sr.executedAs)
+    // Spec 008 FR-013: where the step runs ("local" or a target name).
+    Do out.%Set("executedOn", $S(sr.executedOn '= "":sr.executedOn, 1:"local"))
     Set result = {}
     If (sr.result '= "") {
         Try {
@@ -547,7 +573,11 @@ ClassMethod PauseRun(runGuid As %String) As %Status
 ClassMethod CancelStep(runGuid As %String, stepGuid As %String) As %Status
 {
     Set sc = ##class(sentai.dispatch.WaveDispatcher).CancelStep(runGuid, stepGuid)
-    If $$$ISERR(sc) Quit ..WriteProblem(404, "Not Found", $SYSTEM.Status.GetErrorText(sc))
+    If $$$ISERR(sc) {
+        Set text = $SYSTEM.Status.GetErrorText(sc)
+        If (text [ "CONTROL_REFUSED") Quit ..WriteProblem(502, "Bad Gateway", text)
+        Quit ..WriteProblem(404, "Not Found", text)
+    }
     Quit ..WriteJSON(202, {})
 }
 
@@ -557,6 +587,7 @@ ClassMethod PauseStep(runGuid As %String, stepGuid As %String) As %Status
     If $$$ISERR(sc) {
         Set text = $SYSTEM.Status.GetErrorText(sc)
         If (text [ "SentaiNotPausable") Quit ..WriteProblem(409, "Conflict", text)
+        If (text [ "CONTROL_REFUSED") Quit ..WriteProblem(502, "Bad Gateway", text)
         Quit ..WriteProblem(404, "Not Found", text)
     }
     Quit ..WriteJSON(202, {})
@@ -676,6 +707,57 @@ ClassMethod NextRunFor(scheduleSpec As %String) As %String
 }
 
 /// --- Body parsing ---
+/// --- /targets (spec 008 US1, contracts/api-delta.md §Targets) ---
+ClassMethod ListTargets() As %Status
+{
+    Quit ..WriteOutcome(##class(sentai.targets.TargetService).List())
+}
+
+ClassMethod CreateTarget() As %Status
+{
+    Quit ..WriteOutcome(##class(sentai.targets.TargetService).Create(..ReadJSONBody(), ..CurrentUser()))
+}
+
+ClassMethod ReadTarget(name As %String) As %Status
+{
+    Quit ..WriteOutcome(##class(sentai.targets.TargetService).Get(name))
+}
+
+ClassMethod UpdateTarget(name As %String) As %Status
+{
+    Quit ..WriteOutcome(##class(sentai.targets.TargetService).Update(name, ..ReadJSONBody(), ..CurrentUser()))
+}
+
+ClassMethod DeleteTarget(name As %String) As %Status
+{
+    Set outcome = ##class(sentai.targets.TargetService).Delete(name)
+    If (outcome.httpStatus = 204) {
+        Set %response.Status = 204
+        Quit $$$OK
+    }
+    Quit ..WriteOutcome(outcome)
+}
+
+ClassMethod SetTargetOnline(name As %String) As %Status
+{
+    Quit ..WriteOutcome(##class(sentai.targets.TargetService).SetOnline(name, ..ReadJSONBody(), ..CurrentUser()))
+}
+
+/// FR-022: the body carries the operator's user and password for the target; neither is kept.
+ClassMethod SignInToTarget(name As %String) As %Status
+{
+    Quit ..WriteOutcome(##class(sentai.targets.TargetService).SignIn(name, ..ReadJSONBody()))
+}
+
+/// The request's own Authorization carries the primary token; the target's travels in
+/// X-Sentai-Target-Authorization (research R-7).
+ClassMethod ReadTargetStatus(name As %String) As %Status
+{
+    Set header = $G(%request.CgiEnvs("HTTP_X_SENTAI_TARGET_AUTHORIZATION"))
+    Set token = $S($ZCVT($E(header, 1, 7), "L") = "bearer ":$E(header, 8, *), 1:"")
+    Quit ..WriteOutcome(##class(sentai.targets.TargetService).Status(name, token))
+}
+
 ClassMethod ReadJSONBody() As %DynamicObject
 {
     Set body = ""
