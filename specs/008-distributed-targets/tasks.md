@@ -88,7 +88,7 @@ removed.
 
 ## Phase 2: Foundational
 
-- [ ] T003 Client endpoint and transport errors (plan D-1, R-4). **Tests first** in
+- [X] T003 Client endpoint and transport errors (plan D-1, R-4). **Tests first** in
   `tests/sentai/unittest/dispatch/AdminApiClientTargetTest.cls`:
   1. a call with `baseUrl = ""` behaves exactly as today (double keyed by path);
   2. a call with `baseUrl = "http://iris-target:52773"` is routed to the double's entries for that
