@@ -169,7 +169,7 @@ removed.
     every `^IRIS.Temp.sentaiTargetCred(run, *)` entry.
   Implement in `Dispatcher.DispatchFlow` and `WaveDispatcher` (store/renew/erase).
 
-- [ ] T008 [US2] Remote execution and results (FR-012…FR-015, FR-018, R-10). **Tests first** in
+- [X] T008 [US2] Remote execution and results (FR-012…FR-015, FR-018, R-10). **Tests first** in
   `tests/sentai/unittest/dispatch/RemoteStepRunTest.cls`, with one double per base:
   1. a demo-shaped flow (2 local + 1 remote integrity checks into a local 4th): the remote start and
      polls go to the target base with the target token; the local ones to the loopback with the

@@ -149,7 +149,7 @@ ClassMethod CreateRun(flowId As %String, confirmationsArray As %DynamicArray, di
         Do ..IndexRun(run.guid, flowId, flow.revision, run.startedAt, dispatchedBy)
 
         Set stepRs2 = ##class(%SQL.Statement).%New()
-        Do stepRs2.%Prepare("SELECT id FROM sentai_model.Step WHERE flow = ?")
+        Do stepRs2.%Prepare("SELECT id, target FROM sentai_model.Step WHERE flow = ?")
         Set stepResult2 = stepRs2.%Execute(flowId)
         While stepResult2.%Next() {
             Set stepId = stepResult2.%Get("id")
@@ -157,6 +157,7 @@ ClassMethod CreateRun(flowId As %String, confirmationsArray As %DynamicArray, di
             Set stepRun.guid = $SYSTEM.Util.CreateGUID()
             Do stepRun.runSetObjectId(run.%Id())
             Set stepRun.stepId = stepId
+            Set stepRun.executedOn = $S(stepResult2.%Get("target") '= "":stepResult2.%Get("target"), 1:"local")
             Set stepRun.state = "queued"
             Set stepRun.timeQueued = $ZDATETIME($HOROLOG, 3)
             If $D(confirmed(stepId)) {
@@ -398,6 +399,11 @@ ClassMethod StartStep(run As sentai.model.Run, stepId As %String) As %Status
     If '$IsObject(step) Return sc
 
     Set category = $S(step.wqmCategory '= "":step.wqmCategory, 1:run.flow.defaultCategory)
+    // Spec 008: a remote step uses the address frozen at dispatch with its credential (FR-018).
+    If (step.target '= "") && (stepRun.targetBaseUrl = "") {
+        Set stepRun.targetBaseUrl = ..TargetBaseUrl(run.guid, step.target)
+        Do stepRun.%Save()
+    }
     If (##class(sentai.registry.StepType).GetExecutor(step.type) = "in-process") {
         Quit ..StartInProcessStep(stepRun.guid, category)
     }
@@ -482,13 +488,19 @@ ClassMethod ExecuteStepAsync(stepRunGuid As %String) As %Status
     Quit:'$IsObject(step) $$$OK
 
     Set endpoint = ..AdminEndpointFor(step.type)
-    Set httpStatus = 0, location = ""
+    Set httpStatus = 0, location = "", transportError = ""
+    // Spec 008: a remote step calls its target with the operator's credential for that target.
+    Set base = stepRun.targetBaseUrl, target = stepRun.executedOn
+    Set token = $S(base '= "":..TargetToken(run.guid, target), 1:$G(^sentaiRun(run.guid, "%token")))
     // The platform rejects an empty POST (400 "HTTP POST has no content"); the validated start
     // request carries an empty JSON object (spec 001 evidence/06-integrity-check-start.json).
-    Do ##class(sentai.dispatch.AdminApiClient).Post(endpoint, $G(^sentaiRun(run.guid, "%token")), {}, .httpStatus, .location)
+    Do ##class(sentai.dispatch.AdminApiClient).Post(endpoint, token, {}, .httpStatus, .location, base, .transportError)
 
-    If (httpStatus = 202) && (location '= "") {
+    If (transportError '= "") {
+        Do stepRun.TransitionTo("failed", $S(base '= "":"Target '"_target_"' did not answer: ", 1:"")_transportError)
+    } ElseIf (httpStatus = 202) && (location '= "") {
         Set stepRun.adminJobId = location
+        Set:(base '= "") stepRun.executedAs = ..TargetSub(run.guid, target)
         Do stepRun.%Save()
         Do stepRun.TransitionTo("running")
     } Else {
@@ -509,8 +521,13 @@ ClassMethod PollInFlightSteps(run As sentai.model.Run, bearerToken As %String) A
         Set stepRun = ##class(sentai.model.StepRun).%OpenId(result.%Get("rowId"), 4)
         Continue:(stepRun.adminJobId = "")
 
-        Set httpStatus = 0, location = ""
-        Set body = ##class(sentai.dispatch.AdminApiClient).Get(stepRun.adminJobId, bearerToken, .httpStatus, .location)
+        Set httpStatus = 0, location = "", transportError = ""
+        // Spec 008: a remote job is read on its target, with the run's credential for it.
+        Set base = stepRun.targetBaseUrl
+        Set token = $S(base '= "":..TargetToken(run.guid, stepRun.executedOn), 1:bearerToken)
+        Set body = ##class(sentai.dispatch.AdminApiClient).Get(stepRun.adminJobId, token, .httpStatus, .location, base, .transportError)
+        // No answer: keep polling (a target down mid-run is bounded by the step's timeout, T010).
+        Continue:(transportError '= "")
         // A 4xx is permanent for this run (e.g. 401 once the 60 s credential expired, E-1):
         // fail the step with the status recorded instead of polling a job we can no longer
         // read, which left the step — and the run — "running" forever. 5xx/network: retry.
@@ -523,6 +540,8 @@ ClassMethod PollInFlightSteps(run As sentai.model.Run, bearerToken As %String) A
 
         Set state = $S($IsObject(body."result"):body."result"."State", 1:"")
         If (state = "Finished") {
+            // Research R-10: the job's own report is the step's result, local and remote alike.
+            Set stepRun.result = ##class(sentai.dispatch.InProcessExecutor).FitResult(body."result".%ToJSON())
             Do stepRun.TransitionTo("completed")
         } ElseIf (state = "Error") || (state = "Failed") {
             Set reason = $S($IsObject(body."status") && (body."status"."summary" '= ""):body."status"."summary", 1:"Administrative job reported "_state)
@@ -641,6 +660,8 @@ ClassMethod RerunStep(runGuid As %String, stepGuid As %String, ByRef newStepRunG
     Set newStepRun.guid = $SYSTEM.Util.CreateGUID()
     Do newStepRun.runSetObjectId(oldStepRun.runGetObjectId())
     Set newStepRun.stepId = oldStepRun.stepId
+    Set newStepRun.executedOn = oldStepRun.executedOn
+    Set newStepRun.targetBaseUrl = oldStepRun.targetBaseUrl
     Set newStepRun.state = "queued"
     Set newStepRun.timeQueued = $ZDATETIME($HOROLOG, 3)
     Set sc = newStepRun.%Save()

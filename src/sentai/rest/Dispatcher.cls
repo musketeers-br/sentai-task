@@ -460,6 +460,8 @@ ClassMethod ShapeStepRun(sr As sentai.model.StepRun) As %DynamicObject
     Do out.%Set("confirmedAt", sr.confirmedAt)
     // Spec 005: who ran an in-process step, and the report it produced ({} when none).
     Do out.%Set("executedAs", sr.executedAs)
+    // Spec 008 FR-013: where the step runs ("local" or a target name).
+    Do out.%Set("executedOn", $S(sr.executedOn '= "":sr.executedOn, 1:"local"))
     Set result = {}
     If (sr.result '= "") {
         Try {

@@ -42,6 +42,14 @@ Property result As %String(MAXLEN = 8000);
 /// $USERNAME of the worker that ran an in-process step (spec 005 ID-4); "" for management-API steps.
 Property executedAs As %String(MAXLEN = 160);
 
+/// Spec 008 FR-013: "local", or the name of the target server the step runs on — known from
+/// dispatch, so a queued step already says where it will run.
+Property executedOn As %String(MAXLEN = 64);
+
+/// Spec 008 FR-018: the target's address used by this step, frozen at dispatch; "" = local. The
+/// step's adminJobId (a Location path) is relative to it.
+Property targetBaseUrl As %String(MAXLEN = 256);
+
 /// Seconds TransitionLocked waits for the StepRun's exclusive lock.
 Parameter LOCKTIMEOUT = 5;
 
@@ -185,6 +193,12 @@ Storage Default
 </Value>
 <Value name="16">
 <Value>executedAs</Value>
+</Value>
+<Value name="17">
+<Value>executedOn</Value>
+</Value>
+<Value name="18">
+<Value>targetBaseUrl</Value>
 </Value>
 </Data>
 <DataLocation>^sentai.model.StepRunD</DataLocation>
