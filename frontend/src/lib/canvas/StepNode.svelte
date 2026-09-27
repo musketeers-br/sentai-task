@@ -55,6 +55,9 @@
 				</span>
 			{/if}
 			<span class="chip">{step.namespace || '—'}</span>
+			{#if step.target}
+				<span class="chip target" data-testid="target-badge" title={`Runs on target server ${step.target}`}>{step.target}</span>
+			{/if}
 			{#if data.info?.available === false}
 				<span class="chip unavailable" data-testid="unavailable-chip" title="Not supported on the target platform in v1">not in v1</span>
 			{:else if !destructive}
@@ -362,5 +365,16 @@
 		border: var(--handle-join-stroke) solid var(--edge-join-color);
 		border-radius: 0;
 		transform: translate(-50%, -50%) rotate(45deg);
+	}
+
+	/* Spec 009: a step on a target server — its "squad base" — carries the target's name. */
+	.chip.target {
+		color: var(--color-link);
+		border-color: var(--color-link);
+	}
+
+	.chip.target::before {
+		content: '◆ ';
+		font-size: 0.8em;
 	}
 </style>

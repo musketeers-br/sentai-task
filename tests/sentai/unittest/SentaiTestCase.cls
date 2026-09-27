@@ -5,8 +5,15 @@
 Class sentai.unittest.SentaiTestCase Extends %UnitTest.TestCase
 {
 
+/// Spec 008: the highest target id before the test, so the targets a test registers are removed
+/// after it (they would otherwise pile up in the instance's registry).
+Property TargetIdBefore As %Integer [ InitialExpression = 0 ];
+
 Method OnBeforeOneTest() As %Status
 {
+    Set max = 0
+    &sql(SELECT MAX(%ID) INTO :max FROM sentai_model.Target)
+    Set ..TargetIdBefore = +$G(max)
     Do ##class(sentai.unittest.AdminApiDouble).Reset()
     Do ##class(sentai.unittest.AdminApiDouble).Enable()
     // The platform's category list (spec 001 evidence 09 shape): the three built-ins report
@@ -27,6 +34,8 @@ ClassMethod CategoriesJSON() As %String
 
 Method OnAfterOneTest() As %Status
 {
+    Set floor = ..TargetIdBefore
+    &sql(DELETE FROM sentai_model.Target WHERE %ID > :floor)
     Do ##class(sentai.unittest.AdminApiDouble).Reset()
     Quit $$$OK
 }

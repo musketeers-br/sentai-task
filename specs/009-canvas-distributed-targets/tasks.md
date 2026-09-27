@@ -34,25 +34,25 @@ storage/cookies/URL; components never call `fetch` (only `client.ts`/`session.sv
 
 ## Phase 3: US2 — Place a step (P1)
 
-- [ ] T003 [US2] *Run on* in the inspector (in IDENTIFICATION) and the node badge (D-4). **e2e first**
+- [X] T003 [US2] *Run on* in the inspector (in IDENTIFICATION) and the node badge (D-4). **e2e first**
   in `tests/us16-remote-run.spec.ts` test 1: an integrity-check step offers Local + online targets;
   a `db-size-report` step says it runs locally; choosing `iris-target` → save → reload → the API
   returns `target: iris-target` and the node shows the badge.
 
 ## Phase 4: US3 + US4 + US5 — Run, watch, findings (P1/P2)
 
-- [ ] T004 [US3][US4] Target passwords at *Run now* and `executedOn` in the live run (D-5, D-6).
+- [X] T004 [US3][US4] Target passwords at *Run now* and `executedOn` in the live run (D-5, D-6).
   **e2e first** in `us16` test 2: the demo flow (2 local + 1 on `iris-target`, fan-in) — the dialog
   shows one extra password labelled `iris-target`; a wrong target password → refusal verbatim, no
   run; correct passwords → the run completes and each node shows `executedOn` equal to the run read.
   A flow without targets shows today's dialog (existing us4 tests stay green).
-- [ ] T005 [US5] Findings: `us16` test 3 — a step on an unregistered target shows
+- [X] T005 [US5] Findings: `us16` test 3 — a step on an unregistered target shows
   `TARGET_NOT_FOUND` on its node after *Validate flow*; a step on `iris-target` shows the warning
   `TARGET_NOT_VERIFIED` and *Run now* stays enabled.
 
 ## Phase 5: Polish
 
-- [ ] T006 Theming pair (SC-006) in `us15`: Targets screen with a target's status open, dark and light,
+- [X] T006 Theming pair (SC-006) in `us15`: Targets screen with a target's status open, dark and light,
   spec 002 checks; `evidence/sc006-targets-{dark,light}.png`. SC-004: after the e2e run no token or
   password in localStorage/sessionStorage/cookies/URL. README: the Targets screen in "How to use";
   `evidence/README.md`.

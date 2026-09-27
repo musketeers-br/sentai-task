@@ -4,7 +4,7 @@
 
 **Created**: 2026-09-27
 
-**Status**: Draft
+**Status**: Implemented (2026-09-27; T001–T006, evidence in evidence/README.md)
 
 **Input**: Frontend only: canvas screens for spec 008 (distributed targets, implements InterSystems
 Ideas DPI-I-588). Every value comes from the product's API; no business rule is re-implemented in

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { FlowEditor } from '$lib/flow/editor.svelte';
+	import { targetChoices } from '$lib/targets/targets';
 
 	let { editor }: { editor: FlowEditor } = $props();
 
@@ -13,6 +14,14 @@
 	const info = $derived(node?.data.info);
 	const parameterFields = $derived(step ? (PARAMETER_FIELDS[step.type] ?? []) : []);
 	const selectedCount = $derived(editor.nodes.filter((n) => n.selected).length);
+	/** Spec 009 FR-006: online targets, for a type the API marks remote-capable. */
+	const choices = $derived(targetChoices(editor.targets, info));
+	/** A stored target that is no longer offered (offline or deleted) is still shown, marked. */
+	const storedElsewhere = $derived(!!step?.target && !choices.some((t) => t.name === step?.target));
+
+	function setTarget(name: string) {
+		if (node) editor.updateStep(node.id, { target: name === '' ? undefined : name });
+	}
 
 	function consequence(type: string, parameters: Record<string, unknown>): string {
 		const noRollback = 'There is no rollback: it requires a valid backup taken today.';
@@ -76,6 +85,22 @@
 						<input id="insp-runas" class="mono" value={step.runAsUser} oninput={(e) => setText('runAsUser', e.currentTarget.value)} />
 					</div>
 				</div>
+				{#if info?.remoteCapable}
+					<div class="field">
+						<label for="insp-runon">Run on</label>
+						<select id="insp-runon" class="mono" value={step.target ?? ''} onchange={(e) => setTarget(e.currentTarget.value)}>
+							<option value="">Local (this instance)</option>
+							{#each choices as target (target.name)}
+								<option value={target.name}>{target.name}</option>
+							{/each}
+							{#if storedElsewhere}
+								<option value={step.target}>{step.target} (offline or not registered)</option>
+							{/if}
+						</select>
+					</div>
+				{:else}
+					<p class="note" data-testid="runs-locally-note">This step type runs on this instance only (it cannot run on a target server).</p>
+				{/if}
 			</section>
 
 			<section>

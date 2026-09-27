@@ -2,6 +2,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { envelope, PASSWORD, signInAt, token, USER } from './support';
+import { contrastFailures } from './theming';
 
 // spec 009 User Story 1 — the Targets screen over the spec 008 API. Needs the compose stack's
 // iris-target (the demo allowance lets http://iris-target:52773 be registered).
@@ -107,4 +108,28 @@ test('us15-targets — register, read the live state, refusals verbatim, online 
 		await api(page, 'DELETE', `/targets/${name}`);
 		await api(page, 'DELETE', `/targets/${lost}`);
 	}
+});
+
+test('us15-targets theming and secrets — both themes read the same; no credential left in the browser', async ({ page }) => {
+	await signInAt(page, `?view=targets&target=iris-target`);
+	await pane(page).getByLabel(`Password for ${USER} on iris-target`).fill(PASSWORD);
+	await pane(page).getByRole('button', { name: 'Read state' }).click();
+	await expect(pane(page).getByTestId('status-reachable')).toHaveText('reachable');
+
+	mkdirSync(EVIDENCE, { recursive: true });
+	const texts: Record<string, string[]> = {};
+	for (const theme of ['Dark', 'Light'] as const) {
+		await page.getByRole('button', { name: theme, exact: true }).click();
+		await expect(page.locator('html')).toHaveAttribute('data-theme', theme.toLowerCase());
+		await page.mouse.move(0, 0);
+		expect(await contrastFailures(page), `${theme}: every text >= 4.5:1`).toEqual([]);
+		texts[theme] = (await page.evaluate(() => document.body.innerText)).split('\n').map((s) => s.trim()).filter(Boolean);
+		await page.screenshot({ path: `${EVIDENCE}/sc006-targets-${theme.toLowerCase()}.png` });
+	}
+	expect(texts.Light).toEqual(texts.Dark);
+
+	// SC-004: nothing about the target sign-in is kept by the browser.
+	const kept = await page.evaluate(() => JSON.stringify({ local: { ...localStorage }, session: { ...sessionStorage }, cookies: document.cookie, url: location.href }));
+	if (PASSWORD.length > 3) expect(kept).not.toContain(PASSWORD);
+	expect(kept).not.toMatch(/eyJ[A-Za-z0-9_-]{10,}/);
 });

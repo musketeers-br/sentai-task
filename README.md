@@ -201,6 +201,23 @@ instance, not only SentaiTask's (spec `007-canvas-management-screens`, over the 
 
 ![A live run: completed, cancelled, running and queued steps at once](specs/002-canvas-ui/evidence/q6-live-run.png)
 
+### Target servers from the canvas (DPI-I-588)
+
+**Targets** in the top bar manages the other IRIS instances a step can run on (spec
+`009-canvas-distributed-targets`, over the spec 008 API):
+
+- **Register** a target (name, `https://host:port` address, description), edit, delete, and switch
+  it online or offline. Every refusal is shown as the API worded it.
+- **Live state.** Type your password for the target and *Read state*: its IRIS version and Work
+  Queue Manager categories, as the target reports them — or *unreachable* with the transport
+  error. The password and the target's tokens are used for that one read and not kept.
+- **Run on.** In the inspector, an integrity check can run on *Local* or any online target; the
+  node then carries the target's name. Step types that cannot run remotely say so.
+- **Run now** asks one more password per target the flow uses. The live run shows where each step
+  runs (*on local*, *on iris-target*) and as whom.
+
+![A run with one step on iris-target](specs/009-canvas-distributed-targets/evidence/us3-remote-run.png)
+
 ### With the API
 
 #### 1. Get a token
@@ -530,11 +547,12 @@ sentai-task/
 * [x] **005**: Declared in-process steps: storage headroom (Embedded Python), database size report, journal switch
 * [x] **006**: Task catalog API: the native Task Manager as the platform reports it, with suspend and resume
 * [x] **007 (part A)**: Task catalog screen (list, filters, detail, SentaiTask origin, suspend/resume) and the typed confirmation before dispatching a destructive step
+* [x] **008**: Distributed targets — implements [DPI-I-588](https://ideas.intersystems.com/ideas/DPI-I-588) (API)
+* [x] **009**: Target servers in the canvas: Targets screen, *Run on*, target passwords at *Run now*, where each step runs
 
 ### 🚧 Next
 
 * [ ] **007 (part B)**: declared custom steps in the canvas (*Custom* palette group, parameter form from the API schema). Waiting on its design prototype; the backend side (structured `parameter` on findings, declared `purge-audit-records` schema) is already in 005
-* [ ] **009**: canvas screens for target servers (spec 008's API is ready)
 * [ ] WQM category screen and run history in the canvas (the API already has them)
 * [ ] A credential for scheduled runs (unblocks scheduling)
 * [ ] Prove and enable the remaining step types, one at a time
