@@ -13,6 +13,23 @@ export interface StepTypeInfo {
 	available: boolean;
 	/** Spec 008 FR-008: whether a step of this type may run on a target server. */
 	remoteCapable?: boolean;
+	/** Spec 005: the API's name for the type (absent in a pre-005 catalog). */
+	label?: string;
+	/** Spec 005: how it executes; `in-process` types form the palette's *Custom* group. */
+	executor?: 'platform-api' | 'in-process';
+	/** Spec 005: the declared parameter schema; `[]` = takes no parameters; absent = none declared. */
+	parameters?: ParameterSpec[];
+}
+
+/** One declared parameter (spec 005 catalog); the backend-only `property` is not carried. */
+export interface ParameterSpec {
+	name: string;
+	type: 'string' | 'integer' | 'number' | 'boolean';
+	required: boolean;
+	default?: unknown;
+	min?: number;
+	max?: number;
+	description: string;
 }
 
 export interface FlowStep {
@@ -73,6 +90,28 @@ export function stepLabel(type: string): string {
 	return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
+/** The name shown for a type: the API's label, else one derived from the type id (pre-005). */
+export function typeLabel(info: Pick<StepTypeInfo, 'type' | 'label'>): string {
+	return info.label ?? stepLabel(info.type);
+}
+
+export interface PaletteGroup {
+	id: StepCategory;
+	types: StepTypeInfo[];
+}
+
+const GROUP_ORDER: StepCategory[] = ['verification', 'storage', 'journal', 'purge', 'backup', 'custom'];
+
+/**
+ * Palette groups (spec 007 D-6, Clarifications Q1): every in-process type and the legacy `custom`
+ * entry under *Custom*; the others by category, in the spec 002 order. Display only — which types
+ * exist and whether they can be placed is the API's.
+ */
+export function paletteGroups(registry: StepTypeInfo[]): PaletteGroup[] {
+	const groupOf = (t: StepTypeInfo): StepCategory => (t.executor === 'in-process' || t.type === 'custom' ? 'custom' : t.category);
+	return GROUP_ORDER.map((id) => ({ id, types: registry.filter((t) => groupOf(t) === id) })).filter((g) => g.types.length > 0);
+}
+
 export function nextStepId(steps: Pick<FlowStep, 'id'>[]): string {
 	const highest = steps.reduce((max, s) => Math.max(max, Number.parseInt(s.id, 10) || 0), 0);
 	return String(highest + 1).padStart(2, '0');
@@ -82,14 +121,16 @@ export function createStep(info: StepTypeInfo, id: string, defaultCategory: stri
 	return {
 		id,
 		type: info.type,
-		taskName: stepLabel(info.type),
+		taskName: typeLabel(info),
 		namespace: '%SYS',
 		databaseDirectory: '',
 		runAsUser: '',
 		timeoutMinutes: null,
 		wqmCategory: defaultCategory,
 		customClass: '',
-		parameters: { ...(DEFAULT_PARAMETERS[info.type] ?? {}) }
+		// R-7: a declared schema's defaults are the backend's to apply; only a pre-005 catalog (no
+		// schema) keeps the old presentation default.
+		parameters: info.parameters !== undefined ? {} : { ...(DEFAULT_PARAMETERS[info.type] ?? {}) }
 	};
 }
 

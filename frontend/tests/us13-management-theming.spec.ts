@@ -2,7 +2,7 @@
 import { mkdirSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { catalog, detail } from './catalog-support';
-import { signInAt, token } from './support';
+import { seedFlow, signIn, signInAt, token } from './support';
 import { contrastFailures } from './theming';
 
 // spec 007 SC-008 / FR-020 — the catalog screen in both themes, with the same assertions as spec
@@ -53,4 +53,32 @@ test('us13-management-theming — the catalog with a destructive task open reads
 	for (const s of ['Flows', 'Task catalog', 'sorted by next run', 'Destructive only', 'DESTRUCTIVE']) {
 		expect(shots.Dark.texts.join('\n'), s).toContain(s);
 	}
+});
+
+test('us13-management-theming — the parameter form with a field in error reads the same in both themes', async ({ page }) => {
+	const id = await seedFlow(page.request, {
+		name: `us13 params ${Date.now()}`,
+		defaultCategory: 'Default',
+		steps: [{ id: '01', type: 'storage-headroom-check', taskName: 'Storage headroom', namespace: '%SYS', runAsUser: 'irisadm', wqmCategory: 'Default', parameters: { minFreePercent: 150 } }],
+		edges: [],
+		joins: [],
+		canvasGeometry: { nodes: { '01': { x: 40, y: 40 } } }
+	});
+	await signIn(page, `?flow=${id}`);
+	await page.locator('.svelte-flow__node[data-id="01"] h3').click();
+	await page.getByRole('button', { name: 'Validate flow' }).click();
+	const inspector = page.getByLabel('Inspector', { exact: true });
+	await expect(inspector.getByTestId('param-error-minFreePercent')).toBeVisible();
+
+	mkdirSync(EVIDENCE, { recursive: true });
+	const texts: Record<string, string[]> = {};
+	for (const theme of ['Dark', 'Light'] as const) {
+		await page.getByRole('button', { name: theme, exact: true }).click();
+		await expect(page.locator('html')).toHaveAttribute('data-theme', theme.toLowerCase());
+		await page.mouse.move(0, 0);
+		expect(await contrastFailures(page), `${theme}: every text >= 4.5:1`).toEqual([]);
+		texts[theme] = await inspector.locator('h2, label, .param, [data-testid="param-error-minFreePercent"]').allInnerTexts();
+		await page.screenshot({ path: `${EVIDENCE}/sc008-params-${theme.toLowerCase()}.png` });
+	}
+	expect(texts.Light).toEqual(texts.Dark);
 });

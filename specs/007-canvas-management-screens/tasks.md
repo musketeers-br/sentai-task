@@ -148,7 +148,9 @@ Unit tests never wait for a gate.
 
   Commit as docs only.
 
-- [ ] T001 [P] Produce the **Part B prototype** (plan T0) in the design tool, in the visual system
+- [X] T001 [P] **Superseded 2026-09-27** by spec 009 Clarifications Q1 = A (build in the existing visual
+  system; paired dark/light screenshots are the review): no prototype was produced. Original text:
+  Produce the **Part B prototype** (plan T0) in the design tool, in the visual system
   of `design/System.dc.html`, in **both themes**. Save it as `design/CustomSteps.dc.html` (dark)
   and `design/CustomStepsLight.dc.html` (light). This is design only, with no code, and it can run
   in parallel with T002–T006. It must show:
@@ -370,7 +372,7 @@ schema. Errors appear on the field through the structured `parameter`, with a st
 
 **Independent test**: `us11-declared-steps.spec.ts`.
 
-- [ ] T007 [US5] Custom group and labels (plan row 6). **Gate: G-B, for visuals and e2e.** The
+- [X] T007 [US5] Custom group and labels (plan row 6). **Gate: G-B, for visuals and e2e.** The
   unit tests may start before.
 
   **Unit first**. Three tests:
@@ -398,7 +400,7 @@ schema. Errors appear on the field through the structured `parameter`, with a st
 
   Run unit + e2e.
 
-- [ ] T008 [US5] Parameter form and errors (plan row 7; depends on T007). **Gate: G-B.**
+- [X] T008 [US5] Parameter form and errors (plan row 7; depends on T007). **Gate: G-B.**
 
   **Unit first**, in `frontend/src/lib/flow/params.test.ts`. Five tests:
   1. `ParameterSpec` → field model for each of the 4 types: control, bounds hint, required mark,
@@ -468,7 +470,7 @@ confirmation, and the legacy `custom` class read-only.
 
   Existing `us4` dispatch tests (non-destructive) must stay green. Run unit + e2e.
 
-- [ ] T010 [US6] Declared destructive node and legacy `custom` read-only (plan row 8b; depends on
+- [X] T010 [US6] Declared destructive node and legacy `custom` read-only (plan row 8b; depends on
   T008 and T009). **Gate: G-B.**
 
   **e2e first**, in `frontend/tests/us12-destructive-legacy.spec.ts`. One test:
@@ -491,11 +493,12 @@ confirmation, and the legacy `custom` class read-only.
 
 ## Phase 9: Polish — theming parity and evidence
 
-- [ ] T011 Theming parity and evidence (plan row 9). The Part A half depends on T006; the Part B
+- [X] T011 Theming parity and evidence (plan row 9). The Part A half depends on T006; the Part B
   half depends on T010.
 
   **Part A half done 2026-09-27**: `us13` (catalog pair), SC-003 timing in `us9`, README and
-  `evidence/README.md`. The Part B half (parameter-form pair) is open.
+  `evidence/README.md`. **Part B half done 2026-09-27**: `us13` parameter-form pair
+  (`sc008-params-*.png`).
 
   **e2e**, in `frontend/tests/us13-management-theming.spec.ts`. One test:
   - paired 1440×900 dark/light screenshots of the catalog, with a destructive row selected, and

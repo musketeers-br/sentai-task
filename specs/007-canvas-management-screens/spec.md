@@ -4,7 +4,7 @@
 
 **Created**: 2026-09-26
 
-**Status**: Part A implemented (T002–T006, T009, T011 Part A half; 2026-09-27). Part B waits on the T001 prototype (gate G-B)
+**Status**: Implemented (Part A and Part B, 2026-09-27; Part B built in the existing visual system per spec 009 Q1 = A)
 
 **Input**: Add the management screens the canvas is missing: a **Task catalog** screen over the
 platform's Task Manager (spec 006) and **declared custom steps** in the flow editor (spec 005).

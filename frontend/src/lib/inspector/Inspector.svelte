@@ -1,10 +1,12 @@
 <script lang="ts">
 	import type { FlowEditor } from '$lib/flow/editor.svelte';
 	import { targetChoices } from '$lib/targets/targets';
+	import ParameterForm from './ParameterForm.svelte';
 
 	let { editor }: { editor: FlowEditor } = $props();
 
-	// Type-specific parameters the backend validates (FlowValidator's per-type schema).
+	// Only for a pre-005 catalog, which declares no parameter schema: the spec 002 field. With a
+	// declared schema the form is generated from the API (spec 007 T008).
 	const PARAMETER_FIELDS: Record<string, Array<{ key: string; label: string }>> = {
 		'purge-audit-records': [{ key: 'daysToKeep', label: 'DaysToKeep' }]
 	};
@@ -12,7 +14,12 @@
 	const node = $derived(editor.selectedNode);
 	const step = $derived(node?.data.step);
 	const info = $derived(node?.data.info);
-	const parameterFields = $derived(step ? (PARAMETER_FIELDS[step.type] ?? []) : []);
+	const parameterFields = $derived(step && info?.parameters === undefined ? (PARAMETER_FIELDS[step.type] ?? []) : []);
+	const stepFindings = $derived.by(() => {
+		if (!node) return [];
+		const f = editor.findingsFor(node.id);
+		return [...f.errors, ...f.warnings];
+	});
 	const selectedCount = $derived(editor.nodes.filter((n) => n.selected).length);
 	/** Spec 009 FR-006: online targets, for a type the API marks remote-capable. */
 	const choices = $derived(targetChoices(editor.targets, info));
@@ -37,7 +44,7 @@
 		return Number.isFinite(n) && n > 0 ? n : null;
 	}
 
-	function setText(field: 'taskName' | 'namespace' | 'runAsUser' | 'wqmCategory' | 'customClass', value: string) {
+	function setText(field: 'taskName' | 'namespace' | 'runAsUser' | 'wqmCategory', value: string) {
 		if (node) editor.updateStep(node.id, { [field]: value });
 	}
 
@@ -99,23 +106,26 @@
 						</select>
 					</div>
 				{:else}
-					<p class="note" data-testid="runs-locally-note">This step type runs on this instance only (it cannot run on a target server).</p>
+					<p class="local-note" data-testid="runs-locally-note">This step type runs on this instance only (it cannot run on a target server).</p>
 				{/if}
 			</section>
 
 			<section>
 				<h2 class="label">PARAMETERS</h2>
 				{#if step.type === 'custom'}
+					<!-- Spec 007 FR-018: a legacy custom step is shown, never edited: no field names a class. -->
 					<div class="field">
-						<label for="insp-customclass">Custom class</label>
-						<input
-							id="insp-customclass"
-							class="mono"
-							placeholder="Subclass of %SYS.Task.Definition"
-							value={step.customClass}
-							oninput={(e) => setText('customClass', e.currentTarget.value)}
-						/>
+						<span class="field-label">Custom class</span>
+						<span class="readonly mono" data-testid="custom-class-readonly">{step.customClass || '—'}</span>
+						<p class="local-note">Legacy custom steps are not supported: the class cannot be changed, and validation refuses the step.</p>
 					</div>
+				{:else if info?.parameters !== undefined}
+					<ParameterForm
+						specs={info.parameters}
+						parameters={step.parameters}
+						findings={stepFindings}
+						onchange={(parameters) => node && editor.updateStep(node.id, { parameters })}
+					/>
 				{/if}
 				{#each parameterFields as field (field.key)}
 					<div class="row">
@@ -389,5 +399,23 @@
 		font-size: var(--size-caption);
 		color: var(--color-text);
 		word-break: break-all;
+	}
+
+	.field-label {
+		font-size: var(--size-caption);
+		color: var(--color-text-muted);
+	}
+
+	.readonly {
+		font-size: var(--size-body);
+		padding: 6px 0;
+	}
+
+	/* Notes outside the destructive block: muted, never the destructive colour. */
+	.local-note {
+		margin: 6px 0 0;
+		font-size: var(--size-caption);
+		line-height: 1.5;
+		color: var(--color-text-muted);
 	}
 </style>
