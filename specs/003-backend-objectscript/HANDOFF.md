@@ -166,7 +166,10 @@ proved:
   validation, against the platform's category list.
 - **F-4** (built-in categories fail the invariant) — fixed by 004: `0` in `maxWorkers` /
   `maxTotalWorkers` means unbounded.
-- **F-2**, **F-5** — unchanged, still open.
+- **F-2**, **F-5** — unchanged by 004. Both closed later: **F-2** by spec 008 T009 (cancel and
+  pause are forwarded to the instance running the job; note that IRIS 2026.2 logs the ended
+  worker as a severity-2 alert, see `docs/limitations.md`), **F-5** by T078 on 2026-09-27 (no real
+  background job under the test double; each test removes the runs and targets it created).
 
 ## E-1 fixed for manual dispatch (2026-09-25)
 

@@ -1,0 +1,534 @@
+{
+  "instance": "http://localhost:52773",
+  "startedAt": "20260927-171826",
+  "calls": [
+    {
+      "label": "catalog",
+      "method": "GET",
+      "path": "/catalog/step-types",
+      "status": 200,
+      "body": [
+        {
+          "type": "integrity-check",
+          "label": "Integrity check",
+          "class": "%SYS.Task.IntegrityCheck",
+          "category": "verification",
+          "executor": "platform-api",
+          "destructive": false,
+          "pausable": false,
+          "available": true,
+          "remoteCapable": true
+        },
+        {
+          "type": "compact-globals",
+          "label": "Compact globals",
+          "class": "%SYS.Task.CompactGlobals",
+          "category": "storage",
+          "executor": "platform-api",
+          "destructive": false,
+          "pausable": false,
+          "available": false,
+          "remoteCapable": true
+        },
+        {
+          "type": "defragment-globals",
+          "label": "Defragment globals",
+          "class": "%SYS.Task.Defragment",
+          "category": "storage",
+          "executor": "platform-api",
+          "destructive": false,
+          "pausable": false,
+          "available": false,
+          "remoteCapable": true
+        },
+        {
+          "type": "switch-journal",
+          "label": "Switch journal",
+          "class": "%SYS.Task.SwitchJournal",
+          "category": "journal",
+          "executor": "in-process",
+          "destructive": false,
+          "pausable": false,
+          "available": true,
+          "parameters": [],
+          "remoteCapable": false
+        },
+        {
+          "type": "purge-audit-records",
+          "label": "Purge audit records",
+          "class": "%SYS.Task.PurgeAudit",
+          "category": "purge",
+          "executor": "platform-api",
+          "destructive": true,
+          "pausable": true,
+          "available": false,
+          "parameters": [
+            {
+              "name": "daysToKeep",
+              "property": "KeepDays",
+              "type": "integer",
+              "required": true,
+              "min": 1,
+              "description": "Days of audit records to keep"
+            }
+          ],
+          "remoteCapable": true
+        },
+        {
+          "type": "purge-task-history",
+          "label": "Purge task history",
+          "class": "%SYS.Task.PurgeTaskHistory",
+          "category": "purge",
+          "executor": "in-process",
+          "destructive": true,
+          "pausable": false,
+          "available": true,
+          "parameters": [
+            {
+              "name": "keepDays",
+              "property": "KeepDays",
+              "type": "integer",
+              "required": false,
+              "default": 30,
+              "min": 0,
+              "description": "Days of task history to keep"
+            }
+          ],
+          "remoteCapable": false
+        },
+        {
+          "type": "storage-headroom-check",
+          "label": "Storage headroom check",
+          "class": "sentai.steps.StorageHeadroomCheck",
+          "category": "storage",
+          "executor": "in-process",
+          "destructive": false,
+          "pausable": false,
+          "available": true,
+          "parameters": [
+            {
+              "name": "minFreePercent",
+              "property": "MinFreePercent",
+              "type": "number",
+              "required": false,
+              "default": 10,
+              "min": 0,
+              "max": 100,
+              "description": "Fail when any database or journal location has less free space than this percentage"
+            }
+          ],
+          "remoteCapable": false
+        },
+        {
+          "type": "db-size-report",
+          "label": "Database size report",
+          "class": "sentai.steps.DatabaseSizeReport",
+          "category": "verification",
+          "executor": "in-process",
+          "destructive": false,
+          "pausable": false,
+          "available": true,
+          "parameters": [],
+          "remoteCapable": false
+        },
+        {
+          "type": "custom",
+          "label": "Custom (legacy)",
+          "class": "",
+          "category": "custom",
+          "executor": "platform-api",
+          "destructive": false,
+          "pausable": false,
+          "available": false,
+          "remoteCapable": false
+        }
+      ]
+    },
+    {
+      "label": "(a) create",
+      "method": "POST",
+      "path": "/flows",
+      "status": 201,
+      "body": {
+        "id": "4550",
+        "name": "QS004-a-20260927-171826",
+        "revision": 1,
+        "savedAt": "2026-09-27 20:18:26",
+        "savedBy": "_SYSTEM",
+        "defaultCategory": "Default",
+        "steps": [
+          {
+            "id": "01",
+            "type": "integrity-check",
+            "taskName": "integrity-check 01",
+            "namespace": "USER",
+            "databaseDirectory": "/usr/irissys/mgr/user/",
+            "runAsUser": "irisadm",
+            "timeoutMinutes": 30,
+            "wqmCategory": "Default",
+            "customClass": "",
+            "parameters": {},
+            "isDestructive": "0"
+          },
+          {
+            "id": "02",
+            "type": "integrity-check",
+            "taskName": "integrity-check 02",
+            "namespace": "IRISAPP",
+            "databaseDirectory": "/data/IRISAPP_DATA/",
+            "runAsUser": "irisadm",
+            "timeoutMinutes": 30,
+            "wqmCategory": "Default",
+            "customClass": "",
+            "parameters": {},
+            "isDestructive": "0"
+          },
+          {
+            "id": "03",
+            "type": "integrity-check",
+            "taskName": "integrity-check 03",
+            "namespace": "%SYS",
+            "databaseDirectory": "/usr/irissys/mgr/",
+            "runAsUser": "irisadm",
+            "timeoutMinutes": 30,
+            "wqmCategory": "Default",
+            "customClass": "",
+            "parameters": {},
+            "isDestructive": "0"
+          }
+        ],
+        "edges": [
+          {
+            "source": "01",
+            "target": "03"
+          },
+          {
+            "source": "02",
+            "target": "03"
+          }
+        ],
+        "joins": [
+          {
+            "target": "03",
+            "policy": "ALL_MUST_SUCCEED",
+            "minSucceeded": ""
+          }
+        ],
+        "canvasGeometry": ""
+      }
+    },
+    {
+      "label": "(a) validate",
+      "method": "POST",
+      "path": "/flows/4550/validate",
+      "status": 200,
+      "body": {
+        "errors": [],
+        "warnings": []
+      }
+    },
+    {
+      "label": "(a) dispatch",
+      "method": "POST",
+      "path": "/flows/4550/dispatch",
+      "status": 202,
+      "body": {
+        "guid": "99009646-BAB0-11F1-8188-464495AB33F4",
+        "flowId": "4550",
+        "flowRevision": 1,
+        "state": "running",
+        "startedAt": "2026-09-27 20:18:26",
+        "finishedAt": "",
+        "dispatchedBy": "_SYSTEM"
+      }
+    },
+    {
+      "label": "(a) SSE",
+      "method": "GET",
+      "path": "/runs/99009646-BAB0-11F1-8188-464495AB33F4/events",
+      "events": [
+        {
+          "event": "step-state-changed",
+          "t": 0.0
+        },
+        {
+          "event": "step-state-changed",
+          "t": 0.0
+        },
+        {
+          "event": "step-state-changed",
+          "t": 0.0
+        },
+        {
+          "event": "stream-ended",
+          "detail": "TimeoutError('timed out')",
+          "t": 55.0
+        }
+      ]
+    },
+    {
+      "label": "(a) final run",
+      "method": "GET",
+      "path": "/runs/99009646-BAB0-11F1-8188-464495AB33F4",
+      "status": 200,
+      "body": {
+        "guid": "99009646-BAB0-11F1-8188-464495AB33F4",
+        "flowId": "4550",
+        "flowRevision": 1,
+        "state": "running",
+        "startedAt": "2026-09-27 20:18:26",
+        "finishedAt": "",
+        "dispatchedBy": "_SYSTEM",
+        "totalDurationMs": 55000,
+        "steps": [
+          {
+            "guid": "9900A170-BAB0-11F1-8188-464495AB33F4",
+            "stepId": "01",
+            "state": "running",
+            "timeQueued": "2026-09-27 20:18:26",
+            "timeStarted": "2026-09-27 20:18:26",
+            "timeFinished": "",
+            "failureReason": "",
+            "progressCurrent": "",
+            "progressTotal": "",
+            "confirmedBy": "",
+            "confirmedAt": "",
+            "executedAs": "",
+            "executedOn": "local",
+            "result": {}
+          },
+          {
+            "guid": "9900A80B-BAB0-11F1-8188-464495AB33F4",
+            "stepId": "02",
+            "state": "running",
+            "timeQueued": "2026-09-27 20:18:26",
+            "timeStarted": "2026-09-27 20:18:26",
+            "timeFinished": "",
+            "failureReason": "",
+            "progressCurrent": "",
+            "progressTotal": "",
+            "confirmedBy": "",
+            "confirmedAt": "",
+            "executedAs": "",
+            "executedOn": "local",
+            "result": {}
+          },
+          {
+            "guid": "9900AA50-BAB0-11F1-8188-464495AB33F4",
+            "stepId": "03",
+            "state": "queued",
+            "timeQueued": "2026-09-27 20:18:26",
+            "timeStarted": "",
+            "timeFinished": "",
+            "failureReason": "",
+            "progressCurrent": "",
+            "progressTotal": "",
+            "confirmedBy": "",
+            "confirmedAt": "",
+            "executedAs": "",
+            "executedOn": "local",
+            "result": {}
+          }
+        ],
+        "sumOfStepsMs": 110000,
+        "log": []
+      }
+    },
+    {
+      "label": "(b) create",
+      "method": "POST",
+      "path": "/flows",
+      "status": 201,
+      "body": {
+        "id": "4551",
+        "name": "QS004-b-20260927-171826",
+        "revision": 1,
+        "savedAt": "2026-09-27 20:19:22",
+        "savedBy": "_SYSTEM",
+        "defaultCategory": "Default",
+        "steps": [
+          {
+            "id": "01",
+            "type": "compact-globals",
+            "taskName": "compact-globals 01",
+            "namespace": "%SYS",
+            "databaseDirectory": "",
+            "runAsUser": "irisadm",
+            "timeoutMinutes": 30,
+            "wqmCategory": "Default",
+            "customClass": "",
+            "parameters": {},
+            "isDestructive": "0"
+          }
+        ],
+        "edges": [],
+        "joins": [],
+        "canvasGeometry": ""
+      }
+    },
+    {
+      "label": "(b) validate",
+      "method": "POST",
+      "path": "/flows/4551/validate",
+      "status": 200,
+      "body": {
+        "errors": [
+          {
+            "stepId": "01",
+            "code": "STEP_TYPE_NOT_SUPPORTED_ON_TARGET",
+            "message": "Step type 'compact-globals' is not supported on the target platform in v1 (supported: integrity-check, switch-journal, purge-task-history, storage-headroom-check, db-size-report)"
+          }
+        ],
+        "warnings": []
+      }
+    },
+    {
+      "label": "(b) dispatch",
+      "method": "POST",
+      "path": "/flows/4551/dispatch",
+      "status": 422,
+      "body": {
+        "errors": [
+          {
+            "stepId": "01",
+            "code": "STEP_TYPE_NOT_SUPPORTED_ON_TARGET",
+            "message": "Step type 'compact-globals' is not supported on the target platform in v1 (supported: integrity-check, switch-journal, purge-task-history, storage-headroom-check, db-size-report)"
+          }
+        ],
+        "warnings": []
+      }
+    },
+    {
+      "label": "(c) create",
+      "method": "POST",
+      "path": "/flows",
+      "status": 201,
+      "body": {
+        "id": "4552",
+        "name": "QS004-c-20260927-171826",
+        "revision": 1,
+        "savedAt": "2026-09-27 20:19:22",
+        "savedBy": "_SYSTEM",
+        "defaultCategory": "Default",
+        "steps": [
+          {
+            "id": "01",
+            "type": "integrity-check",
+            "taskName": "integrity-check 01",
+            "namespace": "USER",
+            "databaseDirectory": "/usr/irissys/mgr/user/",
+            "runAsUser": "irisadm",
+            "timeoutMinutes": 30,
+            "wqmCategory": "NONEXISTENT",
+            "customClass": "",
+            "parameters": {},
+            "isDestructive": "0"
+          }
+        ],
+        "edges": [],
+        "joins": [],
+        "canvasGeometry": ""
+      }
+    },
+    {
+      "label": "(c) validate",
+      "method": "POST",
+      "path": "/flows/4552/validate",
+      "status": 200,
+      "body": {
+        "errors": [
+          {
+            "stepId": "01",
+            "code": "CATEGORY_NOT_FOUND",
+            "message": "WQM category 'NONEXISTENT' does not exist on the target platform"
+          }
+        ],
+        "warnings": []
+      }
+    },
+    {
+      "label": "(c) dispatch",
+      "method": "POST",
+      "path": "/flows/4552/dispatch",
+      "status": 422,
+      "body": {
+        "errors": [
+          {
+            "stepId": "01",
+            "code": "CATEGORY_NOT_FOUND",
+            "message": "WQM category 'NONEXISTENT' does not exist on the target platform"
+          }
+        ],
+        "warnings": []
+      }
+    }
+  ],
+  "expectations": [
+    {
+      "label": "catalog: only integrity-check available",
+      "pass": false,
+      "detail": "{'integrity-check': True, 'compact-globals': False, 'defragment-globals': False, 'switch-journal': True, 'purge-audit-records': False, 'purge-task-history': True, 'storage-headroom-check': True, 'db-size-report': True, 'custom': False}"
+    },
+    {
+      "label": "(a) create 201",
+      "pass": true,
+      "detail": "201"
+    },
+    {
+      "label": "(a) validate errors: []",
+      "pass": true,
+      "detail": "[]"
+    },
+    {
+      "label": "(a) dispatch 202",
+      "pass": true,
+      "detail": "202"
+    },
+    {
+      "label": "(a) SSE reached run-terminal",
+      "pass": false,
+      "detail": "['step-state-changed', 'step-state-changed', 'stream-ended']"
+    },
+    {
+      "label": "(a) run completed, all 3 steps completed",
+      "pass": false,
+      "detail": "running {'01': 'running', '02': 'running', '03': 'queued'}"
+    },
+    {
+      "label": "(a) no 404 in any failure reason",
+      "pass": true,
+      "detail": "[]"
+    },
+    {
+      "label": "(b) create 201 (flow stays loadable)",
+      "pass": true,
+      "detail": "201"
+    },
+    {
+      "label": "(b) validate reports STEP_TYPE_NOT_SUPPORTED_ON_TARGET",
+      "pass": true,
+      "detail": "['STEP_TYPE_NOT_SUPPORTED_ON_TARGET']"
+    },
+    {
+      "label": "(b) dispatch 422 with the same error",
+      "pass": true,
+      "detail": "422 ['STEP_TYPE_NOT_SUPPORTED_ON_TARGET']"
+    },
+    {
+      "label": "(c) create 201",
+      "pass": true,
+      "detail": "201"
+    },
+    {
+      "label": "(c) validate reports CATEGORY_NOT_FOUND",
+      "pass": true,
+      "detail": "['CATEGORY_NOT_FOUND']"
+    },
+    {
+      "label": "(c) dispatch 422 with the same error",
+      "pass": true,
+      "detail": "422 ['CATEGORY_NOT_FOUND']"
+    }
+  ],
+  "failures": 3
+}
