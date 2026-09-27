@@ -36,7 +36,9 @@ An operator can, from the canvas:
 ### Session 2026-09-27
 
 - Q: Is a design prototype required before the target screens are built, as spec 007 Part B
-  required one for custom steps? → [NEEDS CLARIFICATION: see Q1 at the end of this document]
+  required one for custom steps? → **No (A).** The screens are built in the existing visual system
+  (the catalog screen's layout, the node's chips, the dispatch dialog's fields); paired dark/light
+  screenshots are the review (SC-006). The same decision unblocks spec 007 Part B.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -266,19 +268,4 @@ after *Validate flow*.
 - The compose stack's `iris-target` and the demo allowance for `http` are the end-to-end
   environment.
 - The visual language is spec 002's (tokens, themes); the target badge and the Targets screen reuse
-  the catalog screen's patterns (spec 007) unless Q1 decides otherwise.
-
-## Questions for the operator
-
-### Q1: A design prototype first, or the existing visual system?
-
-**Context**: spec 007 Part B waited for a prototype of the custom-step additions and is still not
-built. The Targets screen is close to the Task catalog screen (list + detail + actions); the target
-badge is a small addition to the node; the dispatch dialog already has a typed-confirmation block
-this spec extends.
-
-| Option | Answer | Implications |
-|---|---|---|
-| A | Build in the existing visual system (catalog screen layout, node chips, dialog fields); screenshots are the review | Can start now; a later prototype may restyle it |
-| B | Produce a prototype (`design/Targets.dc.html`, both themes) first, like 007 Part B | Visual tasks wait for it; API wiring and tests can start |
-| C | Custom | Describe |
+  the catalog screen's patterns (spec 007) (Clarifications Q1).
