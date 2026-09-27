@@ -4,7 +4,7 @@
 
 **Created**: 2026-09-27
 
-**Status**: Draft
+**Status**: Implemented (2026-09-27; T000–T012, evidence in evidence/README.md)
 
 **Input**: Implement InterSystems Ideas **DPI-I-588 "Distributed Work Manager"**
 (<https://ideas.intersystems.com/ideas/DPI-I-588>, status *Community Opportunity*) within

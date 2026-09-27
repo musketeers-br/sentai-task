@@ -205,10 +205,10 @@ removed.
 
 ## Phase 7: Polish — acceptance and documentation
 
-- [ ] T011 Quickstart (a)–(f) on the compose stack (T002), saving status + body per call (tokens
+- [X] T011 Quickstart (a)–(f) on the compose stack (T002), saving status + body per call (tokens
   and passwords redacted) to `specs/008-distributed-targets/evidence/quickstart-http-<date>.json`;
   residue check (f); `evidence/README.md` with SC-001…SC-008 results.
-- [ ] T012 Docs (FR-021): README section **"Implements DPI-I-588 (Distributed Work Manager)"** with
+- [X] T012 Docs (FR-021): README section **"Implements DPI-I-588 (Distributed Work Manager)"** with
   the idea's link — implemented (remote dispatch, status and results, target state, online/offline,
   load as the platform reports it), deliberately different (closed catalog, no arbitrary code,
   operator's own credential per target), future (in-process steps on targets, mirror-role
