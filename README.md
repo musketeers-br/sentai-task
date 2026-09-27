@@ -490,8 +490,18 @@ IRISAPP>zpm "load /home/irisowner/dev"
 IRISAPP>zpm "test sentai-task -only"
 ```
 
-The suite (`sentai.unittest.*`, 115 methods) runs against a test double of the management API, so
+The suite (`sentai.unittest.*`, 268 methods) runs against a test double of the management API, so
 it never starts real platform jobs through the admin API.
+
+Some tests ask the Work Queue Manager for a category that does not exist, on purpose, to check
+that the step fails with the platform's own message. IRIS logs each of those refusals at severity
+2, which puts the instance in the *alert* state, so Docker then reports the container as
+`unhealthy` (its healthcheck accepts only `ok` and `warn`). After running the suite on an instance
+you keep using, clear the state:
+
+```objectscript
+%SYS>do $SYSTEM.Monitor.Clear()
+```
 
 The canvas has unit tests and end-to-end acceptance tests (these need Node 20+ on your machine and
 the container running):
