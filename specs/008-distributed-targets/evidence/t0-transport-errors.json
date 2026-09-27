@@ -1,0 +1,26 @@
+{
+  "evidence_id": "t0-transport-errors",
+  "captured_at": "2026-09-27",
+  "request": "GET /api/admin/info, %Net.HttpRequest Timeout=10",
+  "cases": [
+    {
+      "target": "iris-nowhere:52773",
+      "elapsed": "13.9s",
+      "transportError": "ERROR #6059: Unable to open TCP/IP socket to server iris-nowhere:52773"
+    },
+    {
+      "target": "iris-target:52999",
+      "elapsed": "13.9s",
+      "transportError": "ERROR #6059: Unable to open TCP/IP socket to server iris-target:52999"
+    },
+    {
+      "target": "iris-target:52773",
+      "elapsed": "18.0s",
+      "transportError": "ERROR #6059: Unable to open TCP/IP socket to server iris-target:52773"
+    }
+  ],
+  "notes": [
+    "iris-target:52773 was measured with the target container stopped.",
+    "The connection attempt takes 14-18 s although Timeout=10: the open timeout is separate (T003 sets it)."
+  ]
+}

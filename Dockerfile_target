@@ -1,0 +1,11 @@
+# A second, plain IRIS instance for spec 008 (distributed targets): a *target server*.
+# Nothing of SentaiTask is installed here on purpose — a remote step only calls this
+# instance's own management API (/api/admin) with the operator's credential for it.
+ARG IMAGE=intersystems/iris-community:latest-cd
+FROM $IMAGE
+
+# Same dev-only convenience as the main image: the stock passwords are not expired, so an
+# operator can sign in to /api/admin/login straight away. Not for production use.
+RUN iris start IRIS && \
+    iris session IRIS -U %SYS '##class(Security.Users).UnExpireUserPasswords("*")' && \
+    iris stop IRIS quietly

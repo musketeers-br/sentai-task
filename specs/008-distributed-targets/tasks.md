@@ -58,7 +58,7 @@ removed.
     processes, erased at its end".
   Commit as docs.
 
-- [ ] T001 **Proofs on a real second instance** (plan T0; no product code). Bring up a temporary
+- [X] T001 **Proofs on a real second instance** (plan T0; no product code). Bring up a temporary
   `iris-target` from `intersystems/iris-community:latest-cd` on the compose network (the T002 files
   may be drafted here). From **inside the primary container** (`%Net.HttpRequest` in an IRIS
   session, as the product will call), with a credential for the target:
@@ -74,7 +74,7 @@ removed.
   `specs/008-distributed-targets/evidence/t0-*.json`, and a `t0-summary.md` stating which R items
   are proven. If (4) fails, stop and report: the feature as planned is not possible.
 
-- [ ] T002 [P] Demo environment (FR-020, R-11, R-13):
+- [X] T002 [P] Demo environment (FR-020, R-11, R-13):
   - `Dockerfile_target`: `FROM` the same base image, unexpire passwords as the main image does,
     nothing of SentaiTask installed;
   - `docker-compose.yml`: service `iris-target` (not published; reachable as
