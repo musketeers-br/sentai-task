@@ -31,6 +31,12 @@ SentaiTask v1 only promises what was proven on IRIS 2026.2 (spec `004-backend-ha
   the one available destructive type: dispatch refuses it (428) until the operator types its
   database directory or namespace, which the canvas asks for at *Run now* (spec 007 T009). No
   v1-available type is pausable, so pause is implemented but cannot be reached over HTTP.
+- **Cancelling a running platform job raises an IRIS alert.** Cancel is forwarded to the platform
+  (`POST /api/admin/v2/async-result/cancel?id=`), which ends the job's Work Queue Manager worker;
+  IRIS 2026.2 logs that as `ERROR #7802: Worker job/s '…' unexpectedly shut down` at severity 2,
+  so the instance enters the *alert* state and the container's healthcheck reports `unhealthy`.
+  The run and the platform are fine. Reproduced on a plain IRIS without SentaiTask (spec 008 T001,
+  `iris-target`, 2026-09-27 09:57:50). Clear it with `do $SYSTEM.Monitor.Clear()` in `%SYS`.
 - **Remote steps (spec 008, DPI-I-588).**
   - Only types executed through the management API can run on a target in v1 (`integrity-check`);
     declared in-process types are refused with `STEP_TYPE_NOT_REMOTE_CAPABLE` (they would need
