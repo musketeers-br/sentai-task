@@ -1,5 +1,16 @@
 // Typed calls to SENTAI.REST.Dispatcher (contracts/openapi.yaml). Every predictable failure
 // comes back as a value, and the platform's own words are kept verbatim (Constitution III, IV).
+import {
+	catalogQuery,
+	fromWireCatalogPage,
+	NO_FILTERS,
+	fromWireCatalogTask,
+	type CatalogFilters,
+	type CatalogPage,
+	type CatalogTaskView,
+	type WireCatalogPage,
+	type WireCatalogTask
+} from '$lib/catalog/catalog';
 import type { FlowDefinition, FlowDocument, StepTypeInfo } from '$lib/flow/document';
 import type { ValidationReport } from '$lib/flow/report';
 import { fromWireRun, type RunView } from '$lib/run/run';
@@ -19,10 +30,23 @@ export interface ScheduleResult {
 	nextRun: string;
 }
 
+/** The platform's own error object, as spec 006 passes it through (never rewritten). */
+export interface PlatformStatus {
+	errors: Array<{ error: string }>;
+	summary: string;
+}
+
 export type ApiError =
 	| { kind: 'unauthorized' }
 	| { kind: 'validation'; status: number; report: ValidationReport }
-	| { kind: 'problem'; status: number; title: string; detail: string }
+	| {
+			kind: 'problem';
+			status: number;
+			title: string;
+			detail: string;
+			platformStatus?: PlatformStatus;
+			platformInfo?: Record<string, unknown>;
+	  }
 	| { kind: 'network'; message: string };
 
 export type ApiResult<T> = { ok: true; value: T } | { ok: false; error: ApiError };
@@ -81,7 +105,9 @@ async function request<T>(
 			kind: 'problem',
 			status: res.status,
 			title: String(json.title ?? res.statusText),
-			detail: String(json.detail ?? '')
+			detail: String(json.detail ?? ''),
+			...(json.platformStatus === undefined ? {} : { platformStatus: json.platformStatus as PlatformStatus }),
+			...(json.platformInfo === undefined ? {} : { platformInfo: json.platformInfo as Record<string, unknown> })
 		}
 	};
 }
@@ -134,19 +160,21 @@ export const api = {
 	},
 
 	/**
-	 * 202 → the run GUID; 422 → ValidationReport; 428 → Problem naming the step (FR-013).
+	 * 202 → the run GUID; 422 → ValidationReport; 428 → Problem naming the step (FR-013), shown
+	 * verbatim. `confirmations` carries one typed value per destructive step (spec 007 D-7).
 	 * The run's dedicated sign-in (session.dedicatedToken): its access token authorizes the call,
 	 * its refresh token (`runCredential`, E-1) lets the backend keep the run's credential alive.
 	 */
 	async dispatch(
 		flowId: string,
-		run: { authorization: string; refreshToken: string }
+		run: { authorization: string; refreshToken: string },
+		confirmations: Array<{ stepId: string; typedName: string }> = []
 	): Promise<ApiResult<{ guid: string }>> {
 		return map(
 			await request<{ guid: string }>(
 				'POST',
 				`/flows/${encodeURIComponent(flowId)}/dispatch`,
-				{ confirmations: [], runCredential: { refreshToken: run.refreshToken } },
+				{ confirmations, runCredential: { refreshToken: run.refreshToken } },
 				run.authorization
 			),
 			(r) => ({ guid: String(r.guid) })
@@ -166,6 +194,24 @@ export const api = {
 			'POST',
 			`/runs/${encodeURIComponent(runGuid)}/steps/${encodeURIComponent(stepGuid)}/${action}`,
 			{}
+		);
+	},
+
+	/** Spec 006: the platform's Task Manager tasks, every value as the platform reported it. */
+	async catalogTasks(filters: CatalogFilters = NO_FILTERS): Promise<ApiResult<CatalogPage>> {
+		return map(await request<WireCatalogPage>('GET', `/catalog/tasks${catalogQuery(filters)}`), fromWireCatalogPage);
+	},
+
+	/** One task's item read (spec 006): the list's fields plus `recentRuns`. */
+	async catalogTask(taskId: number): Promise<ApiResult<CatalogTaskView>> {
+		return map(await request<WireCatalogTask>('GET', `/catalog/tasks/${taskId}`), fromWireCatalogTask);
+	},
+
+	/** Spec 006: suspend or resume; a 200 carries the task as re-read after the call. */
+	async setSuspended(taskId: number, suspended: boolean): Promise<ApiResult<CatalogTaskView>> {
+		return map(
+			await request<WireCatalogTask>('POST', `/catalog/tasks/${taskId}/suspend`, { suspended }),
+			fromWireCatalogTask
 		);
 	},
 

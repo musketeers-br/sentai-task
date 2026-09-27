@@ -167,12 +167,34 @@ USER>zpm "install sentai-task"
    appear on the affected node and block running; warnings, such as a read-only database, are
    shown but do not block.
 3. **Run now.** You are asked for your password once: the run gets its own sign-in and renews its
-   credential by itself for as long as it runs. The password is not kept.
+   credential by itself for as long as it runs. The password is not kept. A destructive step also
+   asks you to type the database directory (or namespace) it acts on; the backend checks the value
+   and, if it does not match, its answer is shown as is.
 4. **Watch.** The live-run view shows each step's state, elapsed time and, if it fails, the
    platform's own failure message. Cancel one step without touching the others, or *Cancel wave*
    for the whole run.
 
 The **Dark / Light** switch in the top bar changes theme on every screen.
+
+### The Task catalog screen
+
+**Task catalog** in the top bar shows the platform's Task Manager: every scheduled task on the
+instance, not only SentaiTask's (spec `007-canvas-management-screens`, over the spec 006 API).
+
+- **Only the platform's values.** Class, run-as user, next and last run, status and suspended are
+  shown as the API returns them. A value the platform refused to read says *unavailable*, with the
+  platform's reason; nothing is filled in. Rows are sorted by next run.
+- **Filters are the API's.** Search, namespace, *All / Scheduled / Suspended* and *Destructive
+  only* are sent to the API, and "N of M tasks" is its count.
+- **Detail and origin.** Click a task for every field plus its recent runs. A task SentaiTask
+  scheduled is marked *SentaiTask · flow 1 · step 01*, and its detail links to that flow on the
+  canvas, or says *flow not found* when the flow is gone.
+- **Suspend / Resume.** The one that applies is offered; the platform decides, and a refusal is
+  shown as the platform worded it (for example `HTTP 403 — no reason given` without
+  `%Admin_Task`).
+- **Addressable.** `?view=catalog&task=4` opens a task's detail directly; back and forward work.
+
+![The Task catalog with a destructive task open](specs/007-canvas-management-screens/evidence/sc008-catalog-dark.png)
 
 ![Composing a flow: three integrity checks fan in to a fourth, then a fifth](specs/002-canvas-ui/evidence/q1-flow-composition.png)
 
@@ -400,7 +422,11 @@ npm run test:e2e            # acceptance tests against http://localhost:52773
 ```
 
 The acceptance tests drive real runs, so they take about six minutes; screenshots and captures
-land in [`specs/002-canvas-ui/evidence/`](specs/002-canvas-ui/evidence/).
+land in [`specs/002-canvas-ui/evidence/`](specs/002-canvas-ui/evidence/) and
+[`specs/007-canvas-management-screens/evidence/`](specs/007-canvas-management-screens/evidence/).
+Some catalog tests create a temporary IRIS user through `docker exec` (container
+`sentai-task-iris-1`, or `SENTAI_CONTAINER`) and delete it at the end. After changing the
+frontend, `bash scripts/publish-canvas.sh` copies a fresh build into the running container.
 
 ---
 
@@ -441,10 +467,12 @@ sentai-task/
 * [x] Runs renew their own credential when dispatched with `runCredential` (runs > 60 s work)
 * [x] **005**: Declared in-process steps: storage headroom (Embedded Python), database size report, journal switch
 * [x] **006**: Task catalog API: the native Task Manager as the platform reports it, with suspend and resume
+* [x] **007 (part A)**: Task catalog screen (list, filters, detail, SentaiTask origin, suspend/resume) and the typed confirmation before dispatching a destructive step
 
 ### 🚧 Next
 
-* [ ] **007**: WQM category screen, task catalog and run history in the canvas (the API already has them)
+* [ ] **007 (part B)**: declared custom steps in the canvas (*Custom* palette group, parameter form from the API schema). Waiting on its design prototype; the backend side (structured `parameter` on findings, declared `purge-audit-records` schema) is already in 005
+* [ ] WQM category screen and run history in the canvas (the API already has them)
 * [ ] A credential for scheduled runs (unblocks scheduling)
 * [ ] Prove and enable the remaining step types, one at a time
 

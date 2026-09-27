@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+	confirmationsFor,
 	createStep,
 	formatSummary,
 	nextStepId,
@@ -104,5 +105,35 @@ describe('toDefinition', () => {
 	it('omits an unset timeout rather than sending null', () => {
 		const def = toDefinition(canonical());
 		expect('timeoutMinutes' in def.steps[0]).toBe(false);
+	});
+});
+
+describe('confirmationsFor (spec 007 T009, typed confirmation before dispatch)', () => {
+	const steps = () => {
+		const purge = { ...createStep(info('purge-audit-records'), '04', 'Default'), taskName: 'Purge audit records', namespace: '%SYS' };
+		const withDir = { ...createStep(info('purge-audit-records'), '06', 'Default'), databaseDirectory: '/usr/irissys/mgr/' };
+		return [createStep(info('integrity-check'), '01', 'Default'), purge, withDir];
+	};
+
+	it('asks one typed value per destructive step, and none for the others', () => {
+		const result = confirmationsFor(steps(), registry, { '04': '%SYS', '01': 'ignored' });
+		expect(result.prompts).toEqual([
+			{ stepId: '04', taskName: 'Purge audit records', expected: '%SYS' },
+			{ stepId: '06', taskName: 'Purge audit records', expected: '/usr/irissys/mgr/' }
+		]);
+		expect(result.confirmations).toEqual([
+			{ stepId: '04', typedName: '%SYS' },
+			{ stepId: '06', typedName: '' }
+		]);
+	});
+
+	it('is complete once every destructive step has a value; matching is left to the backend', () => {
+		expect(confirmationsFor(steps(), registry, { '04': '%SYS' }).complete).toBe(false);
+		expect(confirmationsFor(steps(), registry, { '04': 'wrong', '06': 'also wrong' }).complete).toBe(true);
+		expect(confirmationsFor([createStep(info('integrity-check'), '01', 'Default')], registry, {})).toEqual({
+			prompts: [],
+			confirmations: [],
+			complete: true
+		});
 	});
 });

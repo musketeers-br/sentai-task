@@ -184,6 +184,8 @@ test('Dispatch is refused for a flow with steps unsupported in v1, naming them o
 
 	await page.getByRole('button', { name: 'Run now' }).click();
 	await page.getByLabel(`Password for ${USER}`).fill(PASSWORD);
+	// Spec 007 T009: #04 is destructive, so the dialog asks its typed confirmation first.
+	await page.getByLabel(/to confirm #04/).fill('%SYS');
 	await page.getByRole('button', { name: 'Dispatch', exact: true }).click();
 
 	await expect(page.getByRole('dialog').getByRole('alert')).toContainText('Not dispatched');

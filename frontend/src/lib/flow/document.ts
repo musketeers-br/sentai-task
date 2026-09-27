@@ -116,3 +116,30 @@ export function toDefinition(doc: FlowDocument): FlowDefinition {
 		canvasGeometry: { nodes: doc.positions }
 	};
 }
+
+export interface ConfirmationPrompt {
+	stepId: string;
+	taskName: string;
+	/** What the operator is asked to type: the step's database directory, else its namespace. */
+	expected: string;
+}
+
+/**
+ * The typed confirmation of every destructive step (spec 002 FR-013, spec 007 D-7): one prompt
+ * per step the registry marks destructive, and the values typed so far as the dispatch body's
+ * `confirmations`. Whether a value matches is the backend's decision (HTTP 428), never checked here.
+ */
+export function confirmationsFor(
+	steps: FlowStep[],
+	registry: StepTypeInfo[],
+	typed: Record<string, string>
+): { prompts: ConfirmationPrompt[]; confirmations: Array<{ stepId: string; typedName: string }>; complete: boolean } {
+	const destructiveTypes = new Set(registry.filter((r) => r.destructive).map((r) => r.type));
+	const destructive = steps.filter((s) => destructiveTypes.has(s.type));
+	const confirmations = destructive.map((s) => ({ stepId: s.id, typedName: typed[s.id] ?? '' }));
+	return {
+		prompts: destructive.map((s) => ({ stepId: s.id, taskName: s.taskName, expected: s.databaseDirectory || s.namespace })),
+		confirmations,
+		complete: confirmations.every((c) => c.typedName !== '')
+	};
+}

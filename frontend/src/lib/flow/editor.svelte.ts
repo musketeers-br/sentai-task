@@ -191,13 +191,16 @@ export class FlowEditor {
 	 * The run is given its own login (session.dedicatedToken) so this session's token refreshes
 	 * cannot revoke the credential the run depends on.
 	 */
-	async dispatch(password: string): Promise<{ ok: true; guid: string } | { ok: false; message: string }> {
+	async dispatch(
+		password: string,
+		confirmations: Array<{ stepId: string; typedName: string }> = []
+	): Promise<{ ok: true; guid: string } | { ok: false; message: string }> {
 		if ((this.dirty || !this.id) && !(await this.save())) {
 			return { ok: false, message: this.notice?.text ?? 'Save failed.' };
 		}
 		const credential = await session.dedicatedToken(password);
 		if (!credential.ok) return credential;
-		const result = await api.dispatch(this.id!, credential);
+		const result = await api.dispatch(this.id!, credential, confirmations);
 		if (result.ok) return { ok: true, guid: result.value.guid };
 		if (result.error.kind === 'validation') this.report = result.error.report;
 		return { ok: false, message: `Not dispatched: ${describeError(result.error)}` };

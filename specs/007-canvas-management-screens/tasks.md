@@ -186,7 +186,7 @@ only API values, and handles unavailable values and refusals.
 **Independent test**: `us7-catalog.spec.ts`. Every row and value equals `GET
 /csp/sentai/api/v1/catalog/tasks` (SC-001). Deep link, back and reload all work.
 
-- [ ] T002 [US1] Navigation and routing (plan row 1). **Gate: e2e needs G-A.**
+- [X] T002 [US1] Navigation and routing (plan row 1). **Gate: e2e needs G-A.**
 
   **Test first**, in `frontend/tests/us7-catalog.spec.ts`, test 1 "navigation":
   1. sign in and open a seeded flow (`seedFlow`);
@@ -214,7 +214,7 @@ only API values, and handles unavailable values and refusals.
 
   Run unit + e2e.
 
-- [ ] T003 [US1] List: columns, sort, unavailable values, refusal (plan row 2). **Gate: e2e needs
+- [X] T003 [US1] List: columns, sort, unavailable values, refusal (plan row 2). **Gate: e2e needs
   G-A.**
 
   **Unit first**, in `frontend/src/lib/catalog/catalog.test.ts`. Fixtures are the 006 api-delta
@@ -261,7 +261,7 @@ API, and the header shows "N of M tasks".
 **Independent test**: `us9-catalog-filters.spec.ts`. For each filter, the rows and counts equal
 the API's answer for the same query.
 
-- [ ] T004 [US3] Filters and count (plan row 3; depends on T003). **Gate: e2e needs G-A.**
+- [X] T004 [US3] Filters and count (plan row 3; depends on T003). **Gate: e2e needs G-A.**
 
   **Unit first**, in `frontend/src/lib/catalog/catalog.test.ts`. Three tests:
   1. `namespaceOptions(page)`: the distinct namespaces of an unfiltered page, plus `all`.
@@ -298,7 +298,7 @@ This phase follows plan row 4, which also completes US-1's detail (US-1.4–7).
 **Independent test**: `us8-catalog-origin.spec.ts`. A scheduled 3-step flow gives exactly 3
 marked rows, and the link opens the flow.
 
-- [ ] T005 [US2] Detail, origin and link (plan row 4; depends on T003). Not [P] with T004, because
+- [X] T005 [US2] Detail, origin and link (plan row 4; depends on T003). Not [P] with T004, because
   both edit `catalog.ts`. **Gate: e2e needs G-A.**
 
   **Unit first**, in `frontend/src/lib/catalog/catalog.test.ts`. Three tests:
@@ -338,7 +338,7 @@ re-read and refusals shown verbatim.
 
 **Independent test**: `us10-catalog-suspend.spec.ts`.
 
-- [ ] T006 [US4] Suspend/resume (plan row 5; depends on T005). **Gate: e2e needs G-A.**
+- [X] T006 [US4] Suspend/resume (plan row 5; depends on T005). **Gate: e2e needs G-A.**
 
   **Unit first**, in `frontend/src/lib/catalog/catalog.test.ts`. Two tests on the action reducer:
   1. idle → pending (button disabled) → ok (task from body, list re-read requested);
@@ -436,7 +436,7 @@ confirmation, and the legacy `custom` class read-only.
 
 **Independent test**: `us14-typed-confirmation.spec.ts` and `us12-destructive-legacy.spec.ts`.
 
-- [ ] T009 [US6] Typed confirmation before dispatch (plan row 8a, D-7).
+- [X] T009 [US6] Typed confirmation before dispatch (plan row 8a, D-7).
   - **Not blocked on T001.** It uses the existing dialog's visual system.
   - **Release gate for spec 005:** `purge-task-history` may only become `available: true`
     (005 T016) after this task is merged **with its e2e green**. The e2e runs under G-C's
@@ -493,6 +493,9 @@ confirmation, and the legacy `custom` class read-only.
 
 - [ ] T011 Theming parity and evidence (plan row 9). The Part A half depends on T006; the Part B
   half depends on T010.
+
+  **Part A half done 2026-09-27**: `us13` (catalog pair), SC-003 timing in `us9`, README and
+  `evidence/README.md`. The Part B half (parameter-form pair) is open.
 
   **e2e**, in `frontend/tests/us13-management-theming.spec.ts`. One test:
   - paired 1440×900 dark/light screenshots of the catalog, with a destructive row selected, and
