@@ -19,7 +19,7 @@ Captured on 2026-09-27 on the compose stack: `iris` (SentaiTask) and `iris-targe
 | SC-004 every new code by a test and a recorded call | **Partly met.** Unit tests cover all of them. Recorded calls: `TARGET_NOT_FOUND`, `TARGET_OFFLINE`, `STEP_TYPE_NOT_REMOTE_CAPABLE`, `TARGET_NOT_VERIFIED`, `NAMESPACE_NOT_FOUND` (from the target), `TARGET_CREDENTIAL_MISSING`, `TARGET_CREDENTIAL_USER_MISMATCH`, and the unreachable target in the status read and in (e). `TARGET_REFUSED` and dispatch-time `TARGET_UNREACHABLE` are unit-tested only |
 | SC-005 no secret stored or logged | **Met.** 153 passwords and tokens used during the quickstart were searched in `^sentai`, `^sentaiRun`, the target registry, `^IRIS.Temp.sentaiTargetCred` and `messages.log`: 0 hits; the run credentials of both runs were erased |
 | SC-006 status read < 3 s when reachable | **Met.** 0.07 s (unreachable: 7.96 s, the connection timeout) |
-| SC-007 existing suites green, none removed | **Met.** Backend 268/268 (225 before 008); frontend unit 73/73, e2e green except `us14`, skipped until spec 005 T016 reaches `master` |
+| SC-007 existing suites green, none removed | **Met.** Backend 268/268 (225 before 008); frontend unit 73/73, e2e 21 passed + `us14` skipped before master's spec 005 T016 was merged in; after that merge `us14` passes and the backend is still 268/268 |
 | SC-008 a clean checkout brings both up with one command | **Not verified** from a clean checkout: `iris-target` was built with `docker compose up -d --build iris-target`; the main image was not rebuilt in this session |
 
 ## Deviations recorded during implementation
