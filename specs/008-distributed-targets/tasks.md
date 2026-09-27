@@ -156,7 +156,7 @@ removed.
 
 ## Phase 5: User Story 2 — Run a step on a target and get its result (P1)
 
-- [ ] T007 [US3][US2] Dispatch with target credentials (FR-010, FR-011, D-5). **Tests first** in
+- [X] T007 [US3][US2] Dispatch with target credentials (FR-010, FR-011, D-5). **Tests first** in
   `tests/sentai/unittest/dispatch/TargetCredentialTest.cls`:
   - a flow using a target without its entry → 400 `TARGET_CREDENTIAL_MISSING` naming target and
     steps; no Run row;

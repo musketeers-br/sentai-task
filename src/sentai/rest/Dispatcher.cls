@@ -356,7 +356,12 @@ ClassMethod DispatchFlow(flowId As %String) As %Status
         Set accessToken = pair."access_token", refreshToken = pair."refresh_token"
     }
 
-    Set run = ##class(sentai.dispatch.WaveDispatcher).Dispatch(flowId, confirmations, ..CurrentUser(), .errorCode, .errorDetail, .report, accessToken)
+    // Spec 008 FR-010: one credential per target the flow uses, redeemed and checked before any
+    // run exists; the fresh pairs validate the flow and are kept only for the run.
+    Set targetRefusal = ##class(sentai.targets.TargetService).RedeemForDispatch(flowId, $S($IsObject(payload):payload.targetCredentials, 1:""), ..CurrentUser(), .targetPairs)
+    If $IsObject(targetRefusal) Quit ..WriteOutcome(targetRefusal)
+
+    Set run = ##class(sentai.dispatch.WaveDispatcher).Dispatch(flowId, confirmations, ..CurrentUser(), .errorCode, .errorDetail, .report, accessToken, ##class(sentai.dispatch.WaveDispatcher).AccessTokens(targetPairs))
 
     If (errorCode = "VALIDATION_FAILED") Quit ..WriteJSON(422, report)
     If (errorCode = "CONFIRMATION_REQUIRED") Quit ..WriteProblem(428, "Confirmation Required", "Step '"_errorDetail_"' requires a matching typed confirmation before dispatch")
@@ -365,6 +370,7 @@ ClassMethod DispatchFlow(flowId As %String) As %Status
     // E-1: with a run credential the run holds its fresh pair and renews it; otherwise it uses
     // the request's own token.
     Do ##class(sentai.dispatch.WaveDispatcher).StoreRunCredential(run.guid, accessToken, refreshToken)
+    Do ##class(sentai.dispatch.WaveDispatcher).StoreTargetCredentials(run.guid, targetPairs)
     Do ##class(sentai.dispatch.WaveDispatcher).StartBackgroundLoop(run.guid, accessToken)
 
     Quit ..WriteJSON(202, ..ShapeRun(run, 0))

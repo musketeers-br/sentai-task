@@ -63,12 +63,12 @@ ClassMethod ResolveRunStep(stepRunGuid As %String, ByRef runGuid As %String, ByR
 ///   "CONFIRMATION_REQUIRED"   — errorDetail names the pending stepId (FR-017, HTTP 428)
 /// `bearerToken` is passed to validation (category existence, spec 004 FR-006); the scheduled
 /// path has none.
-ClassMethod Dispatch(flowId As %String, confirmationsArray As %DynamicArray, dispatchedBy As %String, ByRef errorCode As %String, ByRef errorDetail As %String, ByRef validationReport As %DynamicObject, bearerToken As %String = "") As %DynamicObject
+ClassMethod Dispatch(flowId As %String, confirmationsArray As %DynamicArray, dispatchedBy As %String, ByRef errorCode As %String, ByRef errorDetail As %String, ByRef validationReport As %DynamicObject, bearerToken As %String = "", targetTokens As %DynamicObject = "") As %DynamicObject
 {
     Set errorCode = "", errorDetail = ""
 
     // FR-018: structural validation blocks dispatch regardless of any earlier /validate call.
-    Set validationReport = ##class(sentai.validation.FlowValidator).Validate(flowId, bearerToken)
+    Set validationReport = ##class(sentai.validation.FlowValidator).Validate(flowId, bearerToken, targetTokens)
     If '##class(sentai.validation.FlowValidator).HasNoErrors(validationReport) {
         Set errorCode = "VALIDATION_FAILED"
         Return ""
@@ -228,6 +228,65 @@ ClassMethod RenewRunCredentialIfDue(runGuid As %String) As %String
 ClassMethod EraseRunCredential(runGuid As %String)
 {
     Kill ^sentaiRun(runGuid, "%token"), ^sentaiRun(runGuid, "%refresh"), ^sentaiRun(runGuid, "%tokenAt")
+    // Spec 008: the run's target credentials go with it.
+    Kill ^IRIS.Temp.sentaiTargetCred(runGuid)
+}
+
+/// --- Target credentials (spec 008 FR-011, research R-5) ---
+/// ^IRIS.Temp.sentaiTargetCred(runGuid, target) = $lb(access, refresh, issuedAt, sub, baseUrl):
+/// IRISTEMP — never journaled, gone on restart, shared by the run's processes. The address is
+/// the one frozen at dispatch (FR-018).
+ClassMethod StoreTargetCredentials(runGuid As %String, pairs As %DynamicObject) As %Status
+{
+    Quit:'$IsObject(pairs) $$$OK
+    Set iter = pairs.%GetIterator()
+    While iter.%GetNext(.name, .p) {
+        Set ^IRIS.Temp.sentaiTargetCred(runGuid, name) = $LB(p.accessToken, p.refreshToken, ..NowSeconds(), p.sub, p.baseUrl)
+    }
+    Quit $$$OK
+}
+
+/// {target: accessToken} for validation, from redeemed pairs.
+ClassMethod AccessTokens(pairs As %DynamicObject) As %DynamicObject
+{
+    Set out = {}
+    Quit:'$IsObject(pairs) out
+    Set iter = pairs.%GetIterator()
+    While iter.%GetNext(.name, .p) { Do out.%Set(name, p.accessToken) }
+    Quit out
+}
+
+ClassMethod TargetToken(runGuid As %String, target As %String) As %String
+{
+    Quit $LG($G(^IRIS.Temp.sentaiTargetCred(runGuid, target)), 1)
+}
+
+ClassMethod TargetSub(runGuid As %String, target As %String) As %String
+{
+    Quit $LG($G(^IRIS.Temp.sentaiTargetCred(runGuid, target)), 4)
+}
+
+ClassMethod TargetBaseUrl(runGuid As %String, target As %String) As %String
+{
+    Quit $LG($G(^IRIS.Temp.sentaiTargetCred(runGuid, target)), 5)
+}
+
+/// E-1 per target: renews a pair older than RENEWAFTERSECONDS from that target's own refresh
+/// token (no bearer). A refused renewal keeps the current token; the target's later 401 becomes
+/// the step's failure reason. Only the run loop calls this, so renewals never race.
+ClassMethod RenewTargetCredentialsIfDue(runGuid As %String)
+{
+    Set name = ""
+    For {
+        Set name = $O(^IRIS.Temp.sentaiTargetCred(runGuid, name))
+        Quit:(name = "")
+        Continue:(name = "lastError")
+        Set entry = ^IRIS.Temp.sentaiTargetCred(runGuid, name)
+        Continue:((..NowSeconds() - $LG(entry, 3)) < ..#RENEWAFTERSECONDS)
+        Set body = ##class(sentai.dispatch.AdminApiClient).Post("/api/admin/refresh", "", {"refresh_token": ($LG(entry, 2))}, .httpStatus, .location, $LG(entry, 5), .transportError)
+        Continue:((transportError '= "") || (httpStatus '= 200) || '$IsObject(body) || (body."access_token" = ""))
+        Set ^IRIS.Temp.sentaiTargetCred(runGuid, name) = $LB(body."access_token", body."refresh_token", ..NowSeconds(), $LG(entry, 4), $LG(entry, 5))
+    }
 }
 
 /// Starts the background execution loop for `runGuid` as an IRIS job, right after the
@@ -252,6 +311,7 @@ ClassMethod RunLoop(runGuid As %String, bearerToken As %String) As %Status
         // E-1: keep the run's own credential alive (no-op without a refresh token).
         Set current = ..RenewRunCredentialIfDue(runGuid)
         Set:(current '= "") bearerToken = current
+        Do ..RenewTargetCredentialsIfDue(runGuid)
 
         Kill eligible
         Set n = ..ComputeEligibleSteps(runGuid, .anyFailed, .eligible)

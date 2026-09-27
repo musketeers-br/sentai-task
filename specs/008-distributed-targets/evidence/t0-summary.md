@@ -22,3 +22,10 @@ handle (it knows `Finished`, `Error`, `Failed`). Harmless today, because a cance
 polled again, but T009 must not rely on polling to see a cancel.
 
 **Conclusion:** the feature is feasible as planned. Tasks T005 and T008 may proceed.
+
+## Addendum (T007, 2026-09-27)
+
+`POST /api/admin/refresh` on the target **without any Authorization header**, body
+`{"refresh_token": …}`, returns 200 with a new `access_token`, `refresh_token`, `sub`, `iat`,
+`exp`; the old refresh token is then refused (401, rotated). So dispatch can redeem a target
+refresh token on its own, as research R-7 assumed.

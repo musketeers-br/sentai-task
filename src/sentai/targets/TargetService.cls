@@ -148,6 +148,58 @@ ClassMethod Refused(httpStatus As %Integer, body) As %DynamicObject
     Quit outcome
 }
 
+/// FR-010/FR-011 (research R-7): before any run exists, redeems on each target the flow uses the
+/// operator's refresh token for it, and checks the pair belongs to the dispatching user. Returns
+/// "" with `pairs` = {target: {accessToken, refreshToken, sub, baseUrl}} on success, or the
+/// refusal outcome. A target that is unknown or offline is left to validation (TARGET_NOT_FOUND,
+/// TARGET_OFFLINE), which dispatch runs next. Redeeming needs no bearer (t0-summary addendum).
+ClassMethod RedeemForDispatch(flowId As %String, credentials As %DynamicArray, user As %String, Output pairs As %DynamicObject) As %DynamicObject
+{
+    Set pairs = {}
+    Kill stepsOf
+    Set rs = ##class(%SQL.Statement).%ExecDirect(, "SELECT target, id FROM sentai_model.Step WHERE flow = ? AND target IS NOT NULL AND target <> '' ORDER BY target, id", flowId)
+    While rs.%Next() {
+        Set t = rs.%Get("target")
+        Set stepsOf(t) = $G(stepsOf(t))_$S($D(stepsOf(t)):", ", 1:"")_rs.%Get("id")
+    }
+    Kill offered
+    If $IsObject(credentials) {
+        Set iter = credentials.%GetIterator()
+        While iter.%GetNext(.k, .c) {
+            Set:($IsObject(c) && (c.target '= "")) offered(c.target) = c.refreshToken
+        }
+    }
+
+    Set name = "", refusal = ""
+    For {
+        Set name = $O(stepsOf(name))
+        Quit:(name = "")
+        Set target = ..Open(name)
+        Continue:'$IsObject(target)
+        Continue:'target.online
+        If ($G(offered(name)) = "") {
+            Set refusal = ..Problem(400, "Bad Request", "TARGET_CREDENTIAL_MISSING: target '"_name_"' (steps "_stepsOf(name)_")")
+            Quit
+        }
+        Set body = ##class(sentai.dispatch.AdminApiClient).Post("/api/admin/refresh", "", {"refresh_token": (offered(name))}, .httpStatus, .location, target.baseUrl, .transportError)
+        If (transportError '= "") {
+            Set refusal = ..Problem(502, "Bad Gateway", "TARGET_UNREACHABLE: target '"_name_"': "_transportError)
+            Quit
+        }
+        If (httpStatus '= 200) || '$IsObject(body) || (body."access_token" = "") {
+            Set refusal = ..Refused(httpStatus, body)
+            Quit
+        }
+        If ($ZCVT(body.sub, "U") '= $ZCVT(user, "U")) {
+            Set refusal = ..Problem(403, "Forbidden", "TARGET_CREDENTIAL_USER_MISMATCH: the credential for target '"_name_"' belongs to '"_body.sub_"', not to '"_user_"'")
+            Quit
+        }
+        Do pairs.%Set(name, {"accessToken": (body."access_token"), "refreshToken": (body."refresh_token"), "sub": (body.sub), "baseUrl": (target.baseUrl)})
+    }
+    Kill offered
+    Quit refusal
+}
+
 ClassMethod Open(name As %String, concurrency As %Integer = 0) As sentai.model.Target
 {
     Quit:(name = "") ""

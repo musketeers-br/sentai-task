@@ -54,7 +54,7 @@ Checked before validation, and before any run exists:
 - a target used by a step without an entry → 400 `TARGET_CREDENTIAL_MISSING: target '<t>' (steps 03)`;
 - redemption refused → the target's status, `detail` verbatim, `platformStatus`;
 - redeemed `sub` ≠ dispatching user → 403 `TARGET_CREDENTIAL_USER_MISMATCH: the credential for target '<t>' belongs to '<sub>', not to '<user>'`;
-- no HTTP answer → 502 `TARGET_UNREACHABLE`.
+- no HTTP answer → 502 `TARGET_UNREACHABLE: target '<t>': <transport error verbatim>`.
 
 Then validation runs with the redeemed tokens (422 on errors), then confirmations (428), then 202.
 
