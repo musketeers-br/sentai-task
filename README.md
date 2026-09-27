@@ -159,7 +159,7 @@ USER>zpm "install sentai-task"
 ### On the canvas
 
 1. **Compose.** Drag an available step type (*Integrity check*, *Switch journal*, *Storage
-   headroom check*, *Database size report*) from the palette onto the canvas (the others are
+   headroom check*, *Database size report*, *Purge task history*) from the palette onto the canvas (the others are
    listed but marked *not supported in v1*, see [Known limitations](#%EF%B8%8F-known-limitations-v1)).
    Drag from a step's right handle to another step's left handle to connect them; edges that would
    create a cycle are refused as you draw. Several edges into one step meet at a single diamond:
@@ -282,7 +282,7 @@ of the step's category, inside IRIS.
 | `storage-headroom-check` | `sentai.steps.StorageHeadroomCheck` | `minFreePercent` number 0–100, default 10 | Read-only. Fails when a database directory or the journal directory has less free disk than the threshold, naming each location and its free %. Embedded Python (`shutil.disk_usage`). |
 | `db-size-report` | `sentai.steps.DatabaseSizeReport` | — | Read-only. `result.databases` lists every database with `sizeMB` and `freeMB` (`%SYS.DatabaseQuery:FreeSpace`). |
 | `switch-journal` | `%SYS.Task.SwitchJournal` | — | Starts a new journal file. Needs `%Admin_Operate:USE`; without it the platform's `#921` text is the failure reason. |
-| `purge-task-history` | `%SYS.Task.PurgeTaskHistory` | `keepDays` integer ≥ 0, default 30 | Destructive (typed confirmation, not schedulable). Implemented and proven; **not available yet** — waits for the canvas's typed-confirmation dialog (spec 007). |
+| `purge-task-history` | `%SYS.Task.PurgeTaskHistory` | `keepDays` integer ≥ 0, default 30 | Destructive (typed confirmation, not schedulable). Available since the canvas asks for the typed confirmation at *Run now* (spec 007 T009). |
 
 - **Adding one** is a code change reviewed in a pull request: write the class (extending
   `%SYS.Task.Definition`, optionally with a `Result` property holding JSON text) and add one catalog
@@ -441,8 +441,8 @@ curl -H "$H" -H "X-Sentai-Target-Authorization: Bearer <target access token>" $A
 SentaiTask v1 only promises what was proven on IRIS 2026.2 (spec `004-backend-hardening`). The
 main points:
 
-- **Available step types:** `integrity-check`, `switch-journal`, `storage-headroom-check` and
-  `db-size-report`. The others are listed with `available: false` and refused with
+- **Available step types:** `integrity-check`, `switch-journal`, `storage-headroom-check`,
+  `db-size-report` and `purge-task-history` (destructive: typed confirmation). The others are listed with `available: false` and refused with
   `STEP_TYPE_NOT_SUPPORTED_ON_TARGET` until each one is proven.
 - **Use manual dispatch.** `/schedule` validates the flow and registers native tasks, but a
   scheduled run has no operator credential in v1, so it is not a supported execution path yet.
