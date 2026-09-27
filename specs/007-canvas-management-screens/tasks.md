@@ -214,7 +214,7 @@ only API values, and handles unavailable values and refusals.
 
   Run unit + e2e.
 
-- [ ] T003 [US1] List: columns, sort, unavailable values, refusal (plan row 2). **Gate: e2e needs
+- [X] T003 [US1] List: columns, sort, unavailable values, refusal (plan row 2). **Gate: e2e needs
   G-A.**
 
   **Unit first**, in `frontend/src/lib/catalog/catalog.test.ts`. Fixtures are the 006 api-delta

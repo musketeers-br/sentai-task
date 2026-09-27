@@ -12,15 +12,15 @@ export async function signIn(page: Page, query = ''): Promise<void> {
 }
 
 /** Signs in on the page `query` addresses, without assuming it opens on the flow editor. */
-export async function signInAt(page: Page, query = ''): Promise<void> {
+export async function signInAt(page: Page, query = '', user = USER, password = PASSWORD): Promise<void> {
 	await page.goto(`${ENTRY}${query}`);
-	await submitSignIn(page);
+	await submitSignIn(page, user, password);
 }
 
 /** Fills the canvas sign-in form already on screen (after a reload, tokens are in memory only). */
-export async function submitSignIn(page: Page): Promise<void> {
-	await page.getByLabel('User').fill(USER);
-	await page.getByLabel('Password').fill(PASSWORD);
+export async function submitSignIn(page: Page, user = USER, password = PASSWORD): Promise<void> {
+	await page.getByLabel('User').fill(user);
+	await page.getByLabel('Password').fill(password);
 	await page.getByRole('button', { name: 'Sign in' }).click();
 }
 

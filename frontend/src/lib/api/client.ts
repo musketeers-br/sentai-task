@@ -20,10 +20,23 @@ export interface ScheduleResult {
 	nextRun: string;
 }
 
+/** The platform's own error object, as spec 006 passes it through (never rewritten). */
+export interface PlatformStatus {
+	errors: Array<{ error: string }>;
+	summary: string;
+}
+
 export type ApiError =
 	| { kind: 'unauthorized' }
 	| { kind: 'validation'; status: number; report: ValidationReport }
-	| { kind: 'problem'; status: number; title: string; detail: string }
+	| {
+			kind: 'problem';
+			status: number;
+			title: string;
+			detail: string;
+			platformStatus?: PlatformStatus;
+			platformInfo?: Record<string, unknown>;
+	  }
 	| { kind: 'network'; message: string };
 
 export type ApiResult<T> = { ok: true; value: T } | { ok: false; error: ApiError };
@@ -82,7 +95,9 @@ async function request<T>(
 			kind: 'problem',
 			status: res.status,
 			title: String(json.title ?? res.statusText),
-			detail: String(json.detail ?? '')
+			detail: String(json.detail ?? ''),
+			...(json.platformStatus === undefined ? {} : { platformStatus: json.platformStatus as PlatformStatus }),
+			...(json.platformInfo === undefined ? {} : { platformInfo: json.platformInfo as Record<string, unknown> })
 		}
 	};
 }
