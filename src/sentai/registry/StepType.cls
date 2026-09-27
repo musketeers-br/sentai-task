@@ -21,7 +21,7 @@ XData Catalog [ MimeType = application/json ]
       { "name": "daysToKeep", "property": "KeepDays", "type": "integer", "required": true, "min": 1,
         "description": "Days of audit records to keep" }
     ] },
-  { "type": "purge-task-history",     "label": "Purge task history",     "class": "%SYS.Task.PurgeTaskHistory",        "category": "purge",        "executor": "in-process",   "destructive": true,  "pausable": false, "available": false,
+  { "type": "purge-task-history",     "label": "Purge task history",     "class": "%SYS.Task.PurgeTaskHistory",        "category": "purge",        "executor": "in-process",   "destructive": true,  "pausable": false, "available": true,
     "parameters": [
       { "name": "keepDays", "property": "KeepDays", "type": "integer", "required": false, "default": 30, "min": 0,
         "description": "Days of task history to keep" }
