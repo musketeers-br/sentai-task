@@ -195,7 +195,7 @@ removed.
   non-pausable type is still 409 with no call.
   Implement in `WaveDispatcher.CancelStep/CancelRun/PauseStep`.
 
-- [ ] T010 [US3] Target down mid-run (FR-016, R-12). **Tests first** in `RemoteStepRunTest`:
+- [X] T010 [US3] Target down mid-run (FR-016, R-12). **Tests first** in `RemoteStepRunTest`:
   polls answering transport errors keep the step `running` and record the last error; past the
   step's timeout (or 60 min when 0) the step fails with `timed out after N min; last transport
   error: <text>`; sibling steps are untouched; a 4xx stays permanent as today.

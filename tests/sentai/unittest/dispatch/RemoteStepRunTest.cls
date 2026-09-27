@@ -182,4 +182,44 @@ Method TestRunCancelForwardsToEachJob()
     Do $$$AssertEquals(..StepRun(run, "04").state, "cancelled")
 }
 
+/// T010 (FR-016, research R-12): a target that stops answering mid-run keeps its step running
+/// while the step's timeout lasts, then fails only that step with the last transport error.
+Method TestTargetDownMidRunFailsOnlyItsStepAfterTheTimeout()
+{
+    Set id = ..CreateFlowOf("RemoteDown", [{"id": "01", "type": "integrity-check"}, {"id": "03", "type": "integrity-check", "namespace": "USER", "target": (..Name), "timeoutMinutes": 1}])
+    Set run = ..DispatchUngated(id)
+    Do ##class(sentai.dispatch.WaveDispatcher).StoreRunCredential(run.guid, "LOCAL-A")
+    Set pairs = {}
+    Do pairs.%Set(..Name, {"accessToken": "TGT-A", "refreshToken": "TGT-R", "sub": "remote-op", "baseUrl": (..#BASE)})
+    Do ##class(sentai.dispatch.WaveDispatcher).StoreTargetCredentials(run.guid, pairs)
+    Do ##class(sentai.dispatch.WaveDispatcher).StartStep(run, "01")
+    Do ##class(sentai.dispatch.WaveDispatcher).StartStep(run, "03")
+
+    Set text = "ERROR #6059: Unable to open TCP/IP socket to server remote.example:52773"
+    Do ##class(sentai.unittest.AdminApiDouble).ScriptDown(..#BASE, text)
+    Do ##class(sentai.dispatch.WaveDispatcher).PollInFlightSteps(run, "LOCAL-A")
+    Do ##class(sentai.dispatch.WaveDispatcher).SweepTimeouts(run)
+    Do $$$AssertEquals(..StepRun(run, "03").state, "running", "within its timeout")
+
+    // Past the timeout.
+    Set sr = ##class(sentai.model.StepRun).OpenForRunStep(run.%Id(), "03", 4)
+    Set sr.timeStarted = $ZDATETIME($SYSTEM.SQL.Functions.DATEADD("mi", -2, $ZDATETIME($HOROLOG, 3)), 3)
+    Do sr.%Save()
+    Do ##class(sentai.dispatch.WaveDispatcher).SweepTimeouts(run)
+    Do $$$AssertEquals(..StepRun(run, "03").state, "failed")
+    Do $$$AssertEquals(..StepRun(run, "03").failureReason, "timed out after 1 min; last transport error: "_text)
+    Do $$$AssertEquals(..StepRun(run, "01").state, "running", "the local step is untouched")
+}
+
+/// A 4xx from the target stays permanent, as for local steps, with its text.
+Method TestTargetRefusalWhilePollingIsPermanent()
+{
+    Set run = ..DemoRun()
+    Do ##class(sentai.dispatch.WaveDispatcher).StartStep(run, "03")
+    Do ##class(sentai.unittest.AdminApiDouble).Script(..#BASE_"/api/admin/v1/async-result?id=R1", "GET", 401, "", {"status": {"errors": [], "summary": "ERROR #822: Access Denied"}}.%ToJSON())
+    Do ##class(sentai.dispatch.WaveDispatcher).PollInFlightSteps(run, "LOCAL-A")
+    Do $$$AssertEquals(..StepRun(run, "03").state, "failed")
+    Do $$$AssertTrue(..StepRun(run, "03").failureReason [ "HTTP 401: ERROR #822: Access Denied", ..StepRun(run, "03").failureReason)
+}
+
 }

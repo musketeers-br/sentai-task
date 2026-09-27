@@ -281,7 +281,7 @@ ClassMethod RenewTargetCredentialsIfDue(runGuid As %String)
     For {
         Set name = $O(^IRIS.Temp.sentaiTargetCred(runGuid, name))
         Quit:(name = "")
-        Continue:(name = "lastError")
+        Continue:(name = "%lastError")
         Set entry = ^IRIS.Temp.sentaiTargetCred(runGuid, name)
         Continue:((..NowSeconds() - $LG(entry, 3)) < ..#RENEWAFTERSECONDS)
         Set body = ##class(sentai.dispatch.AdminApiClient).Post("/api/admin/refresh", "", {"refresh_token": ($LG(entry, 2))}, .httpStatus, .location, $LG(entry, 5), .transportError)
@@ -459,10 +459,13 @@ ClassMethod SweepTimeouts(run As sentai.model.Run) As %Status
     Set flowId = run.flowGetObjectId()
     Set now = $H
     Set rs = ##class(%SQL.Statement).%New()
-    Do rs.%Prepare("SELECT sr.guid, sr.stepId, sr.timeStarted, s.type, s.timeoutMinutes FROM sentai_model.StepRun sr, sentai_model.Step s WHERE sr.run = ? AND sr.state = 'running' AND s.flow = ? AND s.id = sr.stepId")
+    Do rs.%Prepare("SELECT sr.guid, sr.stepId, sr.timeStarted, sr.targetBaseUrl, s.type, s.timeoutMinutes FROM sentai_model.StepRun sr, sentai_model.Step s WHERE sr.run = ? AND sr.state = 'running' AND s.flow = ? AND s.id = sr.stepId")
     Set result = rs.%Execute(run.%Id(), flowId)
     While result.%Next() {
-        Continue:(##class(sentai.registry.StepType).GetExecutor(result.%Get("type")) '= "in-process")
+        // In-process steps (spec 005) and remote steps (spec 008 FR-016): a local platform job
+        // keeps today's behaviour, followed until the platform ends it.
+        Set remote = (result.%Get("targetBaseUrl") '= "")
+        Continue:('remote && (##class(sentai.registry.StepType).GetExecutor(result.%Get("type")) '= "in-process"))
         Set started = result.%Get("timeStarted")
         Continue:(started = "")
         Set minutes = +result.%Get("timeoutMinutes")
@@ -470,7 +473,8 @@ ClassMethod SweepTimeouts(run As sentai.model.Run) As %Status
         Set h = $ZDATETIMEH(started, 3)
         Set elapsed = ((+now - +h) * 86400) + ($P(now, ",", 2) - $P(h, ",", 2))
         Continue:(elapsed <= (minutes * 60))
-        Do ##class(sentai.model.StepRun).TransitionLocked(result.%Get("guid"), "failed", "timed out after "_minutes_" min")
+        Set lastError = $S(remote:$G(^IRIS.Temp.sentaiTargetCred(run.guid, "%lastError", result.%Get("guid"))), 1:"")
+        Do ##class(sentai.model.StepRun).TransitionLocked(result.%Get("guid"), "failed", "timed out after "_minutes_" min"_$S(lastError '= "":"; last transport error: "_lastError, 1:""))
     }
     Quit $$$OK
 }
@@ -526,8 +530,13 @@ ClassMethod PollInFlightSteps(run As sentai.model.Run, bearerToken As %String) A
         Set base = stepRun.targetBaseUrl
         Set token = $S(base '= "":..TargetToken(run.guid, stepRun.executedOn), 1:bearerToken)
         Set body = ##class(sentai.dispatch.AdminApiClient).Get(stepRun.adminJobId, token, .httpStatus, .location, base, .transportError)
-        // No answer: keep polling (a target down mid-run is bounded by the step's timeout, T010).
-        Continue:(transportError '= "")
+        // No answer: keep polling, remembering why; SweepTimeouts bounds it by the step's
+        // timeout and reports this text (spec 008 FR-016, research R-12).
+        If (transportError '= "") {
+            Set ^IRIS.Temp.sentaiTargetCred(run.guid, "%lastError", stepRun.guid) = transportError
+            Continue
+        }
+        Kill ^IRIS.Temp.sentaiTargetCred(run.guid, "%lastError", stepRun.guid)
         // A 4xx is permanent for this run (e.g. 401 once the 60 s credential expired, E-1):
         // fail the step with the status recorded instead of polling a job we can no longer
         // read, which left the step — and the run — "running" forever. 5xx/network: retry.
