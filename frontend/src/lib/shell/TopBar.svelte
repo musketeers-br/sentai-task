@@ -43,6 +43,9 @@
 		<button type="button" aria-current={screen === 'catalog' ? 'page' : undefined} onclick={() => onnavigate('catalog')}>
 			Task catalog
 		</button>
+		<button type="button" aria-current={screen === 'targets' ? 'page' : undefined} onclick={() => onnavigate('targets')}>
+			Targets
+		</button>
 	</nav>
 
 	{#if screen === 'flows'}

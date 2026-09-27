@@ -1,3 +1,4 @@
+import type { TargetView } from '$lib/targets/targets';
 import type { Edge, Node } from '@xyflow/svelte';
 import { api, describeError, type ScheduleResult } from '$lib/api/client';
 import { session } from '$lib/api/session.svelte';
@@ -42,6 +43,8 @@ function toFlowEdge({ source, target }: EdgeRef): Edge {
 export class FlowEditor {
 	registry = $state.raw<StepTypeInfo[]>([]);
 	wqmCategories = $state.raw<string[]>([]);
+	/** Spec 009: registered target servers, as GET /targets returns them (for *Run on*). */
+	targets = $state.raw<TargetView[]>([]);
 	nodes = $state.raw<StepFlowNode[]>([]);
 	edges = $state.raw<Edge[]>([]);
 

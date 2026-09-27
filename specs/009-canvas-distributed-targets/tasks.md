@@ -23,7 +23,7 @@ storage/cookies/URL; components never call `fetch` (only `client.ts`/`session.sv
 
 ## Phase 2: US1 — Targets screen (P1) 🎯 MVP
 
-- [ ] T002 [US1] `TargetsScreen`, tab and route (D-1, D-7). **e2e first** in
+- [X] T002 [US1] `TargetsScreen`, tab and route (D-1, D-7). **e2e first** in
   `tests/us15-targets.spec.ts`: add a uniquely named target (`http://iris-target:52773`), list equals
   `GET /targets`; an insecure address is refused verbatim (allowance cleared for that call is not
   possible from the browser, so use an invalid address → `INVALID_TARGET` verbatim); sign in with the

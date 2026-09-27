@@ -97,13 +97,21 @@ async function request<T>(
 		return { ok: false, error: { kind: 'network', message: (e as Error).message } };
 	}
 
-	if (res.status === 401) {
+	const text = await res.text();
+	let json: Record<string, unknown> = {};
+	try {
+		json = text ? (JSON.parse(text) as Record<string, unknown>) : {};
+	} catch {
+		json = {};
+	}
+
+	// A 401 is this session's expiry — unless the body says it is a target server's answer, which
+	// spec 008 passes through with the target's own `httpStatus` (a wrong target password must never
+	// sign the operator out of the canvas; spec 009 us15 finding).
+	if (res.status === 401 && json.httpStatus === undefined) {
 		session.expire();
 		return { ok: false, error: { kind: 'unauthorized' } };
 	}
-
-	const text = await res.text();
-	const json = text ? (JSON.parse(text) as Record<string, unknown>) : {};
 
 	if (res.ok) return { ok: true, value: json as T };
 	if (Array.isArray(json.errors)) {

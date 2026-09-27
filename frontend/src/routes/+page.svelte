@@ -5,6 +5,7 @@
 	import { SvelteFlowProvider } from '@xyflow/svelte';
 	import { api, describeError } from '$lib/api/client';
 	import CatalogScreen from '$lib/catalog/CatalogScreen.svelte';
+	import TargetsScreen from '$lib/targets/TargetsScreen.svelte';
 	import { session } from '$lib/api/session.svelte';
 	import FlowCanvas from '$lib/canvas/FlowCanvas.svelte';
 	import type { FlowDocument } from '$lib/flow/document';
@@ -50,6 +51,8 @@
 		// Suggestions only — typing any category name is still allowed and validated server-side.
 		const categories = await api.wqmCategoryNames();
 		if (categories.ok) editor.wqmCategories = categories.value;
+		// Spec 009: the targets *Run on* offers; an unreadable list offers none.
+		await loadTargets();
 
 		const params = new URLSearchParams(location.search);
 		const flowId = params.get('flow');
@@ -78,6 +81,20 @@
 	// edits survive a trip to the catalog.
 	function navigate(to: Screen) {
 		if (to !== screen) void goto(urlForScreen(page.url, to), { keepFocus: true, noScroll: true });
+	}
+
+	/** The Targets screen's selection is addressable (`target=<name>`), like the catalog's. */
+	function selectTarget(name: string | null) {
+		const url = new URL(page.url);
+		if (name === null) url.searchParams.delete('target');
+		else url.searchParams.set('target', name);
+		void goto(url, { keepFocus: true, noScroll: true });
+	}
+
+	/** Spec 009: *Run on* offers the registered targets; re-read after the Targets screen changes. */
+	async function loadTargets() {
+		const targets = await api.listTargets();
+		if (targets.ok) editor.targets = targets.value;
 	}
 
 	/** The catalog detail is addressable too (`task=<id>`), so back closes it. */
@@ -162,7 +179,25 @@
 <svelte:window {onkeydown} />
 <svelte:head><title>{editor.name} — SentaiTask</title></svelte:head>
 
-{#if phase.name === 'ready' && screen === 'catalog'}
+{#if phase.name === 'ready' && screen === 'targets'}
+	<div class="app">
+		<TopBar
+			{editor}
+			{screen}
+			onnavigate={navigate}
+			user={session.user}
+			onsave={save}
+			onvalidate={validate}
+			onrun={() => (dispatchOpen = true)}
+			onschedule={() => (scheduling = true)}
+			onsignout={signOut}
+		/>
+		<TargetsScreen targetParam={page.url.searchParams.get('target')} onselect={selectTarget} onchanged={loadTargets} />
+	</div>
+	{#if session.status === 'expired'}
+		<div class="overlay"><SignIn expired /></div>
+	{/if}
+{:else if phase.name === 'ready' && screen === 'catalog'}
 	<div class="app">
 		<TopBar
 			{editor}
