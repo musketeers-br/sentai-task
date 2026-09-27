@@ -310,6 +310,13 @@ ClassMethod RenewTargetCredentialsIfDue(runGuid As %String)
 /// background job can call the administrative API on the operator's behalf.
 ClassMethod StartBackgroundLoop(runGuid As %String, bearerToken As %String) As %Status
 {
+    // Spec 003 T078 (F-5): under the unit-test double no real job starts — one outlived its test
+    // and called the real management API once the double was reset. Tests drive the loop's parts
+    // (StartStep, PollInFlightSteps, SweepTimeouts…) themselves. Same switch as AdminApiClient.
+    If $G(^sentaiTestDouble("enabled")) {
+        Set ^sentaiTestDouble("backgroundLoop", runGuid) = 1
+        Quit $$$OK
+    }
     JOB ..RunLoop(runGuid, bearerToken)
     Return $$$OK
 }
