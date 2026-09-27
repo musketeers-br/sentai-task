@@ -1,9 +1,9 @@
 {
   "evidence_id": "us4-suspend",
-  "captured_at": "2026-09-27T04:33:31.881Z",
+  "captured_at": "2026-09-27T04:42:17.710Z",
   "request": {
     "method": "POST",
-    "path": "/csp/sentai/api/v1/catalog/tasks/1036/suspend",
+    "path": "/csp/sentai/api/v1/catalog/tasks/1045/suspend",
     "bodies": [
       {
         "suspended": true
@@ -20,11 +20,11 @@
     ],
     "bodies": [
       {
-        "taskId": 1036,
-        "name": "SentaiTask: 172#01",
+        "taskId": 1045,
+        "name": "SentaiTask: 191#01",
         "namespace": "IRISAPP",
         "origin": {
-          "flowId": "172",
+          "flowId": "191",
           "stepId": "01",
           "flowExists": true
         },
@@ -43,11 +43,11 @@
         "isDestructive": false
       },
       {
-        "taskId": 1036,
-        "name": "SentaiTask: 172#01",
+        "taskId": 1045,
+        "name": "SentaiTask: 191#01",
         "namespace": "IRISAPP",
         "origin": {
-          "flowId": "172",
+          "flowId": "191",
           "stepId": "01",
           "flowExists": true
         },
@@ -68,7 +68,7 @@
     ]
   },
   "notes": [
-    "Task 1036 was created by scheduling test flow 172; it and the flow were deleted afterwards.",
+    "Task 1045 was created by scheduling test flow 191; it and the flow were deleted afterwards.",
     "Each button was disabled while its call was pending; detail and row then showed the state in the answer, and a fresh GET agreed."
   ]
 }

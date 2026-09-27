@@ -1,18 +1,18 @@
 {
   "evidence_id": "us2-origin",
-  "captured_at": "2026-09-27T04:39:15.150Z",
+  "captured_at": "2026-09-27T04:48:32.569Z",
   "request": {
     "method": "GET",
-    "path": "/csp/sentai/api/v1/catalog/tasks/1042"
+    "path": "/csp/sentai/api/v1/catalog/tasks/1051"
   },
   "response": {
     "status": 200,
     "body": {
-      "taskId": 1042,
-      "name": "SentaiTask: 184#01",
+      "taskId": 1051,
+      "name": "SentaiTask: 203#01",
       "namespace": "IRISAPP",
       "origin": {
-        "flowId": "184",
+        "flowId": "203",
         "stepId": "01",
         "flowExists": true
       },
@@ -33,8 +33,8 @@
     }
   },
   "notes": [
-    "Flow 184 (3 integrity checks) scheduled; the catalog search \"SentaiTask: 184#\" showed exactly 3 rows marked flow 184 · step 01/02/03.",
-    "Detail shown for task 1042, field by field: {\"name\":\"SentaiTask: 184#01\",\"taskId\":\"1042\",\"namespace\":\"IRISAPP\",\"className\":\"sentai.dispatch.ScheduledFlowTask\",\"runAsUser\":\"_SYSTEM\",\"timePeriod\":\"Daily\",\"nextRun\":\"2026-09-28 00:00:00\",\"lastStarted\":\"—\",\"lastFinished\":\"—\",\"status\":\"OK (1)\",\"lastError\":\"—\",\"suspended\":\"no\",\"destructive\":\"not destructive\",\"origin\":\"flow 184 · step 01\"}",
+    "Flow 203 (3 integrity checks) scheduled; the catalog search \"SentaiTask: 203#\" showed exactly 3 rows marked flow 203 · step 01/02/03.",
+    "Detail shown for task 1051, field by field: {\"name\":\"SentaiTask: 203#01\",\"taskId\":\"1051\",\"namespace\":\"IRISAPP\",\"className\":\"sentai.dispatch.ScheduledFlowTask\",\"runAsUser\":\"_SYSTEM\",\"timePeriod\":\"Daily\",\"nextRun\":\"2026-09-28 00:00:00\",\"lastStarted\":\"—\",\"lastFinished\":\"—\",\"status\":\"OK (1)\",\"lastError\":\"—\",\"suspended\":\"no\",\"destructive\":\"not destructive\",\"origin\":\"flow 203 · step 01\"}",
     "Row click, then the origin link, opened the flow on the canvas (SC-002: 2 clicks).",
     "After the flow was deleted, all 3 rows read \"flow not found\" with no link. The 3 native tasks and the flow were deleted afterwards."
   ]

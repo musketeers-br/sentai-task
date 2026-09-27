@@ -494,6 +494,9 @@ confirmation, and the legacy `custom` class read-only.
 - [ ] T011 Theming parity and evidence (plan row 9). The Part A half depends on T006; the Part B
   half depends on T010.
 
+  **Part A half done 2026-09-27**: `us13` (catalog pair), SC-003 timing in `us9`, README and
+  `evidence/README.md`. The Part B half (parameter-form pair) is open.
+
   **e2e**, in `frontend/tests/us13-management-theming.spec.ts`. One test:
   - paired 1440×900 dark/light screenshots of the catalog, with a destructive row selected, and
     of the parameter form with one field error;

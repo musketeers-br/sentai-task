@@ -370,7 +370,7 @@
 	}
 
 	.none {
-		color: var(--color-text-faint);
+		color: var(--color-text-muted);
 	}
 
 	a {

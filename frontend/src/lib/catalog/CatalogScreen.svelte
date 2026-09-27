@@ -157,13 +157,13 @@
 				<thead>
 					<tr>
 						<th scope="col">Name</th>
+						<th scope="col"><span class="visually-hidden">Marks</span></th>
 						<th scope="col">Namespace</th>
 						<th scope="col">Class</th>
 						<th scope="col">Next run</th>
 						<th scope="col">Last run</th>
 						<th scope="col">Status</th>
 						<th scope="col">Run as</th>
-						<th scope="col"><span class="visually-hidden">Marks</span></th>
 					</tr>
 				</thead>
 				<tbody>
@@ -186,12 +186,6 @@
 									}}>{task.name}</button
 								>
 							</td>
-							<td data-col="namespace" class="mono">{task.namespace}</td>
-							<td data-col="class" class="mono"><CatalogValue value={task.className} /></td>
-							<td data-col="nextRun" class="mono"><CatalogValue value={task.nextRun} /></td>
-							<td data-col="lastRun" class="mono"><CatalogValue value={task.lastFinished} /></td>
-							<td data-col="status"><CatalogValue value={task.status} format={statusLabel} /></td>
-							<td data-col="runAsUser" class="mono"><CatalogValue value={task.runAsUser} /></td>
 							<td data-col="marks"><div class="marks">
 								{#if task.suspended.kind === 'value' && task.suspended.value}
 									<span class="mark" data-testid="suspended-mark"><StateShape state="paused" size={11} />SUSPENDED</span>
@@ -213,6 +207,12 @@
 									<span class="mark sentai" data-testid="origin-mark" title={'title' in origin ? origin.title : undefined}>SentaiTask · {origin.label}</span>
 								{/if}
 							</div></td>
+							<td data-col="namespace" class="mono">{task.namespace}</td>
+							<td data-col="class" class="mono"><CatalogValue value={task.className} /></td>
+							<td data-col="nextRun" class="mono"><CatalogValue value={task.nextRun} /></td>
+							<td data-col="lastRun" class="mono"><CatalogValue value={task.lastFinished} /></td>
+							<td data-col="status"><CatalogValue value={task.status} format={statusLabel} /></td>
+							<td data-col="runAsUser" class="mono"><CatalogValue value={task.runAsUser} /></td>
 						</tr>
 					{/each}
 				</tbody>
@@ -438,8 +438,15 @@
 
 	table {
 		width: 100%;
+		/* Never squeeze the marks column: with the detail open, the list scrolls sideways. */
+		min-width: max-content;
 		border-collapse: collapse;
 		font-size: var(--size-body);
+	}
+
+	td[data-col='marks'] {
+		max-width: none;
+		overflow: visible;
 	}
 
 	th {
