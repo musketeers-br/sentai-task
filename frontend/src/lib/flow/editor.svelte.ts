@@ -1,7 +1,8 @@
 import { targetsUsedBy, type TargetView } from '$lib/targets/targets';
 import { refusalText } from '$lib/catalog/catalog';
 import type { Edge, Node } from '@xyflow/svelte';
-import { api, describeError, type ScheduleResult } from '$lib/api/client';
+import { api, describeError, type ApiResult, type ScheduleResult } from '$lib/api/client';
+import { defaultFlowName } from '$lib/flows/list';
 import { session } from '$lib/api/session.svelte';
 import { checkConnection, type EdgeRef } from './graph';
 import {
@@ -51,7 +52,9 @@ export class FlowEditor {
 
 	id = $state<string | null>(null);
 	// Flow names are unique per instance (409 on a clash), so a fresh draft gets a dated name.
-	name = $state(`Untitled flow ${new Date().toISOString().slice(0, 16).replace('T', ' ')}`);
+	name = $state(defaultFlowName(new Date(), []));
+	/** The name the platform last confirmed; null for a draft never saved (spec 010 FR-005). */
+	savedName = $state<string | null>(null);
 	revision = $state(0);
 	savedAt = $state<string | null>(null);
 	defaultCategory = $state('Default');
@@ -61,6 +64,8 @@ export class FlowEditor {
 	validating = $state(false);
 	zoom = $state(1);
 	notice = $state<Notice | null>(null);
+	/** A 409 on *Save flow*: the status bar adds "Use Save as… to keep your version." (spec 010). */
+	conflictHint = $state(false);
 	/** Last report from POST /validate; cleared by any `graph` change. */
 	report = $state.raw<ValidationReport | null>(null);
 
@@ -71,6 +76,8 @@ export class FlowEditor {
 		const selected = this.nodes.filter((n) => n.selected);
 		return selected.length === 1 ? selected[0] : null;
 	});
+	/** Spec 010 FR-005: saving now would rename the open flow rather than create a copy. */
+	renaming = $derived(this.id !== null && this.savedName !== null && this.name.trim() !== this.savedName);
 	/** FR-010: only errors block scheduling — and only errors we actually know about. */
 	scheduleBlocked = $derived((this.report?.errors.length ?? 0) > 0);
 
@@ -90,6 +97,8 @@ export class FlowEditor {
 		);
 		this.id = doc.id;
 		this.name = doc.name;
+		this.savedName = doc.id === null ? null : doc.name;
+		this.conflictHint = false;
 		this.revision = doc.revision;
 		this.savedAt = doc.savedAt;
 		this.defaultCategory = doc.defaultCategory;
@@ -161,14 +170,49 @@ export class FlowEditor {
 
 		if (!result.ok) {
 			this.notice = { tone: 'error', text: describeError(result.error) };
+			this.conflictHint = result.error.kind === 'problem' && result.error.status === 409 && this.id !== null;
 			return false;
 		}
 		this.id = result.value.id;
 		this.revision = result.value.revision;
 		this.savedAt = result.value.savedAt;
+		this.savedName = result.value.name;
 		this.dirty = false;
 		this.notice = null;
+		this.conflictHint = false;
 		return true;
+	}
+
+	/**
+	 * Spec 010 FR-004: a **new** flow from this canvas — unsaved edits included — under `name`.
+	 * The open flow is never PUT, so it keeps its last saved revision. On success the editor holds
+	 * the new flow; on a refusal nothing changes and the platform's error is returned to the dialog.
+	 */
+	async saveAs(name: string): Promise<ApiResult<FlowDocument>> {
+		const definition = toDefinition({ ...this.toDocument(), id: null, name });
+		this.saving = true;
+		const result = await api.createFlow(definition);
+		this.saving = false;
+		if (result.ok) {
+			this.load(result.value);
+			this.notice = null;
+		}
+		return result;
+	}
+
+	/** Spec 010 FR-007: an empty draft with a fresh name; the caller drops the flow from the address. */
+	reset(name: string): void {
+		this.nodes = [];
+		this.edges = [];
+		this.id = null;
+		this.name = name;
+		this.savedName = null;
+		this.revision = 0;
+		this.savedAt = null;
+		this.report = null;
+		this.notice = null;
+		this.conflictHint = false;
+		this.dirty = false;
 	}
 
 	/** Validation reads the persisted flow, so unsaved edits are saved first (FR-019). */

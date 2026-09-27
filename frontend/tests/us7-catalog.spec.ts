@@ -10,7 +10,7 @@ import {
 } from '../src/lib/catalog/catalog';
 import { apiTask, catalog, detail, expectDetail, valueText as cellText } from './catalog-support';
 import { createOperatorWithoutTaskPrivilege, deleteOperator } from './iris';
-import { envelope, seedFlow, signIn, signInAt, submitSignIn, token, v1Flow } from './support';
+import { envelope, seedFlow, signIn, signInAt, token, v1Flow } from './support';
 
 const EVIDENCE = '../specs/007-canvas-management-screens/evidence';
 
@@ -54,13 +54,13 @@ test('us7-catalog navigation — reachable from the top bar, addressable, back k
 	await expect(page.getByLabel('Flow name')).toHaveValue(edited);
 
 	// A deep link opens the catalog right after sign-in, and a reload keeps it there
-	// (tokens are in memory only, so the reload asks for the sign-in again).
+	// (a reload keeps the tab's sign-in — spec 010 US3).
 	const fresh = await page.context().newPage();
 	await signInAt(fresh, '?view=catalog');
 	await expect(catalog(fresh)).toBeVisible();
 	await fresh.reload();
-	await submitSignIn(fresh);
 	await expect(catalog(fresh)).toBeVisible();
+	await expect(fresh.getByLabel('User')).toBeHidden();
 	await expect(fresh).toHaveURL(/[?&]view=catalog/);
 	await fresh.close();
 });
@@ -139,8 +139,9 @@ test('us7-catalog values — every row and value equals the API (SC-001); a refu
 	deep.on('request', (r) => {
 		if (/\/catalog\/tasks\/[^/?]+/.test(r.url())) itemReads.push(r.url());
 	});
+	// Same tab, new address: the tab's sign-in is kept (spec 010 US3), so no sign-in form.
 	await deep.goto('index.html?view=catalog&task=abc');
-	await submitSignIn(deep);
+	await expect(deep.getByLabel('User')).toBeHidden();
 	await expect(detail(deep)).toContainText('Task not found');
 	expect(itemReads).toEqual([]);
 	await deep.close();

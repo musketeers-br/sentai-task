@@ -6,18 +6,51 @@ export const PASSWORD = process.env.IRIS_PASSWORD ?? 'SYS';
 const ENTRY = process.env.APP_ENTRY ?? 'index.html';
 export const EVIDENCE_DIR = '../specs/002-canvas-ui/evidence';
 
-export async function signIn(page: Page, query = ''): Promise<void> {
-	await signInAt(page, query);
+/**
+ * Spec 010: the getting-started guide opens after a sign-in until it is dismissed in the browser.
+ * `'dismissed'` (the default) stores that choice before the page loads, so the guide never covers
+ * the canvas in specs that are not about it; only us21 signs in with `'fresh'`.
+ */
+export interface SignInOptions {
+	guide?: 'dismissed' | 'fresh';
+}
+
+export async function signIn(page: Page, query = '', options: SignInOptions = {}): Promise<void> {
+	await signInAt(page, query, USER, PASSWORD, options);
 	await expect(page.getByRole('heading', { name: 'STEP TYPES' })).toBeVisible();
 }
 
 /** Signs in on the page `query` addresses, without assuming it opens on the flow editor. */
-export async function signInAt(page: Page, query = '', user = USER, password = PASSWORD): Promise<void> {
+export async function signInAt(
+	page: Page,
+	query = '',
+	user = USER,
+	password = PASSWORD,
+	options: SignInOptions = {}
+): Promise<void> {
+	if ((options.guide ?? 'dismissed') === 'dismissed') await dismissGuide(page);
 	await page.goto(`${ENTRY}${query}`);
 	await submitSignIn(page, user, password);
 }
 
-/** Fills the canvas sign-in form already on screen (after a reload, tokens are in memory only). */
+/** Stores "Don't show this again" before any document of `page` loads (idempotent per page). */
+const guideSeeded = new WeakSet<Page>();
+export async function dismissGuide(page: Page): Promise<void> {
+	if (guideSeeded.has(page)) return;
+	guideSeeded.add(page);
+	await page.addInitScript(() => {
+		try {
+			localStorage.setItem('sentai.guide.dismissed', '1');
+		} catch {
+			// A page that refuses storage simply shows the guide.
+		}
+	});
+}
+
+/** The app's entry, for tests that navigate without signing in (reloads, fresh pages). */
+export const entry = (query = '') => `${ENTRY}${query}`;
+
+/** Fills the canvas sign-in form already on screen. */
 export async function submitSignIn(page: Page, user = USER, password = PASSWORD): Promise<void> {
 	await page.getByLabel('User').fill(user);
 	await page.getByLabel('Password').fill(password);

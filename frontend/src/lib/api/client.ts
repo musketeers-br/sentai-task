@@ -23,8 +23,10 @@ import {
 import type { ValidationReport } from '$lib/flow/report';
 import { fromWireRun, type RunView } from '$lib/run/run';
 import { session } from './session.svelte';
+import type { FlowSummaryView } from '$lib/flows/list';
 import {
 	fromWireFlow,
+	fromWireFlowSummary,
 	fromWireStepTypes,
 	type WireFlow,
 	type WireFlowSummary,
@@ -139,8 +141,9 @@ export const api = {
 		return map(await request<WireStepType[]>('GET', '/catalog/step-types'), fromWireStepTypes);
 	},
 
-	async listFlows(): Promise<ApiResult<WireFlowSummary[]>> {
-		return request<WireFlowSummary[]>('GET', '/flows');
+	/** Spec 010 FR-002: every flow the platform returns for the operator; never cached. */
+	async listFlows(): Promise<ApiResult<FlowSummaryView[]>> {
+		return map(await request<WireFlowSummary[]>('GET', '/flows'), (list) => list.map(fromWireFlowSummary));
 	},
 
 	async getFlow(id: string): Promise<ApiResult<FlowDocument>> {

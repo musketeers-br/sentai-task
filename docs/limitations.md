@@ -76,5 +76,21 @@ SentaiTask v1 only promises what was proven on IRIS 2026.2 (spec `004-backend-ha
 - **Task catalog.** The list reads each task (two platform calls per task): 151 tasks take about
   0.4 s on the dev container. A task deleted between the list and its reads shows up with
   `unavailable` entries instead of values.
+- **Sign-in across reloads (spec 010).** Only the refresh token is kept, per browser tab, in
+  `sessionStorage` (with a flag saying whether a page of the tab is using it). It ends when the tab
+  closes and is erased at sign-out and whenever renewing it fails. No password, access token, user
+  name, role or permission is stored. A reload redeems it for up to 900 s after the last renewal
+  (the platform's refresh lifetime); after that, or after an IRIS restart, the canvas says
+  "Your session ended — sign in again." and, once signed in, returns to the screen, flow and run
+  in the address. A **duplicated tab** starts with a copy of the original's token: it never uses
+  the copy (replaying a rotated token makes the platform revoke the original's sign-in) and asks
+  for its own sign-in. **After a browser crash, a killed renderer or a browser quit**, the tab has
+  no chance to hand its token over, so the restored tab asks to sign in again — the safe failure.
+  The separate sign-in asked at *Run now* is unchanged and never kept.
+- **Example flow (spec 010).** *Example: storage health check* runs `storage-headroom-check` and
+  `db-size-report` in parallel, read-only. `storage-headroom-check` fails by design when any
+  database or journal directory has less than 10% free; that run is a real finding, not a defect.
+  The example is identified by its name: renaming it and choosing *Open example flow* again creates
+  a new one under the well-known name.
 
 ---

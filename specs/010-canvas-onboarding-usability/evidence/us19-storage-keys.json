@@ -1,0 +1,18 @@
+{
+  "captured_at": "2026-09-27T23:05:06.444Z",
+  "sessionStorage": [
+    "sentai.signin"
+  ],
+  "sessionStorage[\"sentai.signin\"] keys": [
+    "live",
+    "refreshToken",
+    "v"
+  ],
+  "localStorage": [
+    "sentai.guide.dismissed",
+    "sentai.theme"
+  ],
+  "notes": [
+    "Key names only. No value contained the password, the access token, the user name, a role or a permission."
+  ]
+}

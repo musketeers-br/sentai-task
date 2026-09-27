@@ -65,3 +65,57 @@ export function deleteFlow(flowId: string): void {
 	const result = /RESULT:(.*)/.exec(out)?.[1]?.trim();
 	if (result !== 'OK') throw new Error(`could not delete flow ${flowId}: ${result ?? 'no answer'}`);
 }
+
+// --- spec 010: deleting test flows that have runs (T038, T061) --------------------------------
+
+/** The dev compose container; destructive test setup runs nowhere else. */
+const DEV_CONTAINER = 'sentai-task-iris-1';
+export const EXAMPLE_FLOW_NAME = 'Example: storage health check';
+/** Names this feature's tests and quickstart create; nothing else may be deleted. */
+const TEST_FLOW_PREFIXES = ['us17-', 'us18-', 'us19-', 'us20-', 'us21-', 'perf-', 'QS ', 'plan010-probe-'];
+
+/**
+ * Throws `refused: …` unless this is the local dev instance and `expectedName` is a flow this
+ * feature's tests may delete. Checked before any IRIS session is opened.
+ */
+export function assertDevInstance(expectedName: string): void {
+	const base = new URL(process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:52773/csp/sentai/');
+	if (!['localhost', '127.0.0.1'].includes(base.hostname)) throw new Error(`refused: base URL ${base.host} is not the local dev instance`);
+	const container = process.env.SENTAI_CONTAINER ?? DEV_CONTAINER;
+	if (container !== DEV_CONTAINER) throw new Error(`refused: container ${container} is not ${DEV_CONTAINER}`);
+	if (expectedName !== EXAMPLE_FLOW_NAME && !TEST_FLOW_PREFIXES.some((p) => expectedName.startsWith(p))) {
+		throw new Error(`refused: "${expectedName}" is not a test flow name`);
+	}
+}
+
+/**
+ * Deletes a flow **and its runs** (LogEntry, StepRun, Run, then Edge, Join, Step, Flow). Guarded
+ * twice: `assertDevInstance` here, and in IRIS the namespace must be IRISAPP and the flow's name
+ * must equal `expectedName`, or it prints REFUSED and deletes nothing.
+ */
+export function deleteFlowWithRuns(flowId: string, expectedName: string): void {
+	assertDevInstance(expectedName);
+	const id = Number(flowId);
+	if (!Number.isInteger(id) || id <= 0) throw new Error(`refused: flow id ${flowId} is not a number`);
+	const name = expectedName.replaceAll('"', '""');
+	const sql = (statement: string) => `do ##class(%SQL.Statement).%ExecDirect(,"${statement}",${id})`;
+	const deletes = [
+		sql('DELETE FROM sentai_model.LogEntry WHERE run IN (SELECT ID FROM sentai_model.Run WHERE flow = ?)'),
+		sql('DELETE FROM sentai_model.StepRun WHERE run IN (SELECT ID FROM sentai_model.Run WHERE flow = ?)'),
+		sql('DELETE FROM sentai_model.Run WHERE flow = ?'),
+		sql('DELETE FROM sentai_model.Edge WHERE flow = ?'),
+		sql('DELETE FROM sentai_model.Join WHERE flow = ?'),
+		sql('DELETE FROM sentai_model.Step WHERE flow = ?'),
+		`set sc=##class(sentai.model.Flow).%DeleteId(${id})`,
+		`write "RESULT:",$select(sc=1:"OK",1:$system.Status.GetErrorText(sc)),!`
+	].join(' ');
+	// One terminal line: a `quit` on its own line would not stop the lines after it.
+	const script =
+		`if $namespace'="IRISAPP" { write "RESULT:REFUSED namespace ",$namespace,! } ` +
+		`else { set f=##class(sentai.model.Flow).%OpenId(${id}) ` +
+		`if '$isobject(f) { write "RESULT:REFUSED no flow ${id}",! } ` +
+		`elseif f.name'="${name}" { write "RESULT:REFUSED name mismatch",! } ` +
+		`else { kill f ${deletes} } }`;
+	const result = /RESULT:(.*)/.exec(irisSys(script, 'IRISAPP'))?.[1]?.trim();
+	if (result !== 'OK') throw new Error(result?.startsWith('REFUSED') ? `refused: ${result}` : `could not delete flow ${flowId}: ${result ?? 'no answer'}`);
+}

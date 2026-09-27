@@ -2,7 +2,9 @@
 	import Mark from './Mark.svelte';
 	import { session } from '$lib/api/session.svelte';
 
-	let { expired = false }: { expired?: boolean } = $props();
+	// `notice` (spec 010 FR-012/FR-013): why a load shows this form — the kept sign-in ended, or
+	// this tab is a copy of another and needs its own sign-in.
+	let { expired = false, notice = null }: { expired?: boolean; notice?: string | null } = $props();
 
 	let user = $state(session.user ?? '');
 	let password = $state('');
@@ -23,6 +25,7 @@
 <main class="sign-in">
 	<form class="panel" {onsubmit}>
 		<Mark />
+		{#if notice}<p class="notice" role="status">{notice}</p>{/if}
 		<p class="lead">
 			{expired
 				? 'Your session could not be renewed. Sign in again — your canvas is kept.'
@@ -59,6 +62,17 @@
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius-panel);
 		box-shadow: var(--color-card-shadow);
+	}
+
+	.notice {
+		margin: 12px 0 0;
+		padding: 8px 10px;
+		font-size: var(--size-body);
+		line-height: 1.5;
+		color: var(--color-text);
+		background: var(--color-surface);
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-control);
 	}
 
 	.lead {
