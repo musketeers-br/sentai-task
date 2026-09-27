@@ -13,8 +13,7 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain — Q1 (target credential path) and Q2 (who manages
-      targets) are open
+- [x] No [NEEDS CLARIFICATION] markers remain
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
@@ -39,3 +38,5 @@
   go to `contracts/` in the plan.
 - Added beyond the input: a per-type "remote-capable" flag in the step-type catalog (FR-008), so
   spec 009 can filter "Run on" without re-implementing the rule in the browser.
+- Resolved 2026-09-27: Q1 → A (sign-in to a target through the primary, nothing kept; FR-022),
+  Q2 → A (any signed-in operator manages the registry; FR-023). See spec Clarifications.

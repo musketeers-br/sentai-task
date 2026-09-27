@@ -39,9 +39,14 @@ the operator's own credential for it.
 ### Session 2026-09-27
 
 - Q: How does the operator obtain a credential for a target (for its status read and for
-  dispatch)? → [NEEDS CLARIFICATION: see question Q1 at the end of this document]
-- Q: Who may register, edit, delete a target and set it online/offline? →
-  [NEEDS CLARIFICATION: see question Q2 at the end of this document]
+  dispatch)? → **Through the primary (A).** A product call signs the operator in to the target:
+  it forwards their user name and password to that target's sign-in once and returns the
+  target's credential pair to the caller. The primary keeps nothing; the password crosses it in
+  transit only. No configuration is needed on the targets, and the same call serves the API and
+  the canvas (FR-022).
+- Q: Who may register, edit, delete a target and set it online/offline? → **Any signed-in
+  operator (A)**, as for flows. A wrong or hostile address only ever receives calls made with the
+  operator's own credential for it, which the operator typed for that target (FR-023).
 
 ## Scope
 
@@ -278,6 +283,17 @@ after its timeout, with the transport error.
 - **FR-019**: Local behaviour and every existing automated test MUST remain unchanged when no step
   uses a target.
 
+**Signing in to a target (Clarifications Q1)**
+
+- **FR-022**: The system MUST offer a sign-in to a target: given the operator's user name and
+  password for that target, it forwards them to the target's own sign-in once and returns the
+  target's credential pair (access and refresh) to the caller, or the target's refusal verbatim
+  (status and reason). It MUST NOT persist, log or cache the password or the returned pair. The
+  status read (FR-005) and dispatch (FR-010) use the pair this call returned.
+- **FR-023**: Managing the registry (FR-001, FR-004) MUST be open to any signed-in operator, as
+  saving flows is; no extra product-side permission is introduced. Every call to a target still
+  carries only the operator's own credential for it (FR-011), so the target decides.
+
 **Reproducibility and documentation**
 
 - **FR-020**: The single documented start command MUST bring up a second platform instance
@@ -299,6 +315,7 @@ Additions to the product API; exact shapes are fixed in `contracts/` by the plan
 | `GET /targets/{name}`, `PUT /targets/{name}`, `DELETE /targets/{name}` | Read, edit, delete |
 | `GET /targets/{name}/status` | Reachable, version, categories with queue length, as the target reported them (operator's credential for that target) |
 | `POST /targets/{name}/online` with `{"online": true\|false}` | Set the product-side flag |
+| `POST /targets/{name}/sign-in` with the operator's user name and password for that target | The target's credential pair, or its refusal verbatim; nothing kept (FR-022) |
 | Step schema: optional `target` | Place a step |
 | Step-type catalog: remote-capable per type | Let clients offer only capable types (FR-008) |
 | Run read: `steps[].executedOn` | Where each step ran |
@@ -333,8 +350,8 @@ New error codes, each with `stepId` (or the target name for dispatch refusals):
   the target.
 - **SC-004**: Each of the six new error codes is produced by at least one automated test and by one
   recorded API call, each carrying the `stepId` or target name.
-- **SC-005**: A search of stored data and logs after a full demo run finds no password, token or
-  refresh credential for any target.
+- **SC-005**: A search of stored data and logs after a full demo run, including target sign-ins,
+  finds no password, token or refresh credential for any target.
 - **SC-006**: A target's status read returns version and queue lengths equal to the same reads made
   directly on the target, in under 3 seconds when it is reachable.
 - **SC-007**: The existing automated suites (backend, frontend unit and e2e) pass with the same
@@ -366,30 +383,3 @@ New error codes, each with `stepId` (or the target name for dispatch refusals):
 - Spec 001 evidence (async job start, read, pause, cancel on the management API) is the contract
   used against each target.
 - Spec 009 (canvas) depends on this spec's `contracts/`.
-
-## Questions for the operator
-
-### Q1: How does the operator obtain a credential for a target?
-
-**Context**: FR-005 (status read) and FR-010 (dispatch) need the operator's own credential for the
-target. The primary never stores it. The canvas (spec 009) runs in the browser, served by the
-primary.
-
-**What we need to know**: which path the operator's sign-in to a target takes.
-
-| Option | Answer | Implications |
-|---|---|---|
-| A | Through the primary: a new call `POST /targets/{name}/sign-in` with user and password, forwarded to the target's sign-in once; the primary returns the target's token pair to the caller and keeps nothing | No change on the targets; the password crosses the primary in transit only; works from curl and the canvas alike |
-| B | Directly from the client to the target's own sign-in | The primary never sees the password; each target must allow cross-origin calls from the canvas, which is configuration on every target |
-| C | Custom | Describe the path |
-
-### Q2: Who may manage the target registry?
-
-**Context**: registering or editing a target decides where privileged work can be sent. Today the
-product's own records (flows) can be edited by any signed-in operator.
-
-| Option | Answer | Implications |
-|---|---|---|
-| A | Any signed-in operator, as for flows | Simplest; a malicious address only receives calls with the operator's own credential for it |
-| B | Only operators holding a named platform privilege on the primary (checked by the platform) | Needs a resource/privilege defined on the primary; the platform decides (Constitution III) |
-| C | Custom | Describe the rule |
