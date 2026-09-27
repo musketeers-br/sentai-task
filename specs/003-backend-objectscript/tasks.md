@@ -267,7 +267,7 @@ tasks can be written for them; they are recorded in `HANDOFF.md`.
 - [ ] T075 [P] Forward step and run cancellation to the platform via `POST /api/admin/v2/async-result/cancel?id=<id>` (spec 001 evidence 08c) from `WaveDispatcher.CancelStep`/`CancelRun` (F-2, FR-027)
 - [ ] T076 [P] Add a `FlowValidator` rule reporting a step whose WQM category does not exist on the platform, so it fails at validation instead of at enqueue (F-3)
 - [ ] T077 [P] Align the category nesting invariant with platform-reported values (`MaxTotalWorkers = 0`, `Dynamic (N)`) before it is applied to built-in categories (F-4)
-- [ ] T078 [P] Stop `DispatchEndpointTest` from starting real background jobs, and have the suite leave no `running` runs behind (F-5)
+- [X] T078 [P] Stop `DispatchEndpointTest` from starting real background jobs, and have the suite leave no `running` runs behind (F-5) — **done 2026-09-27**: under the test double `StartBackgroundLoop` records instead of starting a job; the shared test base removes the runs (and targets) a test created; 1423 stuck `running` runs purged from the dev instance
 
 ---
 

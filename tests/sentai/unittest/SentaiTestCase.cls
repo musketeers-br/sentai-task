@@ -9,17 +9,40 @@ Class sentai.unittest.SentaiTestCase Extends %UnitTest.TestCase
 /// after it (they would otherwise pile up in the instance's registry).
 Property TargetIdBefore As %Integer [ InitialExpression = 0 ];
 
+/// Spec 003 T078: the highest run id before the test; the runs a test creates are removed after
+/// it, so the suite leaves no `running` run behind.
+Property RunIdBefore As %Integer [ InitialExpression = 0 ];
+
 Method OnBeforeOneTest() As %Status
 {
     Set max = 0
     &sql(SELECT MAX(%ID) INTO :max FROM sentai_model.Target)
     Set ..TargetIdBefore = +$G(max)
+    Set max = 0
+    &sql(SELECT MAX(%ID) INTO :max FROM sentai_model.Run)
+    Set ..RunIdBefore = +$G(max)
     Do ##class(sentai.unittest.AdminApiDouble).Reset()
     Do ##class(sentai.unittest.AdminApiDouble).Enable()
     // The platform's category list (spec 001 evidence 09 shape): the three built-ins report
     // MaxWorkers/MaxTotalWorkers = 0 ("unbounded"); SENTAI.NIGHT is the canonical fixture's.
     Do ##class(sentai.unittest.AdminApiDouble).Script("/api/admin/v2/wqm-categories", "GET", 200, "", ..CategoriesJSON())
     Quit $$$OK
+}
+
+/// Removes every run with an id above `floor`, with its step runs, log entries, run index and
+/// transient credentials.
+ClassMethod RemoveRunsAfter(floor As %Integer)
+{
+    Set rs = ##class(%SQL.Statement).%ExecDirect(, "SELECT ID, guid FROM sentai_model.Run WHERE ID > ?", floor)
+    While rs.%Next() {
+        Set runId = rs.%Get("ID"), guid = rs.%Get("guid")
+        Set srs = ##class(%SQL.Statement).%ExecDirect(, "SELECT guid FROM sentai_model.StepRun WHERE run = ?", runId)
+        While srs.%Next() { Kill ^sentaiRun("idx", srs.%Get("guid")) }
+        &sql(DELETE FROM sentai_model.StepRun WHERE run = :runId)
+        &sql(DELETE FROM sentai_model.LogEntry WHERE run = :runId)
+        &sql(DELETE FROM sentai_model.Run WHERE ID = :runId)
+        Kill:(guid '= "") ^sentaiRun(guid), ^IRIS.Temp.sentaiTargetCred(guid)
+    }
 }
 
 ClassMethod CategoriesJSON() As %String
@@ -36,6 +59,7 @@ Method OnAfterOneTest() As %Status
 {
     Set floor = ..TargetIdBefore
     &sql(DELETE FROM sentai_model.Target WHERE %ID > :floor)
+    Do ..RemoveRunsAfter(..RunIdBefore)
     Do ##class(sentai.unittest.AdminApiDouble).Reset()
     Quit $$$OK
 }

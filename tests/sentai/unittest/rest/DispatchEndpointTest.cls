@@ -24,6 +24,20 @@ Method TestValidDispatchReturns202WithAllStepsQueued()
     Do $$$AssertEquals(result.%Get("c"), 3)
 }
 
+/// Spec 003 T078 (F-5): under the test double a dispatch records that its background loop would
+/// start, and starts no real job — a real one outlived the test, called the real management API
+/// once the double was reset, and left `running` runs behind.
+Method TestDispatchStartsNoRealBackgroundJobUnderTheDouble()
+{
+    Set id = ..CreateSupportedFlow("DispatchNoJob")
+    Do ..NewRequest({"confirmations": []})
+    Do ##class(sentai.rest.Dispatcher).DispatchFlow(id)
+    Do $$$AssertEquals(%response.Status, 202)
+    Set guid = ""
+    &sql(SELECT guid INTO :guid FROM sentai_model.Run WHERE flow = :id)
+    Do $$$AssertEquals($G(^sentaiTestDouble("backgroundLoop", guid)), 1, "the loop start was recorded")
+}
+
 /// FR-017 still holds: a destructive step without a matching typed confirmation is named as
 /// pending. Since spec 004 no v1-available type is destructive, so over HTTP the canonical flow
 /// is refused earlier, by validation (422), and never reaches the 428 path.
@@ -94,21 +108,12 @@ Method TestRunCredentialOfTheSameUserBecomesTheRunCredential()
     // sends as the request's bearer — so the rest of the request (validation's category read)
     // uses the fresh one.
     Do $$$AssertEquals($G(^sentaiTestDouble("gets", "/api/admin/v2/wqm-categories")), "fresh-access")
-    // The background loop erases the credential when the run ends, so the stored pair is
-    // observed through its use: the run's calls to the platform carry the fresh access token.
-    For i = 1:1:50 {
-        Set used = ""
-        Set n = ""
-        For {
-            Set n = $O(^sentaiTestDouble("postlog", n))
-            Quit:(n = "")
-            Set entry = ^sentaiTestDouble("postlog", n)
-            Set:($LG(entry, 1) [ "integrity-check") used = $LG(entry, 3)
-        }
-        Quit:(used '= "")
-        Hang 0.1
-    }
-    Do $$$AssertEquals(used, "fresh-access", "the fresh pair is the run credential")
+    // The run holds the fresh pair (E-1). Under the double no background loop runs (T078), so the
+    // stored credential is read directly instead of through the loop's first platform call.
+    Set guid = ""
+    &sql(SELECT guid INTO :guid FROM sentai_model.Run WHERE flow = :id)
+    Do $$$AssertEquals(##class(sentai.dispatch.WaveDispatcher).RunToken(guid), "fresh-access", "the fresh pair is the run credential")
+    Do $$$AssertEquals($G(^sentaiRun(guid, "%refresh")), "fresh-refresh")
 }
 
 Method TestRefusedRedemptionIs401WithThePlatformsText()
