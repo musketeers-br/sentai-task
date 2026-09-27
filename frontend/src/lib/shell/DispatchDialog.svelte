@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { session } from '$lib/api/session.svelte';
+	import { confirmationsFor } from '$lib/flow/document';
 	import type { FlowEditor } from '$lib/flow/editor.svelte';
 
 	let {
@@ -12,10 +13,14 @@
 	let password = $state('');
 	let busy = $state(false);
 	let message = $state<string | null>(null);
+	/** Typed confirmations by step id; kept across a refused attempt so only the wrong one is retyped. */
+	let typed = $state<Record<string, string>>({});
+	const confirmation = $derived(confirmationsFor(editor.steps, editor.registry, typed));
 
 	$effect(() => {
 		if (open && !dialog.open) {
 			message = null;
+			typed = {};
 			dialog.showModal();
 		} else if (!open && dialog.open) {
 			dialog.close();
@@ -25,7 +30,7 @@
 	async function onsubmit(event: SubmitEvent) {
 		event.preventDefault();
 		busy = true;
-		const result = await editor.dispatch(password);
+		const result = await editor.dispatch(password, confirmation.confirmations);
 		busy = false;
 		password = '';
 		if (result.ok) {
@@ -46,6 +51,31 @@
 			is not kept.
 		</p>
 
+		{#if confirmation.prompts.length > 0}
+			<fieldset class="confirmations" data-testid="typed-confirmations">
+				<legend>
+					<svg width="11" height="11" viewBox="0 0 10 10" aria-hidden="true">
+						<path d="M5 0.8 L9.4 8.8 L0.6 8.8 Z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" />
+						<path d="M5 3.6 L5 6.2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" />
+					</svg>
+					{confirmation.prompts.length === 1 ? 'A destructive step needs' : 'Destructive steps need'} a typed confirmation
+				</legend>
+				{#each confirmation.prompts as prompt (prompt.stepId)}
+					<label for={`confirm-${prompt.stepId}`}>
+						Type <code>{prompt.expected}</code> to confirm #{prompt.stepId} {prompt.taskName}
+					</label>
+					<input
+						id={`confirm-${prompt.stepId}`}
+						type="text"
+						required
+						autocomplete="off"
+						spellcheck="false"
+						bind:value={typed[prompt.stepId]}
+					/>
+				{/each}
+			</fieldset>
+		{/if}
+
 		<label for="dispatch-password">Password for {session.user}</label>
 		<input id="dispatch-password" type="password" autocomplete="current-password" required bind:value={password} />
 
@@ -53,7 +83,7 @@
 
 		<div class="actions">
 			<button type="button" class="quiet" onclick={() => (open = false)}>Cancel</button>
-			<button type="submit" class="primary" disabled={busy}>{busy ? 'Dispatching…' : 'Dispatch'}</button>
+			<button type="submit" class="primary" disabled={busy || !confirmation.complete}>{busy ? 'Dispatching…' : 'Dispatch'}</button>
 		</div>
 	</form>
 </dialog>
@@ -115,6 +145,36 @@
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius-control);
 		padding: 8px 9px;
+	}
+
+	.confirmations {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+		margin: 0 0 8px;
+		padding: 10px 12px 12px;
+		background: var(--destructive-surface);
+		border: 1px solid var(--destructive-accent);
+		border-radius: var(--radius-control);
+	}
+
+	.confirmations legend {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		padding: 0 4px;
+		font-size: var(--size-caption);
+		font-weight: 600;
+		color: var(--destructive-text);
+	}
+
+	.confirmations label {
+		color: var(--destructive-body-text);
+	}
+
+	code {
+		font-family: var(--font-mono);
+		font-weight: 600;
 	}
 
 	.actions {

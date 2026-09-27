@@ -436,7 +436,7 @@ confirmation, and the legacy `custom` class read-only.
 
 **Independent test**: `us14-typed-confirmation.spec.ts` and `us12-destructive-legacy.spec.ts`.
 
-- [ ] T009 [US6] Typed confirmation before dispatch (plan row 8a, D-7).
+- [X] T009 [US6] Typed confirmation before dispatch (plan row 8a, D-7).
   - **Not blocked on T001.** It uses the existing dialog's visual system.
   - **Release gate for spec 005:** `purge-task-history` may only become `available: true`
     (005 T016) after this task is merged **with its e2e green**. The e2e runs under G-C's
