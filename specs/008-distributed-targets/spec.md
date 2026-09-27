@@ -48,6 +48,20 @@ the operator's own credential for it.
   operator (A)**, as for flows. A wrong or hostile address only ever receives calls made with the
   operator's own credential for it, which the operator typed for that target (FR-023).
 
+### Session 2026-09-27 (plan)
+
+The plan's research on the current code and the spec 001 contract changed five points; see
+[plan.md §Spec deviations](plan.md) and [research.md](research.md) R-2, R-5, R-8, R-9.
+
+- Load: the platform's category read returns worker configuration, not a queue length; queue
+  length is reported only if a platform read for it is proven (R-2).
+- Validation without a credential for a target warns `TARGET_NOT_VERIFIED`; dispatch always runs
+  every check (R-8).
+- The WQM category of a remote step is the primary's (it bounds the primary's start calls); the
+  target is not asked for it (R-9).
+- A target that answers the reachability read with a refusal is `TARGET_REFUSED`.
+- Target credentials are kept for the run in non-persistent storage shared by its processes (R-5).
+
 ## Scope
 
 **In scope (v1)**:
@@ -80,14 +94,15 @@ declared catalog run on a target, and no code, method name or class name is ever
 An operator registers the other instances they want to use as targets: a unique name, a base
 address (scheme, host, port) and an optional description. They list, read, edit and delete targets.
 For any target they ask for its status and get, as the target itself reported it: whether it is
-reachable, its platform version, and its Work Queue Manager categories with their queue lengths.
+reachable, its platform version, and its Work Queue Manager categories (with queue lengths when the
+platform reports them).
 They mark a target offline to take it out of use without deleting it, and online again later.
 
 **Why this priority**: Without a known, observable target nothing can be placed on it. It is also
 the "manage targets (online/offline, load)" half of the idea on its own.
 
 **Independent Test**: With the demo environment up, register the second instance through the API,
-read its status with the operator's credential for it, and compare version and queue lengths with
+read its status with the operator's credential for it, and compare version and categories with
 the same reads made directly on that instance. Stop it and read the status again: unreachable, with
 the transport error verbatim.
 
@@ -102,8 +117,9 @@ the transport error verbatim.
    registers it without the development allowance enabled, **Then** it is refused with a stated
    reason; with the allowance enabled it is accepted.
 4. **Given** a reachable target and the operator's credential for it, **When** the operator reads
-   its status, **Then** the response carries `reachable: true`, the version and the categories with
-   queue lengths exactly as the target returned them, and when they were read.
+   its status, **Then** the response carries `reachable: true`, the version and the categories
+   exactly as the target returned them (with queue lengths only when the platform provides a read
+   for them), and when they were read.
 5. **Given** a target that is down, **When** the operator reads its status, **Then** the response
    carries `reachable: false` and the transport error verbatim; no version or categories are
    invented.
@@ -236,8 +252,9 @@ after its timeout, with the transport error.
 
 - **FR-005**: The system MUST provide a status read per target, made against the target at the
   moment of the request with the operator's credential for that target, returning: reachable or
-  not, the platform version, and the Work Queue Manager categories with their queue lengths, each
-  value exactly as the target reported it, plus the time of the read.
+  not, the platform version, and the Work Queue Manager categories (with queue lengths only when
+  the platform provides a read for them), each value exactly as the target reported it, plus the
+  time of the read.
 - **FR-006**: When the target cannot be reached, the status read MUST return `reachable: false` and
   the transport error verbatim. When the target refuses, it MUST return the target's status and
   reason verbatim. No value MUST be invented, cached across requests or taken from the primary.
@@ -252,8 +269,11 @@ after its timeout, with the transport error.
 - **FR-009**: Validation of a step on a target MUST check, in this order: the target exists
   (`TARGET_NOT_FOUND`), is online (`TARGET_OFFLINE`), is reachable (`TARGET_UNREACHABLE`, transport
   error verbatim), the type is remote-capable (`STEP_TYPE_NOT_REMOTE_CAPABLE`), and the step's own
-  preconditions hold **by the target's answers** (existing codes). Every finding MUST carry the
-  `stepId`.
+  preconditions hold **by the target's answers** (existing codes). The checks that need the
+  target's answers run when validation is given a credential for that target; without one,
+  validation reports the warning `TARGET_NOT_VERIFIED` instead, and dispatch always runs every
+  check. A target that refuses the reachability read is reported as `TARGET_REFUSED` with its
+  answer verbatim. Every finding MUST carry the `stepId`.
 
 **Dispatch, tracking and results**
 
@@ -262,8 +282,8 @@ after its timeout, with the transport error.
   to a user other than the dispatching operator (`TARGET_CREDENTIAL_USER_MISMATCH`), naming the
   target.
 - **FR-011**: Every call made to a target MUST use the operator's own credential for that target.
-  There MUST be no service account and no shared credential. Target credentials MUST be held in
-  memory for the run only, renewed from that target's refresh credential as the local run
+  There MUST be no service account and no shared credential. Target credentials MUST be held
+  only for the run, in non-persistent storage shared by the run's processes, renewed from that target's refresh credential as the local run
   credential is, and erased when the run reaches a terminal state.
 - **FR-012**: A step on a target MUST start its platform job on that target and MUST be followed
   with the same states, transitions and live events as a local step.
@@ -313,7 +333,7 @@ Additions to the product API; exact shapes are fixed in `contracts/` by the plan
 |---|---|
 | `GET /targets`, `POST /targets` | List, register |
 | `GET /targets/{name}`, `PUT /targets/{name}`, `DELETE /targets/{name}` | Read, edit, delete |
-| `GET /targets/{name}/status` | Reachable, version, categories with queue length, as the target reported them (operator's credential for that target) |
+| `GET /targets/{name}/status` | Reachable, version, categories (queue length when the platform reports it), as the target reported them (operator's credential for that target) |
 | `POST /targets/{name}/online` with `{"online": true\|false}` | Set the product-side flag |
 | `POST /targets/{name}/sign-in` with the operator's user name and password for that target | The target's credential pair, or its refusal verbatim; nothing kept (FR-022) |
 | Step schema: optional `target` | Place a step |
@@ -323,13 +343,14 @@ Additions to the product API; exact shapes are fixed in `contracts/` by the plan
 
 New error codes, each with `stepId` (or the target name for dispatch refusals):
 `TARGET_NOT_FOUND`, `TARGET_OFFLINE`, `TARGET_UNREACHABLE`, `STEP_TYPE_NOT_REMOTE_CAPABLE`,
-`TARGET_CREDENTIAL_MISSING`, `TARGET_CREDENTIAL_USER_MISMATCH`.
+`TARGET_CREDENTIAL_MISSING`, `TARGET_CREDENTIAL_USER_MISMATCH`, `TARGET_REFUSED`; warning
+`TARGET_NOT_VERIFIED`.
 
 ### Key Entities
 
 - **Target server**: a named, reachable instance of the platform. Name (unique), base address,
   description, `online` flag, created/updated times. Never a credential.
-- **Target status** (not stored): reachable, version, categories with queue lengths, read time, or
+- **Target status** (not stored): reachable, version, categories (queue lengths when reported), read time, or
   the transport error / refusal. Always read live.
 - **Step** (existing): gains an optional reference to a target by name.
 - **Step run** (existing): gains `executedOn`; for a remote step it also keeps the target address
@@ -352,7 +373,7 @@ New error codes, each with `stepId` (or the target name for dispatch refusals):
   recorded API call, each carrying the `stepId` or target name.
 - **SC-005**: A search of stored data and logs after a full demo run, including target sign-ins,
   finds no password, token or refresh credential for any target.
-- **SC-006**: A target's status read returns version and queue lengths equal to the same reads made
+- **SC-006**: A target's status read returns version and categories equal to the same reads made
   directly on the target, in under 3 seconds when it is reachable.
 - **SC-007**: The existing automated suites (backend, frontend unit and e2e) pass with the same
   counts plus the new tests; none is removed.
@@ -370,8 +391,8 @@ New error codes, each with `stepId` (or the target name for dispatch refusals):
   time; the bound is a plan decision.
 - A remote step's timeout is the step's own declared timeout, or the product's default when none is
   declared, as for in-process steps today.
-- The Work Queue Manager category a step names must exist on the target (checked by the target's
-  answer); the product does not create it there.
+- The Work Queue Manager category a remote step names is a category of the primary, checked there
+  as today: it bounds the primary's start calls. The target is not asked for it.
 - The demo's second instance is on the same container network as the primary; HTTP between them is
   allowed only through the documented development allowance (FR-003).
 - The spec 003 follow-ups on cancellation forwarding (T075) and category existence at validation

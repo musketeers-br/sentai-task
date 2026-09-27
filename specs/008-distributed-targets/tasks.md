@@ -44,7 +44,7 @@ removed.
 
 ## Phase 1: Setup
 
-- [ ] T000 Reflect the plan's deviations in `specs/008-distributed-targets/spec.md` (docs only):
+- [X] T000 Reflect the plan's deviations in `specs/008-distributed-targets/spec.md` (docs only):
   - add `### Session 2026-09-27 (plan)` under Clarifications pointing to plan §Spec deviations and
     research R-2, R-5, R-8, R-9;
   - **D-1** FR-005 / US1 scenario 4: "categories … as reported; a queue length only when the
