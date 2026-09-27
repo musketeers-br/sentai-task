@@ -42,7 +42,23 @@ XData Catalog [ MimeType = application/json ]
 ClassMethod GetCatalog() As %DynamicArray
 {
     Set stream = ##class(%Dictionary.CompiledXData).%OpenId(..%ClassName(1)_"||Catalog").Data
-    Quit ##class(%DynamicAbstractObject).%FromJSON(stream)
+    Set catalog = ##class(%DynamicAbstractObject).%FromJSON(stream)
+    // Spec 008 FR-008: derived, never declared twice — a type runs on a target when it is executed
+    // through the management API (the same calls work against another instance), except legacy
+    // `custom`, which names no endpoint.
+    Set iter = catalog.%GetIterator()
+    While iter.%GetNext(.key, .entry) {
+        Do entry.%Set("remoteCapable", (entry.executor = "platform-api") && (entry.type '= "custom"), "boolean")
+    }
+    Quit catalog
+}
+
+/// Spec 008 FR-008: whether `type` may run on a target server.
+ClassMethod IsRemoteCapable(type As %String) As %Boolean
+{
+    Set entry = ..Lookup(type)
+    Quit:'$IsObject(entry) 0
+    Quit +entry.remoteCapable
 }
 
 /// Looks up one entry by step type. Returns "" if the type is not in the closed catalog.

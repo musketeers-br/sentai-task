@@ -267,7 +267,7 @@ ClassMethod ShapeFlow(flow As sentai.model.Flow, includeGraph As %Boolean) As %D
 
     Set steps = []
     Set rs = ##class(%SQL.Statement).%New()
-    Do rs.%Prepare("SELECT %ID AS rowId, id, type, taskName, namespace, databaseDirectory, runAsUser, timeoutMinutes, wqmCategory, customClass FROM sentai_model.Step WHERE flow = ?")
+    Do rs.%Prepare("SELECT %ID AS rowId, id, type, taskName, namespace, databaseDirectory, runAsUser, timeoutMinutes, wqmCategory, customClass, target FROM sentai_model.Step WHERE flow = ?")
     Set result = rs.%Execute(flow.%Id())
     While result.%Next() {
         Set s = {}
@@ -280,6 +280,8 @@ ClassMethod ShapeFlow(flow As sentai.model.Flow, includeGraph As %Boolean) As %D
         Do s.%Set("timeoutMinutes", result.%Get("timeoutMinutes"))
         Do s.%Set("wqmCategory", result.%Get("wqmCategory"))
         Do s.%Set("customClass", result.%Get("customClass"))
+        // Spec 008: only a remote step carries `target`, so a local flow reads exactly as before.
+        Do:(result.%Get("target") '= "") s.%Set("target", result.%Get("target"))
         // %DynamicObject properties are not SQL-projected; read parameters from the object.
         Set stepObj = ##class(sentai.model.Step).%OpenId(result.%Get("rowId"), 0)
         Do s.%Set("parameters", $S($IsObject(stepObj) && $IsObject(stepObj.parameters):stepObj.parameters, 1:{}))
@@ -319,7 +321,15 @@ ClassMethod ShapeFlow(flow As sentai.model.Flow, includeGraph As %Boolean) As %D
 /// --- /flows/{id}/validate (FR-012–FR-015, User Story 2) ---
 ClassMethod ValidateFlow(flowId As %String) As %Status
 {
-    Quit ..WriteJSON(200, ##class(sentai.validation.FlowValidator).Validate(flowId, ..CurrentToken()))
+    // Spec 008 (research R-8): optional {"targetCredentials": [{"target", "accessToken"}]}.
+    Set payload = ..ReadJSONBody(), targetTokens = {}
+    If $IsObject(payload) && $IsObject(payload.targetCredentials) {
+        Set iter = payload.targetCredentials.%GetIterator()
+        While iter.%GetNext(.k, .c) {
+            Do:($IsObject(c) && (c.target '= "")) targetTokens.%Set(c.target, c.accessToken)
+        }
+    }
+    Quit ..WriteJSON(200, ##class(sentai.validation.FlowValidator).Validate(flowId, ..CurrentToken(), targetTokens))
 }
 
 /// --- /flows/{id}/dispatch (FR-016–FR-018, User Story 3) ---

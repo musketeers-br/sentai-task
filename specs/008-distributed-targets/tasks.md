@@ -137,7 +137,7 @@ removed.
 
 ## Phase 4: User Story 3 — Refusals at validation (P1)
 
-- [ ] T006 [US3] Step `target`, `remoteCapable`, validation block (FR-007…FR-009, D-2, D-4).
+- [X] T006 [US3] Step `target`, `remoteCapable`, validation block (FR-007…FR-009, D-2, D-4).
   **Tests first**:
   - `tests/sentai/unittest/model/StepTargetTest.cls`: `target` saved and read back through
     `SaveGraph`/flow read; absent = local;

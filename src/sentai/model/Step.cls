@@ -27,6 +27,10 @@ Property wqmCategory As %String(MAXLEN = 64);
 /// Required when type = "custom" (FR-011); a subclass of %SYS.Task.Definition.
 Property customClass As %String(MAXLEN = 256);
 
+/// Spec 008: the name of the target server the step runs on; "" = this instance. A name only,
+/// never resolved at save time (a later rename or delete shows as TARGET_NOT_FOUND).
+Property target As %String(MAXLEN = 64);
+
 Relationship flow As sentai.model.Flow [ Cardinality = one, Inverse = steps ];
 
 Index FlowIndex On flow;
@@ -64,6 +68,7 @@ ClassMethod ReplaceAll(flowId As %String, stepsArray As %DynamicArray) As %Statu
             If stepObj.%IsDefined("timeoutMinutes") Set step.timeoutMinutes = stepObj.timeoutMinutes
             If stepObj.%IsDefined("wqmCategory") Set step.wqmCategory = stepObj.wqmCategory
             If stepObj.%IsDefined("customClass") Set step.customClass = stepObj.customClass
+            If stepObj.%IsDefined("target") Set step.target = stepObj.target
 
             Set sc = step.%Save()
             If $$$ISERR(sc) Quit
@@ -110,6 +115,9 @@ Storage Default
 </Value>
 <Value name="11">
 <Value>customClass</Value>
+</Value>
+<Value name="12">
+<Value>target</Value>
 </Value>
 </Data>
 <Data name="parameters">
