@@ -110,7 +110,7 @@ removed.
 
 **Independent test**: quickstart (a) and (b).
 
-- [ ] T004 [US1] Registry and online flag (FR-001…FR-004, FR-023). **Tests first**:
+- [X] T004 [US1] Registry and online flag (FR-001…FR-004, FR-023). **Tests first**:
   - `tests/sentai/unittest/targets/TargetServiceTest.cls`: create/read/list/update/delete; unique
     name (`TARGET_EXISTS`); name pattern and URL rules (`INVALID_TARGET`: path, query, userinfo,
     bad scheme); `INSECURE_TARGET` for `http` non-loopback without the allowance, accepted with it

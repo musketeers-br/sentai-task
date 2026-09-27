@@ -46,6 +46,12 @@ XData UrlMap [ XMLNamespace = "http://www.intersystems.com/urlmap" ]
     <Route Url="/wqm/categories" Method="GET" Call="ListWqmCategories"/>
     <Route Url="/wqm/categories/:name" Method="GET" Call="ReadWqmCategory"/>
     <Route Url="/wqm/categories/:name" Method="PUT" Call="WriteWqmCategory"/>
+    <Route Url="/targets" Method="GET" Call="ListTargets"/>
+    <Route Url="/targets" Method="POST" Call="CreateTarget"/>
+    <Route Url="/targets/:name" Method="GET" Call="ReadTarget"/>
+    <Route Url="/targets/:name" Method="PUT" Call="UpdateTarget"/>
+    <Route Url="/targets/:name" Method="DELETE" Call="DeleteTarget"/>
+    <Route Url="/targets/:name/online" Method="POST" Call="SetTargetOnline"/>
 </Routes>
 }
 
@@ -676,6 +682,42 @@ ClassMethod NextRunFor(scheduleSpec As %String) As %String
 }
 
 /// --- Body parsing ---
+/// --- /targets (spec 008 US1, contracts/api-delta.md §Targets) ---
+ClassMethod ListTargets() As %Status
+{
+    Quit ..WriteOutcome(##class(sentai.targets.TargetService).List())
+}
+
+ClassMethod CreateTarget() As %Status
+{
+    Quit ..WriteOutcome(##class(sentai.targets.TargetService).Create(..ReadJSONBody(), ..CurrentUser()))
+}
+
+ClassMethod ReadTarget(name As %String) As %Status
+{
+    Quit ..WriteOutcome(##class(sentai.targets.TargetService).Get(name))
+}
+
+ClassMethod UpdateTarget(name As %String) As %Status
+{
+    Quit ..WriteOutcome(##class(sentai.targets.TargetService).Update(name, ..ReadJSONBody(), ..CurrentUser()))
+}
+
+ClassMethod DeleteTarget(name As %String) As %Status
+{
+    Set outcome = ##class(sentai.targets.TargetService).Delete(name)
+    If (outcome.httpStatus = 204) {
+        Set %response.Status = 204
+        Quit $$$OK
+    }
+    Quit ..WriteOutcome(outcome)
+}
+
+ClassMethod SetTargetOnline(name As %String) As %Status
+{
+    Quit ..WriteOutcome(##class(sentai.targets.TargetService).SetOnline(name, ..ReadJSONBody(), ..CurrentUser()))
+}
+
 ClassMethod ReadJSONBody() As %DynamicObject
 {
     Set body = ""
