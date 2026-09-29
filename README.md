@@ -44,7 +44,10 @@ instance and on other IRIS servers, and watch every step live.
 | **Operating system** | `storage-headroom-check` (free disk per database and journal directory, Embedded Python) and `db-size-report` (size and free space of every database) as flow steps | [Declared step types](#declared-step-types) |
 | **Work Queue Manager** | Read and edit WQM categories, the worker pools every step runs on | [API at a glance](#api-at-a-glance) |
 | **Logs** | Every run writes its own log (dispatch, each step start and end with its duration, the platform's failure reason verbatim, joins that stopped a step, who asked to cancel, targets that stopped answering, the outcome); a *Runs* screen finds any past run by flow and outcome, and *Export* saves one as a file | [Runs and run log](#runs-and-run-log), [spec 012](specs/012-run-log-history/) |
-| **Permissions** | Every call runs with the operator's own IRIS credential; the platform's refusal is shown verbatim, never reinterpreted | [How it works](#%EF%B8%8F-how-it-works) |
+| **Security and permissions** | `security-posture-report` as a flow step: enabled accounts and their roles, `%All` holders, services open to unauthenticated connections, auditing off, on any server. Every call runs with the operator's own IRIS credential; the platform's refusal is shown verbatim | [Report steps](#report-steps-security-web-applications-alerts-secrets), [spec 013](specs/013-area-report-steps/) |
+| **Web applications / REST** | `web-app-inventory`: every web application, whether it is a REST endpoint, its resource and authentication; anonymous endpoints are findings | [Report steps](#report-steps-security-web-applications-alerts-secrets) |
+| **Monitoring and alerts** | `system-alerts-check` gates a flow on the platform's serious alerts, application errors and resource statuses | [Report steps](#report-steps-security-web-applications-alerts-secrets) |
+| **Secrets** | `secrets-inventory`: the IRIS Wallet's collections, their protecting resources and secret names, never a value | [Report steps](#report-steps-security-web-applications-alerts-secrets) |
 | **Distributed work** | A flow step can run on another IRIS instance (a *target server*), tracked and with its result collected on the primary | [DPI-I-588](#-implements-dpi-i-588-distributed-work-manager) |
 
 ---
@@ -381,6 +384,26 @@ Validation errors come back as `{"errors": [{"stepId", "code", "message"}], "war
 with codes such as `CYCLE_DETECTED`, `STEP_TYPE_NOT_SUPPORTED_ON_TARGET`, `CATEGORY_NOT_FOUND`
 and, for declared step types, `PARAM_REQUIRED`, `PARAM_TYPE_MISMATCH`, `PARAM_OUT_OF_RANGE`,
 `PARAM_UNKNOWN` (each also carries `parameter`) and, on `/schedule`, `IN_PROCESS_NOT_SCHEDULABLE`.
+
+#### Report steps (security, web applications, alerts, secrets)
+
+Four read-only step types (spec 013, `executor: "platform-read"`) read the **management API of the
+instance the step runs on** with the operator's credential for it, so they run on target servers
+too, and apply fixed rules. Each stores a report: `summary` (counts by severity), `findings`
+(severity, rule, item, detail) and `details`. The run view opens any step's result with **Result**.
+
+| Type | Reads | Findings | Parameters |
+|---|---|---|---|
+| `security-posture-report` | users and each enabled user's roles, services, audit flag | `ALL_ROLE_HOLDER` (high), `AUDIT_DISABLED` (high), `UNAUTHENTICATED_SERVICE` (medium) | `failOnFindings` (fail on any high) |
+| `web-app-inventory` | web applications | `ANONYMOUS_REST_ENDPOINT` (high), `ANONYMOUS_APPLICATION` (medium): enabled, not system, unauthenticated allowed, no resource | `failOnFindings` |
+| `system-alerts-check` | the main monitoring dashboard | `SERIOUS_ALERTS_OVER`, `APPLICATION_ERRORS_OVER`, `STATUS_NOT_NORMAL` — the step fails on any | `maxSeriousAlerts` (0), `maxApplicationErrors` (0), `requireNormalStatus` (true) |
+| `secrets-inventory` | wallet collections and their secrets' names | `UNPROTECTED_COLLECTION` (medium) | — |
+
+- Reports copy only named fields from the platform's answers; no password, hash, token or secret
+  value can reach a result. The platform decides what the operator may read: reading users and
+  services needs security administration privileges, and a refusal fails the step verbatim.
+- The canvas's own page `/csp/sentai` is anonymous by design (it serves only static files) and the
+  web application inventory reports it; that finding is expected.
 
 #### Declared step types
 

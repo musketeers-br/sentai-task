@@ -118,7 +118,9 @@ export function fromWireStepTypes(list: WireStepType[]): StepTypeInfo[] {	return
 		...(t.remoteCapable === true ? { remoteCapable: true } : {}),
 		// Spec 005 (spec 007 T007): absent in a pre-005 catalog, so a pre-005 entry maps as before.
 		...(t.label ? { label: t.label } : {}),
-		...(t.executor === 'in-process' || t.executor === 'platform-api' ? { executor: t.executor } : {}),
+		...(t.executor === 'in-process' || t.executor === 'platform-api' || t.executor === 'platform-read'
+			? { executor: t.executor }
+			: {}),
 		...(Array.isArray(t.parameters)
 			? {
 					parameters: t.parameters.map((p) => ({

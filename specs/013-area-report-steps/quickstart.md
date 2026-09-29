@@ -23,8 +23,9 @@ Four entries, all `remoteCapable: true`, `available: true`.
    That is a real finding (research R-4).
 4. Click **Result** on the security report: the summary counts by severity, then the findings
    (`ALL_ROLE_HOLDER _SYSTEM`, `SuperUser`, …), then accounts and services. On the web
-   application inventory: `/csp/sentai` is a *medium* finding and `/csp/sentai/api/v1` is a REST
-   endpoint that requires a password. Click **Result** on a **Database size report** of another
+   application inventory: `/csp/sentai` is an `ANONYMOUS_REST_ENDPOINT` finding (*high*: its
+   static file server is a REST dispatch class; anonymous by design, spec 010) and
+   `/csp/sentai/api/v1` is a REST endpoint that requires a password. Click **Result** on a **Database size report** of another
    flow: a readable tree (the existing step's result was never shown before).
 
 ## 3. Refused operator

@@ -13,6 +13,8 @@ export class RunMonitor {
 	error = $state<string | null>(null);
 	notice = $state<string | null>(null);
 	busy = $state(false);
+	/** Spec 013 FR-012: the step whose stored result the side rail shows, or null. */
+	resultFor = $state<string | null>(null);
 	/** Ticks while the run is live, so elapsed times move between polls. */
 	now = $state(Date.now());
 

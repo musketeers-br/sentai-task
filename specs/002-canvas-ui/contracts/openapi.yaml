@@ -388,7 +388,8 @@ components:
 
     StepType:
       type: string
-      enum: [integrity-check, compact-globals, defragment-globals, switch-journal, purge-audit-records, purge-task-history, custom]
+      description: The closed catalog (GET /catalog/step-types is the authority). Spec 005 declared types and spec 013 report types (executor platform-read) included.
+      enum: [integrity-check, compact-globals, defragment-globals, switch-journal, purge-audit-records, purge-task-history, storage-headroom-check, db-size-report, security-posture-report, web-app-inventory, system-alerts-check, secrets-inventory, custom]
 
     JoinPolicy:
       type: string

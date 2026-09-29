@@ -9,8 +9,9 @@ Method TestCatalogExposesAllSevenTypesWithCategoryDestructiveAndPausable()
     Do $$$AssertEquals(%response.Status, 200)
 
     Set catalog = ##class(sentai.registry.StepType).GetCatalog()
-    // The seven spec 003 types plus the two shipped declared types (spec 005).
-    Do $$$AssertEquals(catalog.%Size(), 9)
+    // The seven spec 003 types, the two shipped declared types (spec 005) and the four report
+    // types (spec 013).
+    Do $$$AssertEquals(catalog.%Size(), 13)
 
     // Spec 004 FR-001: every entry the endpoint serves carries `available`.
     Set iter = catalog.%GetIterator()
@@ -60,7 +61,7 @@ Method TestCatalogCarriesLabelExecutorAndParameters()
 /// purge-task-history is released by spec 005 T016, after spec 007 T009's typed confirmation.
 ClassMethod AvailableTypes() As %String
 {
-    Quit ",integrity-check,switch-journal,storage-headroom-check,db-size-report,purge-task-history,"
+    Quit ",integrity-check,switch-journal,storage-headroom-check,db-size-report,purge-task-history,security-posture-report,web-app-inventory,system-alerts-check,secrets-inventory,"
 }
 
 }
