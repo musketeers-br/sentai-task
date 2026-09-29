@@ -29,3 +29,4 @@ scripts/sanitation/backup-*.zwr
 assets/media/*.mp4
 assets/media/review-*.png
 frontend/media-results/
+__pycache__/

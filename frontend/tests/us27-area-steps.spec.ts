@@ -45,7 +45,7 @@ test('us27 run — the three reports complete locally and on iris-target; result
 	// The target step needs a credential for the target: dispatch from the canvas, which asks for it.
 	await signIn(page, `?flow=${id}`);
 	await page.getByRole('button', { name: 'Run now' }).click();
-	for (const field of await page.getByLabel(/^Password for/).all()) await field.fill(process.env.IRIS_PASSWORD ?? 'SYS');
+	for (const field of await page.getByRole('dialog', { name: /^Run .* now$/ }).getByLabel(/^Password for/).all()) await field.fill(process.env.IRIS_PASSWORD ?? 'SYS');
 	await page.getByRole('button', { name: 'Dispatch', exact: true }).click();
 	await expect(page.getByTestId('run-state')).toContainText('RUN COMPLETED', { timeout: 120_000 });
 

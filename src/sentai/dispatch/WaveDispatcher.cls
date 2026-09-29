@@ -63,7 +63,7 @@ ClassMethod ResolveRunStep(stepRunGuid As %String, ByRef runGuid As %String, ByR
 ///   "CONFIRMATION_REQUIRED"   — errorDetail names the pending stepId (FR-017, HTTP 428)
 /// `bearerToken` is passed to validation (category existence, spec 004 FR-006); the scheduled
 /// path has none.
-ClassMethod Dispatch(flowId As %String, confirmationsArray As %DynamicArray, dispatchedBy As %String, ByRef errorCode As %String, ByRef errorDetail As %String, ByRef validationReport As %DynamicObject, bearerToken As %String = "", targetTokens As %DynamicObject = "") As %DynamicObject
+ClassMethod Dispatch(flowId As %String, confirmationsArray As %DynamicArray, dispatchedBy As %String, ByRef errorCode As %String, ByRef errorDetail As %String, ByRef validationReport As %DynamicObject, bearerToken As %String = "", targetTokens As %DynamicObject = "", trigger As %String = "manual") As %DynamicObject
 {
     Set errorCode = "", errorDetail = ""
 
@@ -81,7 +81,7 @@ ClassMethod Dispatch(flowId As %String, confirmationsArray As %DynamicArray, dis
         Return ""
     }
 
-    Quit ..CreateRun(flowId, confirmationsArray, dispatchedBy, .errorCode, .errorDetail)
+    Quit ..CreateRun(flowId, confirmationsArray, dispatchedBy, .errorCode, .errorDetail, trigger)
 }
 
 /// FR-017 gate on its own: true when every destructive step of `flowId` has a typed
@@ -119,7 +119,7 @@ ClassMethod CheckConfirmations(flowId As %String, confirmationsArray As %Dynamic
 /// NFR-002, NFR-004, research.md R-011), recording confirmedBy/At for the confirmed steps.
 /// Applies no gate: Dispatch() calls it only after validation and confirmations passed.
 /// On failure returns "" with errorCode "INTERNAL_ERROR".
-ClassMethod CreateRun(flowId As %String, confirmationsArray As %DynamicArray, dispatchedBy As %String, ByRef errorCode As %String, ByRef errorDetail As %String) As %DynamicObject
+ClassMethod CreateRun(flowId As %String, confirmationsArray As %DynamicArray, dispatchedBy As %String, ByRef errorCode As %String, ByRef errorDetail As %String, trigger As %String = "manual") As %DynamicObject
 {
     Set errorCode = "", errorDetail = "", result = ""
     Kill confirmed
@@ -142,6 +142,7 @@ ClassMethod CreateRun(flowId As %String, confirmationsArray As %DynamicArray, di
         Set run.flowRevision = flow.revision
         Set run.dispatchedBy = dispatchedBy
         Set run.state = "running"
+        Set run.trigger = trigger
         Set run.startedAt = $ZDATETIME($HOROLOG, 3)
         Set sc = run.%Save()
         $$$ThrowOnError(sc)
@@ -172,7 +173,11 @@ ClassMethod CreateRun(flowId As %String, confirmationsArray As %DynamicArray, di
             Do ..IndexStepRun(run.guid, stepId, stepRun.guid)
         }
         // Spec 012: the run log starts with the dispatch.
-        Do ##class(sentai.dispatch.RunNarrator).Dispatched(run.%Id(), dispatchedBy, flow.revision, stepCount)
+        If (trigger = "scheduled") {
+            Do ##class(sentai.dispatch.RunNarrator).ScheduledStart(run.%Id(), flow.name, dispatchedBy, flow.revision, stepCount)
+        } Else {
+            Do ##class(sentai.dispatch.RunNarrator).Dispatched(run.%Id(), dispatchedBy, flow.revision, stepCount)
+        }
 
         TCOMMIT
         Set result = run

@@ -75,16 +75,64 @@ export async function seedFlow(request: APIRequestContext, definition: object): 
 	return String((await res.json()).id);
 }
 
-/** Native %SYS.Task entries the backend created for a flow ("SentaiTask: <flowId>#<stepId>"). */
+/**
+ * Native %SYS.Task entries of a flow: the flow's task (spec 015, "SentaiTask: <flowId> <name>") and
+ * any legacy per-step task ("SentaiTask: <flowId>#<stepId>").
+ */
 export async function nativeTaskIds(request: APIRequestContext, flowId: string): Promise<number[]> {
-	const res = await request.get(`/api/admin/v2/tasks?filter=${encodeURIComponent(`SentaiTask: ${flowId}#`)}`, {
+	const res = await request.get(`/api/admin/v2/tasks?filter=${encodeURIComponent(`SentaiTask: ${flowId}`)}`, {
 		headers: { Authorization: `Bearer ${await token(request)}` }
 	});
 	expect(res.status()).toBe(200);
 	const rows: Array<Record<string, unknown>> = (await res.json()).result ?? [];
 	return rows
-		.filter((r) => String(r.Name ?? r.name ?? '').startsWith(`SentaiTask: ${flowId}#`))
+		.filter((r) => {
+			const name = String(r.Name ?? r.name ?? '');
+			return name.startsWith(`SentaiTask: ${flowId}#`) || name.startsWith(`SentaiTask: ${flowId} `);
+		})
 		.map((r) => Number(r.ID ?? r.Id ?? r.id));
+}
+
+/** Spec 015: schedules `flowId` weekly on Saturday 03:00, running as the e2e operator. */
+export async function scheduleFlow(request: APIRequestContext, flowId: string, targets: string[] = []) {
+	return request.post(`/csp/sentai/api/v1/flows/${flowId}/schedule`, {
+		headers: { Authorization: `Bearer ${await token(request)}` },
+		data: {
+			schedule: { kind: 'weekly', days: [6], startTime: '03:00' },
+			runAs: USER,
+			password: PASSWORD,
+			targetPasswords: targets.map((target) => ({ target, password: PASSWORD }))
+		}
+	});
+}
+
+/** Removes a flow's task(s) and its stored credentials (works after the flow was deleted too). */
+export async function unscheduleFlow(request: APIRequestContext, flowId: string): Promise<void> {
+	const res = await request.delete(`/csp/sentai/api/v1/flows/${flowId}/schedule`, {
+		headers: { Authorization: `Bearer ${await token(request)}` }
+	});
+	expect(res.status(), await res.text()).toBe(200);
+}
+
+/**
+ * A plain platform task named `name` (weekly, Saturday 03:00, from tomorrow), created through the
+ * management API. It uses the legacy per-step form of ScheduledFlowTask, which never starts a run.
+ */
+export async function createPlatformTask(request: APIRequestContext, name: string, flowId: string, stepId: string): Promise<void> {
+	const tomorrow = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
+	const res = await request.post('/api/admin/v2/task', {
+		headers: { Authorization: `Bearer ${await token(request)}` },
+		data: {
+			Name: name, RunAsUser: '', Description: '', TaskClass: 'sentai.dispatch.ScheduledFlowTask', NameSpace: 'IRISAPP',
+			EmailOnCompletion: [], EmailOnError: [], EmailOnExpiration: [], ExpiresDays: '', ExpiresHours: '', ExpiresMinutes: '',
+			OutputDirectory: '', OutputFilename: '', Priority: 'Normal', TimePeriod: 'Weekly', TimePeriodDay: '7', TimePeriodEvery: 1,
+			DailyFrequency: 'Once', DailyFrequencyTime: '', DailyIncrement: '', DailyStartTime: '03:00:00', DailyEndTime: '00:00:00',
+			StartDate: tomorrow, EndDate: '', RunAfterGUID: '', MirrorStatus: 'Primary', EmailOutput: false, OpenOutputFile: false,
+			SuspendOnError: false, SuspendTerminated: false, IsBatch: false, RescheduleOnStart: false, Expires: true,
+			OutputFileIsBinary: true, Settings: { FlowId: flowId, StepId: stepId }
+		}
+	});
+	expect(res.ok(), `create task ${name}: ${res.status()} ${await res.text()}`).toBe(true);
 }
 
 export async function deleteNativeTask(request: APIRequestContext, taskId: number): Promise<void> {

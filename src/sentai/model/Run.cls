@@ -16,6 +16,9 @@ Property dispatchedBy As %String(MAXLEN = 64);
 
 Property state As %String(MAXLEN = 16) [ InitialExpression = "running" ];
 
+/// Spec 015: manual | scheduled. TRIGGER is reserved in IRIS SQL: quote it ("trigger").
+Property trigger As %String(MAXLEN = 16) [ InitialExpression = "manual" ];
+
 /// Internal only — never serialized to the REST response. Bumped on every observable
 /// change (a StepRun transition or a new LogEntry) so SSE can detect "what's new since
 /// the client's last seen version" (data-model.md, contracts/sse-protocol.md).
@@ -93,6 +96,9 @@ Storage Default
 </Value>
 <Value name="9">
 <Value>eventVersion</Value>
+</Value>
+<Value name="10">
+<Value>trigger</Value>
 </Value>
 </Data>
 <DataLocation>^sentai.model.RunD</DataLocation>

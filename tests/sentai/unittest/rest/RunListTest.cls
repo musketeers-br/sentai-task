@@ -96,4 +96,23 @@ Method AssertListRefused(limit As %String, state As %String, before As %String, 
     Do $$$AssertEquals(%response.Status, 400, code)
 }
 
+/// Spec 015 T020: every item says how it started; the list filters by it (older runs are manual).
+Method TestTriggerFieldAndFilter()
+{
+    Set id = ..CreateCanonicalFlow("RunListTrigger")
+    Set manual = ..DispatchUngated(id), scheduled = ..DispatchUngated(id)
+    Set scheduled.trigger = "scheduled"
+    Do scheduled.%Save()
+    Set legacy = ..DispatchUngated(id)
+    Set legacy.trigger = ""
+    Do legacy.%Save()
+    Set page = ..Page(id)
+    Do $$$AssertEquals(page.%Get(1).trigger, "scheduled")
+    Do $$$AssertEquals(page.%Get(0).trigger, "manual", "no trigger recorded reads as manual")
+    Set only = ##class(sentai.rest.Dispatcher).RunPage(id, "", 50, "", "scheduled").body
+    Do $$$AssertEquals(only.%Size(), 1)
+    Do $$$AssertEquals(only.%Get(0).guid, scheduled.guid)
+    Do $$$AssertEquals(##class(sentai.rest.Dispatcher).RunPage(id, "", 50, "", "manual").body.%Size(), 2)
+}
+
 }

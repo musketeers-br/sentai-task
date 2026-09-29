@@ -11,7 +11,7 @@ import {
 	type WireCatalogPage
 } from '../src/lib/catalog/catalog';
 import { deleteFlow } from './iris';
-import { deleteNativeTask, nativeTaskIds, seedFlow, signIn, signInAt, token } from './support';
+import { createPlatformTask, deleteNativeTask, nativeTaskIds, seedFlow, signIn, signInAt, token } from './support';
 
 // spec 007 User Story 3 — Filter and search the catalog (FR-005): every filter is the API's,
 // so for each one the rows and "N of M" must equal the API's answer to the same query.
@@ -78,27 +78,14 @@ test('us9-catalog-filters SC-003 — with about 150 tasks, first rows < 3 s and 
 	const total = async () => Number((await apiPage(page, NO_FILTERS)).total);
 	const before = await total();
 
-	// Seed: 3 flows of 45 integrity checks, scheduled — one native task per step.
+	// Seed: 3 x 45 platform tasks named as the legacy per-step form of 3 flows (spec 015 schedules
+	// one task per flow, so the load is created through the management API directly).
 	const flowIds: string[] = [];
 	try {
 		for (let f = 0; f < 3; f++) {
-			const steps = Array.from({ length: 45 }, (_, i) => ({
-				id: String(i + 1).padStart(2, '0'),
-				type: 'integrity-check',
-				taskName: `SC-003 load ${f}.${i + 1}`,
-				namespace: 'USER',
-				runAsUser: 'irisadm',
-				wqmCategory: 'Default',
-				databaseDirectory: '/usr/irissys/mgr/user/',
-				timeoutMinutes: 30
-			}));
-			const id = await seedFlow(request, { name: `SC-003 load ${Date.now()}-${f}`, defaultCategory: 'Default', steps, edges: [], joins: [], canvasGeometry: { nodes: {} } });
+			const id = await seedFlow(request, { name: `SC-003 load ${Date.now()}-${f}`, defaultCategory: 'Default', steps: [{ id: '01', type: 'integrity-check', taskName: 'SC-003', namespace: 'USER', runAsUser: 'irisadm', wqmCategory: 'Default', databaseDirectory: '/usr/irissys/mgr/user/', timeoutMinutes: 30 }], edges: [], joins: [], canvasGeometry: { nodes: {} } });
 			flowIds.push(id);
-			const res = await request.post(`/csp/sentai/api/v1/flows/${id}/schedule`, {
-				headers: { Authorization: `Bearer ${await token(request)}` },
-				data: { scheduleSpec: 'WEEKLY SAT 03:00', category: 'Default' }
-			});
-			expect(res.status(), await res.text()).toBe(201);
+			for (let i = 1; i <= 45; i++) await createPlatformTask(request, `SentaiTask: ${id}#${String(i).padStart(2, '0')}`, id, String(i).padStart(2, '0'));
 		}
 		const seeded = await total();
 		expect(seeded).toBeGreaterThanOrEqual(before + 135);
@@ -128,7 +115,7 @@ test('us9-catalog-filters SC-003 — with about 150 tasks, first rows < 3 s and 
 			`${EVIDENCE}/sc003-timing.txt`,
 			[
 				`SC-003 timing — ${new Date().toISOString()}`,
-				`Tasks on the instance: ${seeded} (${before} before seeding; 3 flows x 45 integrity-check steps scheduled).`,
+				`Tasks on the instance: ${seeded} (${before} before seeding; 3 x 45 tasks created through the management API).`,
 				'Measured in the browser at 1440x900 against the dev container, from the click/keystroke to the rendered answer.',
 				...runs.map((r, i) => `run ${i + 1}: first rows ${r.firstRowsMs} ms (limit 3000) · filter update ${r.filterMs} ms incl. 300 ms debounce (limit 2000)`),
 				'Seeded tasks and flows were deleted afterwards; the task count returned to its value before the run.'

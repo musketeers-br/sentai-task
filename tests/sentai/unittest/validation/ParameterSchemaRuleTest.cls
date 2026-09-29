@@ -134,7 +134,7 @@ Method TestViolationRefusedOnValidateDispatchAndSchedule()
 
     Set %request = ##class(%CSP.Request).%New()
     Set %request.Content = ##class(%Stream.TmpCharacter).%New()
-    Do %request.Content.Write({"scheduleSpec": "WEEKLY SAT 03:00"}.%ToJSON())
+    Do %request.Content.Write({"schedule": {"kind": "daily", "startTime": "03:00"}, "runAs": "sched-test", "password": "x"}.%ToJSON())
     Set %response = ##class(%CSP.Response).%New()
     Do ##class(sentai.rest.Dispatcher).ScheduleFlow(id)
     Do $$$AssertEquals(%response.Status, 422)

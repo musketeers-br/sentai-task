@@ -30,6 +30,8 @@ XData UrlMap [ XMLNamespace = "http://www.intersystems.com/urlmap" ]
     <Route Url="/flows/:flowId" Method="PUT" Call="SaveFlow"/>
     <Route Url="/flows/:flowId/validate" Method="POST" Call="ValidateFlow"/>
     <Route Url="/flows/:flowId/schedule" Method="POST" Call="ScheduleFlow"/>
+    <Route Url="/flows/:flowId/schedule" Method="GET" Call="ReadSchedule"/>
+    <Route Url="/flows/:flowId/schedule" Method="DELETE" Call="UnscheduleFlow"/>
     <Route Url="/flows/:flowId/dispatch" Method="POST" Call="DispatchFlow"/>
     <Route Url="/runs" Method="GET" Call="ListRuns"/>
     <Route Url="/runs/:runGuid" Method="GET" Call="ReadRun"/>
@@ -165,7 +167,7 @@ ClassMethod ListFlows() As %Status
 {
     Set out = []
     Set rs = ##class(%SQL.Statement).%New()
-    Do rs.%Prepare("SELECT %ID AS rowId, name, revision, savedAt, savedBy, scheduleSpec FROM sentai_model.Flow ORDER BY name")
+    Do rs.%Prepare("SELECT f.%ID AS rowId, f.name, f.revision, f.savedAt, f.savedBy, s.nextRun FROM sentai_model.Flow f LEFT JOIN sentai_model.Schedule s ON s.flow = f.%ID ORDER BY f.name")
     Set result = rs.%Execute()
     While result.%Next() {
         Set item = {}
@@ -174,7 +176,8 @@ ClassMethod ListFlows() As %Status
         Do item.%Set("revision", result.%Get("revision"))
         Do item.%Set("savedAt", result.%Get("savedAt"))
         Do item.%Set("savedBy", result.%Get("savedBy"))
-        Do item.%Set("nextRun", $S(result.%Get("scheduleSpec") '= "":result.%Get("scheduleSpec"), 1:$$$NULLOREF))
+        // Spec 015 D-8: the platform's next run as of the last schedule read or change.
+        Do item.%Set("nextRun", $S(result.%Get("nextRun") '= "":result.%Get("nextRun"), 1:$$$NULLOREF))
         Do out.%Push(item)
     }
     Quit ..WriteJSON(200, out)
@@ -381,19 +384,23 @@ ClassMethod DispatchFlow(flowId As %String) As %Status
 /// row id): `?flowId=&state=&limit=1..200&before=<seq>`. A refused read is the platform's 403.
 ClassMethod ListRuns() As %Status
 {
-    Set flowId = %request.Get("flowId"), state = %request.Get("state")
+    Set flowId = %request.Get("flowId"), state = %request.Get("state"), trigger = %request.Get("trigger")
     Set limit = %request.Get("limit", 50), before = %request.Get("before")
     If (limit '? 1.3N) || (limit < 1) || (limit > 200) Quit ..WriteProblem(400, "Bad Request", "LIMIT_OUT_OF_RANGE: limit must be an integer from 1 to 200")
     If (state '= "") && '$LISTFIND($LB("running", "completed", "failed", "cancelled"), state) Quit ..WriteProblem(400, "Bad Request", "STATE_UNKNOWN: state must be one of running, completed, failed, cancelled")
     If (before '= "") && ((before '? 1.18N) || (+before < 1)) Quit ..WriteProblem(400, "Bad Request", "CURSOR_INVALID: before must be a positive integer (a run's seq)")
-    Quit ..WriteOutcome(..RunPage(flowId, state, +limit, before))
+    If (trigger '= "") && '$LISTFIND($LB("manual", "scheduled"), trigger) Quit ..WriteProblem(400, "Bad Request", "TRIGGER_UNKNOWN: trigger must be manual or scheduled")
+    Quit ..WriteOutcome(..RunPage(flowId, state, +limit, before, trigger))
 }
 
 /// The page as an outcome value ({httpStatus, body} or {httpStatus, problem}), so tests call it
 /// without HTTP.
-ClassMethod RunPage(flowId As %String, state As %String, limit As %Integer, before As %String) As %DynamicObject
+ClassMethod RunPage(flowId As %String, state As %String, limit As %Integer, before As %String, trigger As %String = "") As %DynamicObject
 {
     Set where = "", args = 0
+    // Spec 015: runs recorded before the trigger existed are manual.
+    If (trigger = "scheduled") Set where = where_" AND r.""trigger"" = 'scheduled'"
+    If (trigger = "manual") Set where = where_" AND (r.""trigger"" IS NULL OR r.""trigger"" <> 'scheduled')"
     If (flowId '= "") Set where = where_" AND r.flow = ?", args = args + 1, args(args) = flowId
     If (state '= "") Set where = where_" AND r.state = ?", args = args + 1, args(args) = state
     If (before '= "") Set where = where_" AND r.ID < ?", args = args + 1, args(args) = +before
@@ -457,6 +464,7 @@ ClassMethod ShapeRun(run As sentai.model.Run, detail As %Boolean) As %DynamicObj
     Do out.%Set("startedAt", run.startedAt)
     Do out.%Set("finishedAt", run.finishedAt)
     Do out.%Set("dispatchedBy", run.dispatchedBy)
+    Do out.%Set("trigger", $S(run.trigger = "scheduled":"scheduled", 1:"manual"))
     Quit:'detail out
 
     Do out.%Set("totalDurationMs", run.TotalDurationMs())
@@ -732,48 +740,33 @@ ClassMethod WriteWqmCategory(name As %String) As %Status
     Quit ..WriteJSON(200, {})
 }
 
-/// --- /flows/{id}/schedule (FR-031, FR-032, User Story 5) ---
+/// --- /flows/{id}/schedule (spec 015, contracts/api-delta.md) ---
+/// The request body carries passwords: it is never logged or echoed.
 ClassMethod ScheduleFlow(flowId As %String) As %Status
 {
     Set payload = ..ReadJSONBody()
-    // Blocks before any %SYS.Task is created: validation errors (FR-032) and any destructive
-    // step (out of scope for scheduling in v1, TD-06).
-    Set report = ##class(sentai.validation.FlowValidator).ValidateForSchedule(flowId, ..CurrentToken())
-    If '##class(sentai.validation.FlowValidator).HasNoErrors(report) {
-        Quit ..WriteJSON(422, report)
+    If '$IsObject(payload) || payload.%IsDefined("scheduleSpec") || '$IsObject(payload.schedule) {
+        Set problem = {"status": 400, "title": "Bad Request", "code": "SCHEDULE_FORMAT",
+                       "detail": "SCHEDULE_FORMAT: send {\"schedule\": {\"kind\": \"daily|weekly|monthly|hourly\", \"startTime\": \"HH:MM\", \"days\"|\"dayOfMonth\"|\"everyHours\": …}, \"runAs\", \"password\", \"targetPasswords\": [{\"target\", \"password\"}]}"}
+        Kill payload
+        Quit ..WriteJSON(400, problem)
     }
-
-    // Each task is created by the platform with the operator's token; its refusal is the answer.
-    Set outcome = ##class(sentai.dispatch.NativeScheduler).Schedule(flowId, ..CurrentToken())
-    If (outcome.httpStatus '= 200) Quit ..WriteOutcome(outcome)
-    Set taskIds = outcome.body.taskIds
-
-    Set flow = ##class(sentai.model.Flow).%OpenId(flowId, 4)
-    Set flow.scheduleSpec = payload.scheduleSpec
-    Do flow.%Save()
-
-    Set out = {}
-    Do out.%Set("taskIds", taskIds)
-    Do out.%Set("nextRun", ..NextRunFor(payload.scheduleSpec))
-    Quit ..WriteJSON(201, out)
+    Set outcome = ##class(sentai.schedule.ScheduleService).Schedule(flowId, payload, ..CurrentToken(), ..CurrentUser())
+    Kill payload
+    Quit ..WriteOutcome(outcome)
 }
 
-/// Root steps (no incoming edge) start a run when their native task fires — they call back into
-/// POST /flows/{id}/dispatch on OnTask(); tasks for downstream steps exist only to satisfy "one
-/// task id per scheduled step" (research.md R-007/OQ-1). Tasks are created by
-/// sentai.dispatch.NativeScheduler through the platform's management API.
-ClassMethod StepHasIncomingEdge(flowId As %String, stepId As %String) As %Boolean
+ClassMethod ReadSchedule(flowId As %String) As %Status
 {
-    Set rs = ##class(%SQL.Statement).%New()
-    Do rs.%Prepare("SELECT COUNT(*) AS c FROM sentai_model.Edge WHERE flow = ? AND target = ?")
-    Set result = rs.%Execute(flowId, stepId)
-    Do result.%Next()
-    Quit (result.%Get("c") > 0)
+    If '##class(sentai.model.Flow).%ExistsId(flowId) Quit ..WriteProblem(404, "Not Found", "Flow '"_flowId_"' does not exist")
+    Quit ..WriteOutcome(##class(sentai.schedule.ScheduleService).Read(flowId, ..CurrentToken()))
 }
 
-ClassMethod NextRunFor(scheduleSpec As %String) As %String
+/// Works for a flow that no longer exists too: it removes whatever tasks and secrets it left.
+ClassMethod UnscheduleFlow(flowId As %String) As %Status
 {
-    Quit $ZDATETIME($HOROLOG, 3)
+    If (flowId '? 1.N) Quit ..WriteProblem(404, "Not Found", "Flow '"_flowId_"' does not exist")
+    Quit ..WriteOutcome(##class(sentai.schedule.ScheduleService).Unschedule(flowId, ..CurrentToken()))
 }
 
 /// --- Body parsing ---

@@ -3,7 +3,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { apiTask, catalog, detail } from './catalog-support';
 import { createOperatorWithoutTaskPrivilege, deleteFlow, deleteOperator } from './iris';
-import { canonicalFlow, deleteNativeTask, envelope, nativeTaskIds, seedFlow, signInAt, token } from './support';
+import { canonicalFlow, envelope, nativeTaskIds, scheduleFlow, seedFlow, signInAt, unscheduleFlow } from './support';
 
 // spec 007 User Story 4 — Suspend and resume a task (FR-008, FR-011). Always on a task this test
 // scheduled itself, never on one of the instance's own tasks.
@@ -16,16 +16,13 @@ let taskId = 0;
 test.beforeAll(async ({ request }) => {
 	const base = canonicalFlow(`us10 suspend ${Date.now()}`);
 	flowId = await seedFlow(request, { ...base, steps: base.steps.slice(0, 1), edges: [], joins: [], canvasGeometry: { nodes: {} } });
-	const res = await request.post(`/csp/sentai/api/v1/flows/${flowId}/schedule`, {
-		headers: { Authorization: `Bearer ${await token(request)}` },
-		data: { scheduleSpec: 'WEEKLY SAT 03:00', category: 'Default' }
-	});
+	const res = await scheduleFlow(request, flowId);
 	expect(res.status(), await res.text()).toBe(201);
-	taskId = Number((await res.json()).taskIds[0]);
+	taskId = Number((await res.json()).taskId);
 });
 
 test.afterAll(async ({ request }) => {
-	for (const id of await nativeTaskIds(request, flowId)) await deleteNativeTask(request, id);
+	await unscheduleFlow(request, flowId);
 	deleteFlow(flowId);
 	expect(await nativeTaskIds(request, flowId)).toEqual([]);
 });
