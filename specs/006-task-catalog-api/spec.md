@@ -4,7 +4,9 @@
 
 **Created**: 2026-09-26
 
-**Status**: Implemented (merged in PR #2, 2026-09-26)
+**Status**: Implemented
+
+**Status note**: merged in PR #2, 2026-09-26
 
 **Input**: Make the existing task-catalog API tell the truth about the platform's Task Manager, so
 the canvas (spec 007) can offer a management-portal view of it. Backend only; same philosophy as

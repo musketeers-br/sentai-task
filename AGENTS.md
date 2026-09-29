@@ -94,6 +94,25 @@ npx playwright test             # e2e: needs the stack up, ~6 min, real runs
 - Tasks are sliced by user-observable behaviour with the test written first (Principle V), never by
   technical layer. Each feature's `evidence/` gets a README table; no credentials in it.
 
+## Spec status
+
+`**Status**:` in each `spec.md` (line 7) is one of `Draft | Planned | In Progress | Implemented | Merged |
+Superseded by NNN`; dates and follow-ups go in `**Status note**:`, never in the value.
+
+| Value | When | Set by |
+|---|---|---|
+| `Draft` | after `/speckit.specify`, until clarify closes | `/speckit.specify` |
+| `Planned` | plan, analyze and tasks exist, nothing checked | `/speckit.tasks` |
+| `In Progress` | first task checked, others open | `/speckit.implement` |
+| `Implemented` | every task checked, or open ones marked `[external]`; suite green | `/speckit.implement`, last step |
+| `Merged` | the PR is on `master` — a branch never declares it | whoever merges |
+
+- `[external]` on a task = needs an action outside the repo or a human session (a VM, a publication, a
+  manual usability run). It never blocks `Implemented`; the `Status note` says who owns it.
+- `scripts/check-spec-status.sh` fails when a Status contradicts its `tasks.md` (Implemented with open
+  tasks, Draft with checked ones, a value outside the list). Run it before opening a PR.
+- Spec numbers are unique: `ls specs/` and take the next free one before `/speckit.specify`.
+
 ## Constitution rules that change what you may write
 
 - **II — closed capability set**: no code, method or class name ever comes from input. Step types

@@ -4,7 +4,9 @@
 
 **Created**: [DATE]
 
-**Status**: Draft
+**Status**: Draft <!-- Draft | Planned | In Progress | Implemented | Merged | Superseded by NNN — see "Spec status" in AGENTS.md -->
+
+**Status note**: <!-- optional: dates, task ranges, follow-ups. Never put them in the Status value. -->
 
 **Input**: User description: "$ARGUMENTS"
 
