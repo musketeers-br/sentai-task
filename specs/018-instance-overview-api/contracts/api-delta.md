@@ -68,8 +68,12 @@ The flow is then scheduled with the existing `POST /flows/{id}/schedule`, unchan
 
 `GET /overview/process-actions?limit=1..200` (default 50) → `[ProcessAction]`, newest first.
 
-The platform request body for each action is fixed by the spike's evidence and recorded here when
-it lands.
+Platform contract (T029 spike, `evidence/01–04`): `POST /api/admin/v2/process/<action>?id=<pid>`
+with **no body**; a JSON body (`{"pid"|"Pid"|"id": n}`) instead of `?id=` answers 400
+`ERROR #40300 Query parameter 'id' is required`. An operator without `%Admin_Operate` gets 403 with
+an empty status object. After terminate, `GET /v2/process?id=` answers 404. Unknown action → 404
+`UNKNOWN_PROCESS_ACTION`; a pid that is not a positive integer → 400 `INVALID_PID`; neither calls
+the platform.
 
 ## `openapi.yaml`
 

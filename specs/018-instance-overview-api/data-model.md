@@ -32,7 +32,7 @@ catalog is not changed (clarification Q4); the step type column must name an exi
 ```text
 Reading {
   area:     string            // §1 id
-  readAt:   string            // ISO 8601 UTC, when the product finished the platform reads
+  readAt:   string            // "YYYY-MM-DD HH:MM:SS", the instance's local clock ($ZDATETIME($H,3)), as target status reads
   columns:  string[]          // allow-listed field names, in display order
   rows:     object[]          // each row has exactly `columns` (absent field → null, never 0)
   computed: string[]          // names of columns the product computed (e.g. "SMHUsedPercent")

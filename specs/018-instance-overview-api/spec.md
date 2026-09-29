@@ -4,11 +4,11 @@
 
 **Created**: 2026-09-29
 
-**Status**: Planned <!-- Draft | Planned | In Progress | Implemented | Merged | Superseded by NNN — see "Spec status" in AGENTS.md -->
+**Status**: Implemented <!-- Draft | Planned | In Progress | Implemented | Merged | Superseded by NNN — see "Spec status" in AGENTS.md -->
 
-**Status note**: Backend only; the canvas screens are spec 019. Clarified 2026-09-29 (4 questions), planned with
-measurements (research.md), 38 tasks in tasks.md; User Story 5 (T030–T033) is built only if the
-T029 spike passes, else T034. Next: `/speckit-analyze` or `/speckit-implement`.
+**Status note**: 2026-09-29. 38/38 tasks; the T029 spike passed, so process actions shipped (T034 not
+needed). Suite 440/440; live quickstart and spike evidence in evidence/README.md. The canvas screens
+are spec 019.
 
 **Input**: User description: "Instance Overview API (backend). Backend only; the canvas screens are
 spec 019. A closed, named set of on-demand readings over the platform's management API (processes,
