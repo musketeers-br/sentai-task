@@ -63,7 +63,8 @@ export function deleteOperator(operator: Operator): void {
 export function deleteFlow(flowId: string): void {
 	const id = Number(flowId);
 	// Children first (steps, edges and joins reference the flow); test flows never have runs.
-	const children = ['sentai_model.Edge', 'sentai_model.Join', 'sentai_model.Step']
+	// "Join" is an SQL reserved word: quoted, and doubled inside the ObjectScript string.
+	const children = ['sentai_model.Edge', 'sentai_model.""Join""', 'sentai_model.Step']
 		.map((table) => `do ##class(%SQL.Statement).%ExecDirect(,"DELETE FROM ${table} WHERE flow = ?",${id})`)
 		.join('\n');
 	const out = irisSys(
@@ -112,7 +113,7 @@ export function deleteFlowWithRuns(flowId: string, expectedName: string): void {
 		sql('DELETE FROM sentai_model.StepRun WHERE run IN (SELECT ID FROM sentai_model.Run WHERE flow = ?)'),
 		sql('DELETE FROM sentai_model.Run WHERE flow = ?'),
 		sql('DELETE FROM sentai_model.Edge WHERE flow = ?'),
-		sql('DELETE FROM sentai_model.Join WHERE flow = ?'),
+		sql('DELETE FROM sentai_model.""Join"" WHERE flow = ?'),
 		sql('DELETE FROM sentai_model.Step WHERE flow = ?'),
 		`set sc=##class(sentai.model.Flow).%DeleteId(${id})`,
 		`write "RESULT:",$select(sc=1:"OK",1:$system.Status.GetErrorText(sc)),!`

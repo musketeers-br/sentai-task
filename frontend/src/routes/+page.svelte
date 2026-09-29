@@ -22,6 +22,8 @@
 	import Inspector from '$lib/inspector/Inspector.svelte';
 	import Palette from '$lib/palette/Palette.svelte';
 	import RunScreen from '$lib/run/RunScreen.svelte';
+	import RunsScreen from '$lib/runs/RunsScreen.svelte';
+	import { queryFromUrl, urlForQuery, urlForRun, type RunSummaryView, type RunsQuery } from '$lib/runs/runs';
 	import DispatchDialog from '$lib/shell/DispatchDialog.svelte';
 	import ScheduleDialog from '$lib/shell/ScheduleDialog.svelte';
 	import SignIn from '$lib/shell/SignIn.svelte';
@@ -156,6 +158,35 @@
 		watching = null;
 		unreadable = null;
 		editor.load(flow.value);
+		// Spec 012: a run opened from the Runs screen arrives with its flow; show it once loaded.
+		const runGuid = page.url.searchParams.get('run');
+		if (runGuid) watching = { guid: runGuid, flow: flow.value };
+	}
+
+	// Spec 012: the address names a run of the flow already open (a run of the same flow opened
+	// from the Runs screen, or back/forward): show it.
+	$effect(() => {
+		const runGuid = page.url.searchParams.get('run');
+		const flowId = page.url.searchParams.get('flow');
+		if (phase.name !== 'ready' || screen !== 'flows' || !runGuid) return;
+		untrack(() => {
+			if (flowId === editor.id && watching?.guid !== runGuid) watching = { guid: runGuid, flow: editor.toDocument() };
+		});
+	});
+
+	/** Spec 012 US2: the Runs screen's filters live in the address (FR-007). */
+	function setRunsQuery(query: RunsQuery) {
+		void goto(urlForQuery(page.url, query), { keepFocus: true, noScroll: true });
+	}
+
+	/** A past run opens in the run view with its flow; switching flows goes through the guard. */
+	function openRun(run: RunSummaryView) {
+		void guarded({ kind: 'address', url: urlForRun(page.url, run) });
+	}
+
+	/** Spec 012 FR-010: the Runs screen filtered to the open flow. */
+	function runHistory() {
+		if (editor.id) void goto(urlForQuery(page.url, { flow: editor.id }), { noScroll: true });
 	}
 
 	let dispatchOpen = $state(false);
@@ -272,6 +303,11 @@
 
 	function backToFlow() {
 		watching = null;
+		// Spec 012 D-7: a run opened from the Runs screen goes back to it, with its filters.
+		if (page.url.searchParams.get('from') === 'runs') {
+			void goto(urlForQuery(page.url, queryFromUrl(page.url)), { noScroll: true });
+			return;
+		}
 		syncUrl();
 	}
 
@@ -350,8 +386,32 @@
 			onschedule={() => (scheduling = true)}
 			onhelp={() => guide.openFromHelp()}
 			onsignout={signOut}
+			onhistory={runHistory}
 		/>
 		<TargetsScreen targetParam={page.url.searchParams.get('target')} onselect={selectTarget} onchanged={loadTargets} />
+	</div>
+	{#if session.status === 'expired'}
+		<div class="overlay"><SignIn expired /></div>
+	{/if}
+{:else if phase.name === 'ready' && screen === 'runs'}
+	<div class="app">
+		<TopBar
+			{editor}
+			{screen}
+			onnavigate={navigate}
+			user={session.user}
+			onsave={save}
+			onsaveas={() => (saveAsOpen = true)}
+			onnew={() => void guarded({ kind: 'new' })}
+			onopen={() => (openListOpen = true)}
+			onvalidate={validate}
+			onrun={() => (dispatchOpen = true)}
+			onschedule={() => (scheduling = true)}
+			onhelp={() => guide.openFromHelp()}
+			onsignout={signOut}
+			onhistory={runHistory}
+		/>
+		<RunsScreen query={queryFromUrl(page.url)} onquery={setRunsQuery} onopen={openRun} />
 	</div>
 	{#if session.status === 'expired'}
 		<div class="overlay"><SignIn expired /></div>
@@ -372,6 +432,7 @@
 			onschedule={() => (scheduling = true)}
 			onhelp={() => guide.openFromHelp()}
 			onsignout={signOut}
+			onhistory={runHistory}
 		/>
 		<CatalogScreen taskParam={page.url.searchParams.get('task')} {flowHref} onselect={selectTask} onopenflow={openFlow} />
 	</div>
@@ -380,7 +441,13 @@
 	{/if}
 {:else if phase.name === 'ready' && watching}
 	{#key watching.guid}
-		<RunScreen guid={watching.guid} flow={watching.flow} registry={editor.registry} onback={backToFlow} />
+		<RunScreen
+			guid={watching.guid}
+			flow={watching.flow}
+			registry={editor.registry}
+			onback={backToFlow}
+			backLabel={page.url.searchParams.get('from') === 'runs' ? 'Back to runs' : 'Back to flow'}
+		/>
 	{/key}
 	{#if session.status === 'expired'}
 		<div class="overlay"><SignIn expired /></div>
@@ -401,6 +468,7 @@
 			onschedule={() => (scheduling = true)}
 			onhelp={() => guide.openFromHelp()}
 			onsignout={signOut}
+			onhistory={runHistory}
 		/>
 		<div class="workspace">
 			<Palette registry={editor.registry} onadd={addFromPalette} />

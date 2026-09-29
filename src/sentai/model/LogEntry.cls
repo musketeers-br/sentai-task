@@ -17,22 +17,24 @@ Property message As %String(MAXLEN = 4000);
 Index RunAtIndex On (run, at);
 
 /// Writes one log line and bumps the owning Run's eventVersion in the same transaction,
-/// so SSE and the 3s-polling fallback never diverge.
-ClassMethod Append(runId As %String, stepId As %String, severity As %String, message As %String) As %Status
+/// so SSE and the 3s-polling fallback never diverge. Spec 012: `bump` = 0 for an entry written
+/// inside a change that bumps it already (a step transition, a new run, the run's end).
+ClassMethod Append(runId As %String, stepId As %String, severity As %String, message As %String, bump As %Boolean = 1) As %Status
 {
     Set sc = $$$OK
     TSTART
     Try {
         Set entry = ..%New()
         Do entry.runSetObjectId(runId)
-        Set entry.at = $ZDATETIME($HOROLOG, 3)
+        // Spec 012 R-2: milliseconds, so entries written within one second keep their order.
+        Set entry.at = $ZDATETIME($NOW(), 3, , 3)
         Set entry.stepId = stepId
         Set entry.severity = severity
         Set entry.message = message
         Set sc = entry.%Save()
         $$$ThrowOnError(sc)
 
-        $$$ThrowOnError(##class(sentai.model.Run).BumpEventVersionFor(runId))
+        If bump $$$ThrowOnError(##class(sentai.model.Run).BumpEventVersionFor(runId))
 
         TCOMMIT
     }
