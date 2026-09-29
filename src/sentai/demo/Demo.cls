@@ -236,7 +236,8 @@ ClassMethod DeleteFlow(flowId As %String, Output removedRuns As %Integer) As %St
             Set removedRuns = removedRuns + 1
         }
         &sql(DELETE FROM sentai_model.Edge WHERE flow = :flowId)
-        &sql(DELETE FROM sentai_model.Join WHERE flow = :flowId)
+        // "Join" is an SQL reserved word: unquoted, this delete failed and the flow could not go.
+        &sql(DELETE FROM sentai_model."Join" WHERE flow = :flowId)
         &sql(DELETE FROM sentai_model.Step WHERE flow = :flowId)
         $$$ThrowOnError(##class(sentai.model.Flow).%DeleteId(flowId))
         TCOMMIT

@@ -226,4 +226,18 @@ Method TestStatusShape()
     Do $$$AssertTrue(st.%IsDefined("lastReset"))
 }
 
+/// A visitor flow with a join goes too (the table name "Join" is an SQL reserved word).
+Method TestResetRemovesAFlowWithAJoin()
+{
+    Set ^sentai("config", "demo") = 1
+    Set payload = ##class(sentai.demo.Demo).ShowcaseDefinition()
+    Do payload.%Set("name", ..Prefix_"visitor with join")
+    $$$ThrowOnError(##class(sentai.model.Flow).SaveGraph(payload, "", 0, "visitor", .id))
+    Set out = ##class(sentai.demo.Demo).Reset(..Prefix)
+    Do $$$AssertEquals(out.ok, 1, out.%ToJSON())
+    Do $$$AssertNotTrue(##class(sentai.model.Flow).%ExistsId(id), "removed")
+    &sql(SELECT COUNT(*) INTO :joins FROM sentai_model."Join" WHERE flow = :id)
+    Do $$$AssertEquals(joins, 0)
+}
+
 }

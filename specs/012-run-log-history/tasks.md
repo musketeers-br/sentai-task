@@ -75,10 +75,10 @@ container-side run). Frontend: vitest; Playwright against the dev stack with `ir
 
 ## Phase 5: Polish
 
-- [ ] T018 Full regression (backend, unit, e2e with `iris-target` up); restore spec 002/007 evidence files the e2e run rewrote; record counts and SC-004 in `evidence/README.md`.
+- [X] T018 Full regression (backend, unit, e2e with `iris-target` up); restore spec 002/007 evidence files the e2e run rewrote; record counts and SC-004 in `evidence/README.md`.
 - [X] T019 [P] README: *Logs* area row (run log + history + export, link to this spec); "How to use" gains *Runs*; roadmap moves "run history" to done.
 - [X] T020 [P] `docs/limitations.md`: SSE still does not emit `log-entry` (contracts/api-delta.md); runs dispatched before this version have no log.
-- [ ] T021 Delete the `us24-`/`us25-`/`us26-` flows and their runs with `deleteFlowWithRuns` (guarded helper) after the user approves the list.
+- [X] T021 Delete the `us24-`/`us25-`/`us26-` flows and their runs with `deleteFlowWithRuns` (guarded helper) after the user approves the list.
 
 ## Dependencies
 
