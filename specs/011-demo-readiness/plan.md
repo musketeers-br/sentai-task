@@ -61,7 +61,7 @@ stack). No new npm or IPM dependency.
 - vitest for `cancelRaisesAlert` and the `demo.json` parser.
 - Playwright `us22-cancel-alert-notice.spec.ts` and `us23-demo-sign-in-hint.spec.ts` against the
   dev stack.
-- A shell acceptance script `scripts/demo/acceptance.sh` for US2 and US4 against a demo stack
+- A shell acceptance script `scripts/demo/acceptance.py` for US2 and US4 against a demo stack
   started under a separate compose project name on alternate ports (the clean-checkout pattern
   used on 2026-09-27), so the dev stack is not touched.
 
@@ -145,10 +145,12 @@ Unit tests 145 → ~155; e2e 65 → ~69; backend 269 → ~279.
   `CSP.ini`, so it is left alone. Changing it would break the gateway and gain nothing.
   `UnknownUser` has no password.
 - **D-8 Demo account.** User `sentai-demo`, password `sentai-demo-2026` (published), role
-  `SentaiDemo`, on both instances. The role holds exactly the resources the T001 spike proves
-  necessary to run the example and showcase flows and to read the catalog and categories
-  ([R-4](research.md)); it holds **no** `%Admin_Secure`. The account is recreated with the
-  published password by every reset.
+  `SentaiDemo`, on both instances. The role holds exactly the resources the T001 spike proved
+  necessary ([evidence](evidence/t001-demo-role.md)): primary `%DB_IRISAPP_CODE:R,
+  %DB_IRISAPP_DATA:RW, %Admin_Manage:U, %DB_IRISSYS:RW, %Admin_Operate:U` plus SQL `SELECT,
+  INSERT, UPDATE, DELETE ON SCHEMA sentai_model` and `EXECUTE ON %SYS.DatabaseQuery_FreeSpace`;
+  target `%DB_USER:R, %Admin_Manage:U, %DB_IRISSYS:RW, %Admin_Operate:U`. It holds **no**
+  `%Admin_Secure`. The account is recreated with the published password by every reset.
 - **D-9 Order in `up.sh`.** (1) refuse without `SENTAI_DEMO_SECRET`; (2) `compose up -d --build
   iris iris-target --wait`; (3) secure both instances; (4) create the demo role and account on
   both; (5) `Demo.Setup(1)` on the primary (the explicit `1` is required, so an accidental call on a normal installation does nothing; it sets the demo marker, registers `iris-target`, seeds the
@@ -218,10 +220,10 @@ Unit tests 145 → ~155; e2e 65 → ~69; backend 269 → ~279.
 |---|---|---|---|
 | 1 | US5 cancel notice | `cancel-alert.test.ts`; `us22` (notice present with running integrity check, absent with in-process only) | helper, two dialogs, tooltip |
 | 2 | US3 seed | `DemoTest.TestSeedCreatesShowcase`, `TestSeedIsIdempotent`, `TestExampleMatchesCanvas` | `sentai.demo.Demo.Seed` |
-| 3 | US4 reset/status | `DemoTest.TestResetRefusesWithoutMarker`, `TestResetRemovesVisitorFlows`, `TestStatusShape`; `acceptance.sh` part B | `Reset`, `Status`, `reset.sh`, `status.sh` |
-| 4 | US2 demo stack | `acceptance.sh` part A (default password refused on both; portal 404; demo account runs showcase; missing secret refused) | override, Caddyfile, `secure-accounts.script`, `demo-account.script`, `up.sh` |
+| 3 | US4 reset/status | `DemoTest.TestResetRefusesWithoutMarker`, `TestResetRemovesVisitorFlows`, `TestStatusShape`; `acceptance.py` part B | `Reset`, `Status`, `reset.sh`, `status.sh` |
+| 4 | US2 demo stack | `acceptance.py` part A (default password refused on both; portal 404; demo account runs showcase; missing secret refused) | override, Caddyfile, `secure-accounts.script`, `demo-account.script`, `up.sh` |
 | 5 | US3 hint | `demo-info.test.ts`; `us23` (hint shown when `demo.json` exists, absent otherwise) | `SignIn.svelte` hint |
-| 6 | US1 README | a README lint check in `acceptance.sh` part C (order of headings, links resolve) | README edit, picture |
+| 6 | US1 README | a README lint check in `acceptance.py` part C (order of headings, links resolve) | README edit, picture |
 
 ## Project Structure
 
@@ -248,7 +250,7 @@ scripts/demo/reset.sh              # new
 scripts/demo/status.sh             # new
 scripts/demo/secure-accounts.script   # new (ObjectScript for iris session, %SYS)
 scripts/demo/demo-account.script      # new (ObjectScript for iris session, %SYS)
-scripts/demo/acceptance.sh         # new
+scripts/demo/acceptance.py         # new
 src/sentai/demo/Demo.cls           # new: Setup, Seed, Reset, Status
 tests/sentai/unittest/DemoTest.cls # new
 frontend/src/lib/run/cancel-alert.ts (+ .test.ts)   # new

@@ -6,3 +6,5 @@ frontend/build
 frontend/.svelte-kit
 frontend/test-results
 frontend/playwright-report
+# Local secrets (spec 011 demo: SENTAI_DEMO_SECRET) must never enter a build context
+.env*

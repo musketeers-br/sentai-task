@@ -13,9 +13,11 @@ SentaiTask v1 only promises what was proven on IRIS 2026.2 (spec `004-backend-ha
   `CATEGORY_NOT_FOUND`. On IRIS 2026.2 those resources are also enough for the platform to allow
   the task-history purge (it refuses the journal switch without `%Admin_Operate:USE`) — the
   platform decides, not SentaiTask.
-- **Scheduling is not operational.** `/schedule` validates the flow and registers native tasks
-  (through the platform, see below), but scheduled runs cannot authenticate to the platform in v1 and are not a supported execution
-  path. Use manual dispatch.
+- **Schedules (spec 015).** Times are the instance's local clock. Overlapping runs of the same flow
+  are not prevented. The flow list's next run is the platform's value as of the last schedule read
+  or change; the schedule dialog always reads it live. A time already past today starts tomorrow.
+  Destructive steps cannot be scheduled. The run-as account needs `SentaiSchedule:U`; without it the
+  platform refuses the stored password (`ERROR #822`) and the attempt is recorded as a failed run.
 - **Run credential.** A dispatched run calls the platform with an access token that expires 60 s
   after it was issued, and refreshing a token revokes the previous one. The canvas therefore asks
   for the password at *Run now*, dispatches under a separate sign-in, and passes that sign-in's
@@ -31,12 +33,14 @@ SentaiTask v1 only promises what was proven on IRIS 2026.2 (spec `004-backend-ha
   the one available destructive type: dispatch refuses it (428) until the operator types its
   database directory or namespace, which the canvas asks for at *Run now* (spec 007 T009). No
   v1-available type is pausable, so pause is implemented but cannot be reached over HTTP.
-- **Cancelling a running platform job raises an IRIS alert.** Cancel is forwarded to the platform
+- <a id="cancel-alert"></a>**Cancelling a running platform job raises an IRIS alert.** Cancel is forwarded to the platform
   (`POST /api/admin/v2/async-result/cancel?id=`), which ends the job's Work Queue Manager worker;
   IRIS 2026.2 logs that as `ERROR #7802: Worker job/s '…' unexpectedly shut down` at severity 2,
   so the instance enters the *alert* state and the container's healthcheck reports `unhealthy`.
   The run and the platform are fine. Reproduced on a plain IRIS without SentaiTask (spec 008 T001,
   `iris-target`, 2026-09-27 09:57:50). Clear it with `do $SYSTEM.Monitor.Clear()` in `%SYS`.
+  Since spec 011, the canvas says so before such a cancel (*Cancel wave* and a running
+  management-API step's *Cancel* ask first); in-process and queued steps cancel without it.
 - **Remote steps (spec 008, DPI-I-588).**
   - Only types executed through the management API can run on a target in v1 (`integrity-check`);
     declared in-process types are refused with `STEP_TYPE_NOT_REMOTE_CAPABLE` (they would need
@@ -65,10 +69,11 @@ SentaiTask v1 only promises what was proven on IRIS 2026.2 (spec `004-backend-ha
   by the platform at each call, and its refusal is returned verbatim (e.g. 403 with
   `platformStatus` from the catalog, or `SQLCODE -99` when the operator has no SQL privilege on
   the product's tables).
-- **Scheduling creates tasks through the platform.** `/schedule` creates each native task with
-  `POST /api/admin/v2/task` and the operator's token (the platform accepts `%Admin_Task` or
-  `%Admin_Operate`); a refusal is returned verbatim and tasks already created by the same request
-  are deleted. The task runs as the operator who scheduled it.
+- **Scheduling creates the task through the platform.** `/schedule` creates the flow's one
+  native task with `POST /api/admin/v2/task` and the operator's token (the platform accepts
+  `%Admin_Task` or `%Admin_Operate`); a refusal is returned verbatim, and the passwords stored for
+  that request are removed. The task runs as the schedule's run-as account. Tasks of the spec 001
+  form (one per step) are removed on the flow's next schedule or unschedule; they never start a run.
 - **A refused WQM category read is reported as `CATEGORY_NOT_FOUND`.** Validation says the
   category "does not exist" when the platform actually refused the read (operator without
   `%Admin_Manage:USE` and read on IRISSYS; `%Admin_Operate:USE` alone is refused — spec 005
@@ -92,5 +97,24 @@ SentaiTask v1 only promises what was proven on IRIS 2026.2 (spec `004-backend-ha
   database or journal directory has less than 10% free; that run is a real finding, not a defect.
   The example is identified by its name: renaming it and choosing *Open example flow* again creates
   a new one under the well-known name.
-
+- **Report steps (spec 013).** Reads are instance-wide: the step's namespace is not used. The
+  security report reads the roles of at most 200 enabled accounts (an *info* finding says how
+  many were left out). The platform's `SeriousAlerts` counter is what the dashboard reports; on
+  IRIS 2026.2 it keeps counting severe `messages.log` entries after `$SYSTEM.Monitor.Clear()`, so an
+  instance that raised alerts since it started fails `system-alerts-check` at the default
+  threshold 0 until it restarts or the threshold is raised. Reports never correct anything.
+- **Run log (spec 012).** Runs dispatched before this version have no log; the run view says so.
+  The SSE stream still emits only `step-state-changed` and `run-terminal`: the `log-entry` event of
+  spec 003's protocol was never implemented, and the canvas reads the log by polling the run.
+  Log times are the primary's, when the product observed the fact.
+- **Public demo (spec 011).** The demo account `sentai-demo` holds no security administration,
+  so security reads are refused verbatim by design. The privileges an integrity check needs
+  (`%Admin_Manage`, write on IRISSYS) also let the platform run the task-history purge and change
+  platform settings reachable through the management API, such as WQM categories; on a
+  disposable demo this is accepted, and the daily reset does not restore platform settings
+  (it resets the product's flows and runs, the demo password and the alert state).
+- **Fixed in spec 011 (T025).** A platform SQL refusal while reading a flow (an operator with
+  no SQL privilege on the product's tables) is now reported by validation as `PLATFORM_REFUSED`
+  with the platform's text, so dispatch refuses it (422) instead of starting a run with no steps.
+  A platform job that ends `Failed` now records the platform's own `FailureReason` verbatim.
 ---

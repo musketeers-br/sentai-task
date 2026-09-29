@@ -1,30 +1,33 @@
 {
   "evidence_id": "q5-schedule",
-  "captured_at": "2026-09-26T12:56:46.168Z",
+  "captured_at": "2026-09-29T10:06:00.440Z",
   "request": {
     "method": "POST",
-    "url_path": "/csp/sentai/api/v1/flows/4815/schedule",
+    "url_path": "/csp/sentai/api/v1/flows/7445/schedule",
     "body": {
-      "scheduleSpec": "WEEKLY SAT 03:00",
-      "category": "Default"
+      "schedule": {
+        "kind": "weekly",
+        "startTime": "03:00",
+        "days": [
+          6
+        ]
+      },
+      "runAs": "_SYSTEM",
+      "password": "<redacted>",
+      "targetPasswords": []
     }
   },
   "response": {
     "status": 201,
     "body": {
-      "taskIds": [
-        1480,
-        1481,
-        1482,
-        1483,
-        1484
-      ],
-      "nextRun": "2026-09-26 12:56:46"
+      "taskId": 2651,
+      "nextRun": "2026-10-03 03:00:00",
+      "describe": "Weekly on Sat at 03:00",
+      "residue": []
     }
   },
   "notes": [
-    "Native tasks were deleted after capture so the dev instance keeps no schedule.",
-    "Spec 004 D-2: registration succeeds, but scheduled runs cannot authenticate in v1 and are not a supported execution path.",
-    "nextRun is the value the backend returns; converting scheduleSpec into %SYS.Task timing is an open backend item (spec 003 HANDOFF)."
+    "Spec 015: one task per flow, run as the run-as account; the password is kept only in the IRIS Wallet.",
+    "The task and the stored credential were removed after capture."
   ]
 }

@@ -1,0 +1,14 @@
+# Spec 011 public demo proxy (plan D-6). Only the canvas and the management API calls the
+# canvas makes are forwarded; everything else, including the management portal, is 404.
+{$DEMO_SITE} {
+	redir / /csp/sentai/ 302
+
+	@allowed path /csp/sentai /csp/sentai/* /api/admin/*
+	handle @allowed {
+		reverse_proxy iris:52773
+	}
+
+	handle {
+		respond "Not found" 404
+	}
+}

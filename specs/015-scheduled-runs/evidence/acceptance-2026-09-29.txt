@@ -1,0 +1,33 @@
+PASS run-as account on the primary
+PASS run-as account on iris-target
+PASS flow created — HTTP 201
+PASS GET schedule of an unscheduled flow — {"instanceTime": "2026-09-29 10:12:49", "scheduled": false}
+PASS wrong run-as password is refused, nothing created — HTTP 422
+PASS the spec 001 body is refused with SCHEDULE_FORMAT — HTTP 400
+PASS schedule created — HTTP 201 
+PASS the platform's next run is the chosen time — 2026-09-29 10:15:00
+PASS one task, running as the run-as account
+PASS two wallet secrets (primary, iris-target)
+PASS task RunAsUser — HTTP 200
+… waiting for the task to fire at 10:15 (instance time)
+PASS SC-001 a scheduled run started and ended
+PASS SC-001 the run completed — {"guid": "A11AE58D-BBEE-11F1-91F8-B6C6F3878660", "flowId": "7460", "flowRevision": 1, "state": "completed", "startedAt": "2026-09-29 10:15:00", "finishedAt": "2026-09-29 10:15:34", "dispatchedBy": "sched-test", "trigger": "scheduled", "totalDurationMs": 34000, "steps": [{"guid": "A11AF53B-BBEE-11F1-91F8-B6C6F3878660", "stepId": "01", "state": "completed", "timeQueued": "2026-09-29 10:15:00", "timeStarted": "2026-09-29 10:15:00", "timeFinished": "2026-09-29 10:15:33", "failureReason": "", "progressCurrent": "", "progressTotal": "", "confirmedBy": "", "confirmedAt": "", "executedAs": "sched-test
+PASS run marked scheduled, dispatched by the run-as account
+PASS in-process step executed as the run-as account — {"guid": "A11AFAC2-BBEE-11F1-91F8-B6C6F3878660", "stepId": "02", "state": "completed", "timeQueued": "2026-09-29 10:15:00", "timeStarted": "2026-09-29 10:15:33", "timeFinished": "2026-09-29 10:15:33",
+PASS remote step ran on iris-target
+PASS first log entry names the schedule — Run started by the schedule of flow us28-accept-a7d972 as sched-test (flow revision 1, 2 steps)
+PASS replace: one task, a new id
+PASS replace: still two secrets (new generation)
+PASS SentaiSchedule:U taken from the run-as role
+… waiting for the task to fire at 10:17 (instance time)
+PASS SC-004 a failed scheduled run is recorded — {"guid": "E89BE4F0-BBEE-11F1-91F8-B6C6F3878660", "flowId": "7460", "flowRevision": 1, "state": "failed", "startedAt": "2026-09-29 10:17:00", "finishedAt": "2026-09-29 10:17:00", "dispatchedBy": "sched-test", "trigger": "scheduled", "seq": 3328, "flowName": "us28-accept-a7d972", "totalDurationMs": 0,
+PASS SC-004 the log gives the platform's refusal — Scheduled run could not start: could not read the stored credential for primary: ERROR #822: Access Denied
+PASS SC-004 the task history shows the error — HTTP 200
+PASS unschedule — {"removedTasks": [2789], "removedSecrets": 2, "residue": []}
+PASS no task left
+PASS no secret left
+PASS unschedule again is harmless
+PASS GET schedule: not scheduled
+PASS SC-002 password in no product global — CLEAN
+29/29 checks passed
+EXIT 0

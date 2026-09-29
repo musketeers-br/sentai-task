@@ -7,14 +7,48 @@
 [![IPM](https://img.shields.io/badge/IPM-sentai--task-00b2a9.svg)](#ipm)
 
 <p align="center">
-  <img src="./assets/sentai-task.png" alt="SentaiTask 戦隊 — red ranger holding a wrench and an IRIS crystal" width="420">
+  <img src="./assets/sentai-task.png" alt="SentaiTask 戦隊 — red ranger holding a wrench and an IRIS crystal" width="320">
 </p>
 
 # 🦸 SentaiTask 戦隊
 
-**Visual orchestration for InterSystems IRIS maintenance tasks**
+**Visual orchestration for InterSystems IRIS maintenance tasks**: compose checks, purges and
+journal switches as a flow, run them in parallel waves that converge at join points, on this
+instance and on other IRIS servers, and watch every step live.
 
-> *Every task a squad member. Every flow a coordinated attack.*
+<p align="center">
+  <img src="./assets/media/sentai-run.gif" alt="SentaiTask running a flow: three integrity checks, one of them on a second IRIS server, and two security reports run in parallel, converge on a join, and the final report opens with its findings; then the run log and the run history" width="880">
+</p>
+
+## 🚀 Try it
+
+- **Public demo**: a stable address is being set up for the voting week; it will be listed here.
+  Sign in as **`sentai-demo`** / **`sentai-demo-2026`**, open **Showcase: nightly checks across
+  servers** from *Open flow…* and choose *Run now*. The demo is reset every day.
+- **On your machine, in three commands** (Docker only):
+
+  ```sh
+  git clone https://github.com/musketeers-br/sentai-task.git && cd sentai-task
+  docker compose up -d --build
+  # then open http://localhost:52773/csp/sentai/ and sign in as _SYSTEM / SYS
+  ```
+
+  The local quickstart works even when the public demo is down. *Open example flow* on the empty
+  canvas runs a ready-made, read-only flow in about a second.
+
+### Contest areas covered
+
+| Management Portal area | What SentaiTask offers | Proof |
+|---|---|---|
+| **Task management** | Flows of tasks with dependencies and fan-in joins; dispatch, live tracking, cancel and rerun per step; native Task Manager catalog with filters, suspend and resume; schedules that run: one native task per flow, running as a run-as account whose password lives in the IRIS Wallet | [How to use](#-how-to-use), [spec 006](specs/006-task-catalog-api/) |
+| **Operating system** | `storage-headroom-check` (free disk per database and journal directory, Embedded Python) and `db-size-report` (size and free space of every database) as flow steps | [Declared step types](#declared-step-types) |
+| **Work Queue Manager** | Read and edit WQM categories, the worker pools every step runs on | [API at a glance](#api-at-a-glance) |
+| **Logs** | Every run writes its own log (dispatch, each step start and end with its duration, the platform's failure reason verbatim, joins that stopped a step, who asked to cancel, targets that stopped answering, the outcome); a *Runs* screen finds any past run by flow and outcome, and *Export* saves one as a file | [Runs and run log](#runs-and-run-log), [spec 012](specs/012-run-log-history/) |
+| **Security and permissions** | `security-posture-report` as a flow step: enabled accounts and their roles, `%All` holders, services open to unauthenticated connections, auditing off, on any server. Every call runs with the operator's own IRIS credential; the platform's refusal is shown verbatim | [Report steps](#report-steps-security-web-applications-alerts-secrets), [spec 013](specs/013-area-report-steps/) |
+| **Web applications / REST** | `web-app-inventory`: every web application, whether it is a REST endpoint, its resource and authentication; anonymous endpoints are findings | [Report steps](#report-steps-security-web-applications-alerts-secrets) |
+| **Monitoring and alerts** | `system-alerts-check` gates a flow on the platform's serious alerts, application errors and resource statuses | [Report steps](#report-steps-security-web-applications-alerts-secrets) |
+| **Secrets** | `secrets-inventory`: the IRIS Wallet's collections, their protecting resources and secret names, never a value | [Report steps](#report-steps-security-web-applications-alerts-secrets) |
+| **Distributed work** | A flow step can run on another IRIS instance (a *target server*), tracked and with its result collected on the primary | [DPI-I-588](#-implements-dpi-i-588-distributed-work-manager) |
 
 ---
 
@@ -37,17 +71,6 @@ knowledge into a declared, validated, observable flow:
   [Known limitations](#%EF%B8%8F-known-limitations-v1)).
 
 Like a *sentai* squad, each step has its own role, and the flow decides when they move together.
-
-### Contest areas covered
-
-| Management Portal area | What SentaiTask offers |
-|---|---|
-| **Task management** | Flows of tasks with dependencies and fan-in joins; dispatch, live tracking, cancel and rerun per step; native Task Manager catalog with filters, suspend and resume; flow scheduling through the platform |
-| **Operating system** | `storage-headroom-check` (free disk per database and journal directory, Embedded Python) and `db-size-report` (size and free space of every database) as flow steps |
-| **Work Queue Manager** | Read and edit WQM categories, the worker pools every step runs on |
-| **Logs** | Each step's state, elapsed time and the platform's failure reason verbatim, streamed over SSE and kept per run |
-| **Permissions** | Every call runs with the operator's own IRIS credential; the platform's refusal is shown verbatim, never reinterpreted |
-| **Distributed work** | A flow step can run on another IRIS instance (a *target server*), tracked and with its result collected on the primary — see [DPI-I-588](#-implements-dpi-i-588-distributed-work-manager) |
 
 ---
 
@@ -135,8 +158,8 @@ The build compiles the canvas, loads the `sentai-task` module and registers the 
 **http://localhost:52773/csp/sentai/**
 
 Sign in to the canvas with your IRIS user (`_SYSTEM` / `SYS` on this dev image). That sign-in
-exchanges the password for short-lived API tokens, which stay in memory only; the password is
-never stored.
+exchanges the password for short-lived API tokens; only the renewal token is kept, for the
+current browser tab (spec 010), and the password is never stored.
 
 > **What is public and what is not:** the page itself (HTML, JS, CSS) is served without
 > authentication by `sentai.web.StaticFiles`, which only reads the canvas build and holds no
@@ -175,6 +198,41 @@ natively; no container needed) or any server speaking `POST /v1/embeddings` — 
 `%Embedding.OpenAI` for a hosted provider, which **sends the operator's query text off the
 machine**. Delete the row to drop semantic search again; nothing else changes.
 
+### Public demo (hosts)
+
+A public machine runs the same compose stack behind a proxy that forwards only the canvas and
+the management API calls the canvas makes; the management portal and every other web
+application answer 404, and IRIS publishes no port of its own (spec 011).
+
+```sh
+git clone https://github.com/musketeers-br/sentai-task.git /opt/sentai-task && cd /opt/sentai-task
+printf 'SENTAI_DEMO_SECRET=%s
+DEMO_HOST=%s
+' "<long random secret>" "demo.example.org" > .env
+scripts/demo/up.sh
+```
+
+- `up.sh` refuses to start without `SENTAI_DEMO_SECRET`. It gives that secret to every privileged
+  account on both instances, creates the demo account `sentai-demo` / `sentai-demo-2026` with
+  least privilege ([what it may do](specs/011-demo-readiness/evidence/t001-demo-role.md)), seeds
+  the example and showcase flows, and only then opens the proxy. With `DEMO_HOST` set the proxy
+  obtains an HTTPS certificate for it; without it, the demo answers on plain HTTP.
+- The demo account holds no security administration. The platform still lets it purge task
+  history, because the privileges an integrity check needs allow that too; on a disposable demo
+  this is accepted.
+- Keep it clean and watch it (cron on the host):
+
+  ```cron
+  0 6 * * *    cd /opt/sentai-task && scripts/demo/reset.sh  >> /var/log/sentai-demo.log 2>&1
+  0 */12 * * * cd /opt/sentai-task && scripts/demo/status.sh >> /var/log/sentai-demo.log 2>&1
+  ```
+
+  `reset.sh` removes visitor flows and runs, restores the showcase and the demo password, and
+  clears the IRIS alert state on both instances; `status.sh` exits non-zero when an instance is
+  unhealthy.
+- Never `docker compose down` the demo (it removes the containers and their data): use
+  `restart`, or run `up.sh` again to rebuild, re-secure and re-seed.
+
 ---
 
 ## 💡 How to Use
@@ -203,6 +261,58 @@ machine**. Delete the row to drop semantic search again; nothing else changes.
    for the whole run.
 
 The **Dark / Light** switch in the top bar changes theme on every screen.
+
+### Runs and run log
+
+- **RUN LOG** in the run view tells the run's story, oldest first: who dispatched it, each step
+  starting and finishing (with its duration), the platform's failure reason in quotes, a join
+  that kept a step from starting (naming the input), cancel/pause/re-run requests and their
+  answer, a target that stopped or started answering again, and the outcome.
+- The **Runs** tab lists runs newest first, 50 at a time (*Load more*), with flow, outcome, start,
+  duration, who dispatched it and step counts. Filter by flow and outcome; the filters live in the
+  address. *More → Run history* on a flow opens the list filtered to it. A finished run opens
+  read-only, with *Back to runs*.
+- *Export* in any run view saves `<flow>-<run>.json`: the run, every step with its result and
+  failure reason, and the log. Nothing from the session is in it.
+- API: `GET /csp/sentai/api/v1/runs?flowId=&state=&trigger=&limit=&before=` (spec 012 contract).
+  A run started by a schedule is marked *scheduled* (`trigger`), and the list filters by it.
+
+### Schedules
+
+*Schedule in Task Manager* in the top bar schedules the open flow: daily, weekly (chosen days),
+monthly (a day of the month) or every 1–12 hours, at a time in the **instance's clock** (the dialog
+shows the instance's current time).
+
+- **One native task per flow**, named `SentaiTask: <flowId> <flow name>`, created through the
+  platform's management API with your token (the platform decides whether you may). It runs as the
+  **run-as account** you name, and when it fires it runs the flow exactly as *Run now* does. The run
+  is marked *scheduled* in the history.
+- **The run-as password is checked by signing in** on this instance, and on each target server the
+  flow uses (one password per target), **then kept only in the IRIS Wallet** — collection
+  `SentaiTask`, protected by the resource `SentaiSchedule`. SentaiTask never stores, logs or shows
+  it; at firing the platform applies it to the sign-in request itself.
+- **Grants (by the administrator):** `SentaiSchedule:U` to run-as accounts (to use the stored
+  password), `SentaiSchedule:W` to operators who schedule (to write it). The installer creates the
+  resource and the collection and grants them to nobody.
+- **See, change, remove:** reopening the dialog shows the schedule, the platform's next run and the
+  last scheduled run. *Update* changes the timing, *Renew credential* keeps it with new passwords
+  (after a password change), *Unschedule…* removes the task and the stored passwords. Each change
+  leaves exactly one task.
+- **When a scheduled run cannot start** (the password was changed, the account lost
+  `SentaiSchedule:U`, the flow no longer validates), a failed run records why, in the platform's
+  words (`Scheduled run could not start: …`), and the Task Manager's history shows the error.
+- Destructive steps cannot be scheduled (they need a typed confirmation at *Run now*).
+- API: `GET/POST/DELETE /csp/sentai/api/v1/flows/{id}/schedule`
+  ([contract](specs/015-scheduled-runs/contracts/api-delta.md)). Example:
+
+```bash
+curl -s -X POST http://localhost:52773/csp/sentai/api/v1/flows/1/schedule \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"schedule": {"kind": "weekly", "days": [6], "startTime": "03:00"},
+       "runAs": "nightly-ops", "password": "<run-as password>",
+       "targetPasswords": [{"target": "iris-target", "password": "<run-as password there>"}]}'
+# 201 {"taskId": 42, "nextRun": "2026-10-03 03:00:00", "describe": "Weekly on Sat at 03:00", "residue": []}
+```
 
 ### The Task catalog screen
 
@@ -301,7 +411,7 @@ run then renews its own credential and erases it when it ends. The canvas does t
 
 | Area | Endpoints |
 |---|---|
-| Flows | `GET/POST /flows` · `GET/PUT /flows/{id}` · `POST /flows/{id}/validate` · `POST /flows/{id}/dispatch` · `POST /flows/{id}/schedule` |
+| Flows | `GET/POST /flows` · `GET/PUT /flows/{id}` · `POST /flows/{id}/validate` · `POST /flows/{id}/dispatch` · `GET/POST/DELETE /flows/{id}/schedule` |
 | Runs | `GET /runs` · `GET /runs/{guid}` · `GET /runs/{guid}/events` (SSE) · `POST /runs/{guid}/cancel` · `POST /runs/{guid}/pause` |
 | Steps | `POST /runs/{guid}/steps/{stepGuid}/cancel` · `…/pause` · `…/rerun` |
 | Catalog | `GET /catalog/step-types` · `GET /catalog/step-types/search?q=…` · `GET /catalog/tasks` · `GET /catalog/tasks/{id}` · `POST /catalog/tasks/{id}/suspend` |
@@ -311,7 +421,27 @@ run then renews its own credential and erases it when it ends. The canvas does t
 Validation errors come back as `{"errors": [{"stepId", "code", "message"}], "warnings": [...]}`,
 with codes such as `CYCLE_DETECTED`, `STEP_TYPE_NOT_SUPPORTED_ON_TARGET`, `CATEGORY_NOT_FOUND`
 and, for declared step types, `PARAM_REQUIRED`, `PARAM_TYPE_MISMATCH`, `PARAM_OUT_OF_RANGE`,
-`PARAM_UNKNOWN` (each also carries `parameter`) and, on `/schedule`, `IN_PROCESS_NOT_SCHEDULABLE`.
+`PARAM_UNKNOWN` (each also carries `parameter`) and, on `/schedule`, `DESTRUCTIVE_NOT_SCHEDULABLE`.
+
+#### Report steps (security, web applications, alerts, secrets)
+
+Four read-only step types (spec 013, `executor: "platform-read"`) read the **management API of the
+instance the step runs on** with the operator's credential for it, so they run on target servers
+too, and apply fixed rules. Each stores a report: `summary` (counts by severity), `findings`
+(severity, rule, item, detail) and `details`. The run view opens any step's result with **Result**.
+
+| Type | Reads | Findings | Parameters |
+|---|---|---|---|
+| `security-posture-report` | users and each enabled user's roles, services, audit flag | `ALL_ROLE_HOLDER` (high), `AUDIT_DISABLED` (high), `UNAUTHENTICATED_SERVICE` (medium) | `failOnFindings` (fail on any high) |
+| `web-app-inventory` | web applications | `ANONYMOUS_REST_ENDPOINT` (high), `ANONYMOUS_APPLICATION` (medium): enabled, not system, unauthenticated allowed, no resource | `failOnFindings` |
+| `system-alerts-check` | the main monitoring dashboard | `SERIOUS_ALERTS_OVER`, `APPLICATION_ERRORS_OVER`, `STATUS_NOT_NORMAL` — the step fails on any | `maxSeriousAlerts` (0), `maxApplicationErrors` (0), `requireNormalStatus` (true) |
+| `secrets-inventory` | wallet collections and their secrets' names | `UNPROTECTED_COLLECTION` (medium) | — |
+
+- Reports copy only named fields from the platform's answers; no password, hash, token or secret
+  value can reach a result. The platform decides what the operator may read: reading users and
+  services needs security administration privileges, and a refusal fails the step verbatim.
+- The canvas's own page `/csp/sentai` is anonymous by design (it serves only static files) and the
+  web application inventory reports it; that finding is expected.
 
 #### Declared step types
 
@@ -339,8 +469,8 @@ of the step's category, inside IRIS.
   who ran it in `executedAs` (`GET /runs/{guid}` → `steps[]`). A run has one identity:
   `/dispatch` with a `runCredential` of another user is refused with 403
   `RUN_CREDENTIAL_USER_MISMATCH` before any run exists, and only the dispatcher may re-run a step
-  (403 `RERUN_NOT_BY_DISPATCHER`). Declared steps are not schedulable
-  (`IN_PROCESS_NOT_SCHEDULABLE`): a scheduled run has no operator.
+  (403 `RERUN_NOT_BY_DISPATCHER`). In a scheduled run, declared steps run as the schedule's
+  run-as account (spec 015).
 - **Timeout.** `timeoutMinutes` (60 when 0) counts from the moment the step becomes `running`,
   which includes the time spent waiting for a worker under the category's limits. A timed-out or
   cancelled step's work may still finish in the background; its late result is discarded.
@@ -556,8 +686,8 @@ main points:
 - **Available step types:** `integrity-check`, `switch-journal`, `storage-headroom-check`,
   `db-size-report` and `purge-task-history` (destructive: typed confirmation). The others are listed with `available: false` and refused with
   `STEP_TYPE_NOT_SUPPORTED_ON_TARGET` until each one is proven.
-- **Use manual dispatch.** `/schedule` validates the flow and registers native tasks, but a
-  scheduled run has no operator credential in v1, so it is not a supported execution path yet.
+- **Schedules use the instance's clock**, and overlapping runs of the same flow are not
+  prevented (a long run may still be going when the next firing starts another).
 - **Long runs need a run credential.** The canvas handles it at *Run now*; a plain `curl` dispatch
   without `runCredential` stops after the platform's 60-second token.
 - **Flows must name an existing WQM category**, such as `Default`.
@@ -660,11 +790,16 @@ sentai-task/
 * [x] **007 (part B)**: declared custom steps in the canvas: a *Custom* palette group and an inspector form generated from the API schema, with errors on their field
 * [x] **008**: Distributed targets — implements [DPI-I-588](https://ideas.intersystems.com/ideas/DPI-I-588) (API)
 * [x] **009**: Target servers in the canvas: Targets screen, *Run on*, target passwords at *Run now*, where each step runs
+* [x] **010**: Onboarding: *Open flow…*, *Save as…*, sign-in kept across reloads, a ready-made example flow and a getting-started guide
+* [x] **011**: Demo readiness: a public demo that stays up (proxy, secured accounts, least-privilege demo account, daily reset), this README's first screen, and a warning before a cancel that makes IRIS raise an alert
+* [x] **012**: Run log and run history: every run tells its own story, past runs are one click away, and any run exports as a file
+* [x] **013**: Area report steps: security posture, web applications, system alerts and secrets as flow steps, on any server
+* [x] **014**: Demo media (animated capture, stills) and the community article drafts in English and Portuguese
+* [x] **015**: Scheduled runs that execute, with the run-as credential kept in the IRIS Wallet
 
 ### 🚧 Next
 
-* [ ] WQM category screen and run history in the canvas (the API already has them)
-* [ ] A credential for scheduled runs (unblocks scheduling)
+* [ ] WQM category screen in the canvas (the API already has it)
 * [ ] Prove and enable the remaining step types, one at a time
 
 ---

@@ -112,6 +112,41 @@ ClassMethod Login(baseUrl As %String, user As %String, password As %String, ByRe
     Quit ..Send(req, "Post", "/api/admin/login", .httpStatus, .location, .transportError)
 }
 
+/// Spec 015 (plan D-3): signs in at `baseUrl` with the IRIS Wallet secret `secretName` (a key-value
+/// secret {"user","password"} of usage HTTP). The platform applies the credential to the request
+/// itself (`UseSecret` → `%Wallet.KeyValue.ApplyHTTP`) after checking that the current process
+/// may use the secret's collection: this code never reads the password. A refused use is
+/// returned as status 0 with the platform's text in `transportError` and `secretRefused` = 1
+/// (a transport error with `secretRefused` = 0 means the instance did not answer).
+ClassMethod LoginWithSecret(baseUrl As %String, secretName As %String, ByRef httpStatus As %Integer, ByRef transportError As %String, ByRef secretRefused As %Boolean) As %DynamicObject
+{
+    Set secretRefused = 0
+    If $G(^sentaiTestDouble("enabled")) {
+        Quit ##class(sentai.unittest.AdminApiDouble).LoginWithSecret(baseUrl, secretName, .httpStatus, .transportError, .secretRefused)
+    }
+    Set httpStatus = 0, transportError = ""
+    Set req = ..NewRequest("", baseUrl)
+    Do req.EntityBody.Write("{}")
+    Try {
+        Set sc = req.UseSecret(secretName, "basic")
+    } Catch ex {
+        Set sc = ex.AsStatus()
+    }
+    If $$$ISERR(sc) {
+        Set transportError = $SYSTEM.Status.GetErrorText(sc), secretRefused = 1
+        Quit ""
+    }
+    Try {
+        Set body = ..Send(req, "Post", "/api/admin/login", .httpStatus, .location, .transportError)
+        // ApplyHTTP's refusal may also come back as the request's error status.
+        Set:((httpStatus = 0) && (transportError [ "#822")) secretRefused = 1
+    } Catch ex {
+        // ApplyHTTP throws when the process may not use the collection (#822).
+        Set body = "", httpStatus = 0, transportError = ex.DisplayString(), secretRefused = 1
+    }
+    Quit body
+}
+
 /// Sends `req` and turns the outcome into values: the parsed body, the HTTP status and Location,
 /// or status 0 with the transport error text when no HTTP answer arrived (research R-4). On such
 /// a failure HttpResponse is not an object, so it is never read (T001).

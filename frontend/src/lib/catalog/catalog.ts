@@ -48,10 +48,11 @@ export interface WireRecentRun {
 	LogDatetime: string;
 }
 
-/** Present only on tasks whose name follows `SentaiTask: <flowId>#<stepId>` (spec 006). */
+/** Present only on tasks whose name follows `SentaiTask: <flowId> <flow name>` (spec 015) or the
+ * legacy `SentaiTask: <flowId>#<stepId>` (spec 006, which alone carries `stepId`). */
 export interface TaskOrigin {
 	flowId: string;
-	stepId: string;
+	stepId?: string;
 	flowExists: boolean;
 }
 
@@ -163,7 +164,7 @@ export type OriginMark = { label: string; flowId: string } | { label: 'flow not 
 /** FR-009: the SentaiTask mark, a link to the flow only when the API says it still exists. */
 export function originMark(task: CatalogTaskView): OriginMark | null {
 	if (!task.origin) return null;
-	const label = `flow ${task.origin.flowId} · step ${task.origin.stepId}`;
+	const label = task.origin.stepId ? `flow ${task.origin.flowId} · step ${task.origin.stepId}` : `flow ${task.origin.flowId}`;
 	return task.origin.flowExists ? { label, flowId: task.origin.flowId } : { label: 'flow not found', flowId: null, title: label };
 }
 

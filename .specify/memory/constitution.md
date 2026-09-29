@@ -1,37 +1,31 @@
 <!--
 Sync Impact Report
 ==================
-Version change: (uninitialized template) → 1.0.0
-Bump rationale: Initial ratification of the SentaiTask Constitution.
+Version change: 1.0.0 → 1.1.0
+Bump rationale: MINOR — Principle III is materially expanded: it now states how an application
+may authenticate on behalf of an operator who is not present (a scheduled run), which it did not
+address before. No principle is removed or redefined.
 
-Principles established (all new):
-  1. Layered Architecture
-  2. Closed Capability Set
-  3. Delegated Authorization
-  4. Errors as Values
-  5. Verifiable Increments
-  6. Technology Agnosticism
+Modified principles:
+  - III. Delegated Authorization — adds the stored-credential rule: an application MAY keep an
+    authentication secret only in the platform's own secret store, protected by a platform
+    resource, so that every use of it is authorized by the platform; it MUST NOT keep one in its
+    own storage, logs or records. The rationale is extended accordingly.
 
-Sections added:
-  - Core Principles
-  - Engineering Standards
-  - Workflow
-  - Governance
-
-Sections removed: none (template placeholders replaced).
+Added / removed sections: none.
 
 Templates requiring updates:
-  ✅ .specify/templates/plan-template.md — "Constitution Check" gate remains
-     generic ("[Gates determined based on constitution file]"); no rewrite
-     required, but reviewers MUST evaluate plans against the six principles.
-  ✅ .specify/templates/spec-template.md — remains generic; no changes required.
-     Spec authors MUST keep specifications free of implementation-specific
-     technology choices (Principle 6).
-  ✅ .specify/templates/tasks-template.md — remains generic; no changes
-     required. Task authors MUST slice by verifiable user-observable behavior,
-     not by technical layer (Principle 5).
-  ⚠ README.md and any runtime guidance docs — none currently exist that
-     reference constitutional rules; revisit when introduced.
+  ✅ .specify/templates/plan-template.md — generic Constitution Check; no change.
+  ✅ .specify/templates/spec-template.md — no change.
+  ✅ .specify/templates/tasks-template.md — no change.
+  ✅ specs/015-scheduled-runs/plan.md — cites this amendment (plan item 7).
+
+Trigger: spec 015 (scheduled runs that execute) — the Governance review required for "a change in
+how the platform authorizes calls". Decided on 2026-09-29 in autonomous mode granted by the
+product owner, and recorded for their review.
+
+Previous report (1.0.0, 2026-09-20): initial ratification of the six principles, Engineering
+Standards, Workflow and Governance.
 
 Deferred TODOs: none.
 -->
@@ -97,12 +91,22 @@ platform denies an operation, the denial — including the reason the platform
 gave — MUST be surfaced to the user without modification or paraphrase that
 loses information.
 
+When work must run with no operator present, the application MAY keep an
+authentication secret for it only in the platform's own secret store, protected
+by a platform resource, so that the platform authorizes every use of the secret
+and every call made with it. The application MUST NOT keep such a secret in its
+own storage, logs, records or responses, and MUST remove it when the work it
+serves is removed.
+
 **Rationale**: The platform is the system of record for who may do what to
 which resource, and its policy changes without notifying us. Any local copy of
 that policy will drift and will, sooner or later, authorize an action the
 platform would have refused. Delegating each decision at the moment of use
 keeps the application's view of permission aligned with the platform's, and
-preserves the platform's explanation so the operator can act on it.
+preserves the platform's explanation so the operator can act on it. Unattended
+work needs to authenticate, not to decide: keeping its secret where the
+platform guards and audits it leaves every decision with the platform, while a
+copy in the application's own storage would be a second, unguarded key.
 
 ### IV. Errors as Values
 
@@ -226,4 +230,4 @@ reorganized edge, a new class of capability, a change in how the platform
 authorizes calls — obliges a review of this Constitution, whether or not the
 change ultimately requires an amendment.
 
-**Version**: 1.0.0 | **Ratified**: 2026-09-20 | **Last Amended**: 2026-09-20
+**Version**: 1.1.0 | **Ratified**: 2026-09-20 | **Last Amended**: 2026-09-29

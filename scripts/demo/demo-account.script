@@ -1,0 +1,15 @@
+ // Spec 011 (plan D-8): the demo operator account `sentai-demo` with role `SentaiDemo`, on either
+ // instance. Run in %SYS through `iris session`, with these lines sent on stdin before this file:
+ //   set demopw="<published demo password>"
+ //   set resources="<resource:permission,...>"   (the least-privilege set, research R-4)
+ // Creates or updates both, so a reset restores the published password. Never grants
+ // %Admin_Secure or %All. Prints "RESULT:OK" or "RESULT:<error>".
+ set err="" if ($get(demopw)="")||($get(resources)="") { set err="demopw and resources are required on stdin" } elseif (resources["%Admin_Secure")||(resources["%All") { set err="refused: the demo role must not hold security administration" }
+ if err="" { if ##class(Security.Roles).Exists("SentaiDemo") { kill r set r("Resources")=resources,r("Description")="SentaiTask public demo operator (spec 011)",sc=##class(Security.Roles).Modify("SentaiDemo",.r) } else { set sc=##class(Security.Roles).Create("SentaiDemo","SentaiTask public demo operator (spec 011)",resources) } set:'sc err=$system.Status.GetErrorText(sc) }
+ if err="" { kill u set u("Password")=demopw,u("Roles")="SentaiDemo",u("Enabled")=1,u("ChangePassword")=0,u("FullName")="SentaiTask demo operator" if ##class(Security.Users).Exists("sentai-demo") { set sc=##class(Security.Users).Modify("sentai-demo",.u) } else { set sc=##class(Security.Users).Create("sentai-demo","SentaiDemo",demopw,"SentaiTask demo operator") } set:'sc err=$system.Status.GetErrorText(sc) }
+ // On the primary (`set sqlschema="sentai_model"` on stdin), the role also needs SQL privileges on
+ // the product's tables, and EXECUTE on the platform's free-space query that the in-process
+ // storage steps call: without them the platform refuses with SQLCODE -99.
+ if (err="")&&($get(sqlschema)'="") { new $namespace set $namespace="IRISAPP" set st=##class(%SQL.Statement).%ExecDirect(,"GRANT SELECT, INSERT, UPDATE, DELETE ON SCHEMA "_sqlschema_" TO SentaiDemo") set:st.%SQLCODE<0 err="SQL grant: "_st.%Message if err="" { set st=##class(%SQL.Statement).%ExecDirect(,"GRANT EXECUTE ON %SYS.DatabaseQuery_FreeSpace TO SentaiDemo") set:st.%SQLCODE<0 err="SQL grant: "_st.%Message } }
+ write "RESULT:",$select(err="":"OK",1:err),!
+ kill demopw,resources,sqlschema

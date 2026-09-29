@@ -18,7 +18,8 @@
 		onrun,
 		onschedule,
 		onhelp,
-		onsignout
+		onsignout,
+		onhistory
 	}: {
 		editor: FlowEditor;
 		screen: Screen;
@@ -36,6 +37,8 @@
 		/** Spec 010 FR-023: Help → Getting started, on every screen. */
 		onhelp: () => void;
 		onsignout: () => void;
+		/** Spec 012 FR-010: the Runs screen filtered to the open flow. */
+		onhistory: () => void;
 	} = $props();
 
 
@@ -58,6 +61,9 @@
 		</button>
 		<button type="button" aria-current={screen === 'targets' ? 'page' : undefined} onclick={() => onnavigate('targets')}>
 			Targets
+		</button>
+		<button type="button" aria-current={screen === 'runs' ? 'page' : undefined} onclick={() => onnavigate('runs')}>
+			Runs
 		</button>
 	</nav>
 
@@ -112,7 +118,8 @@
 			label="More"
 			items={[
 				{ label: 'New flow', onselect: onnew },
-				{ label: 'Save as…', disabled: editor.saving || editor.name.trim() === '', onselect: onsaveas }
+				{ label: 'Save as…', disabled: editor.saving || editor.name.trim() === '', onselect: onsaveas },
+				{ label: 'Run history', disabled: editor.id === null, onselect: onhistory }
 			]}
 		/>
 		<button
@@ -152,8 +159,8 @@
 	.top-bar {
 		display: flex;
 		align-items: center;
-		/* Three tabs plus the flow actions must fit 1440 px without clipping (spec 009, spec 010). */
-		gap: 8px;
+		/* Four tabs plus the flow actions must fit 1440 px without clipping (spec 009, 010, 012). */
+		gap: 6px;
 		height: var(--chrome-top-bar-height);
 		flex-shrink: 0;
 		box-sizing: border-box;
@@ -173,7 +180,7 @@
 		background: transparent;
 		border: 1px solid transparent;
 		border-radius: var(--radius-control);
-		padding: 6px 10px;
+		padding: 6px 7px;
 	}
 
 	.tabs button[aria-current='page'] {

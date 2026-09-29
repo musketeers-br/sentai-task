@@ -95,6 +95,7 @@ Method TransitionTo(newState As %String, failureReason As %String = "") As %Stat
             $$$ThrowStatus($$$ERROR($$$GeneralError, "SentaiIllegalTransition: "_..state_" -> "_newState_" is not allowed"))
         }
 
+        Set from = ..state
         Set ..state = newState
         If (newState = "running") && (..timeStarted = "") Set ..timeStarted = $ZDATETIME($HOROLOG, 3)
         If $LISTFIND($LB("completed", "failed", "cancelled"), newState) Set ..timeFinished = $ZDATETIME($HOROLOG, 3)
@@ -104,6 +105,8 @@ Method TransitionTo(newState As %String, failureReason As %String = "") As %Stat
         $$$ThrowOnError(sc)
 
         $$$ThrowOnError(##class(sentai.model.Run).BumpEventVersionFor(..runGetObjectId()))
+        // Spec 012: the run log records the change; a failed write never undoes it (FR-004).
+        Do ##class(sentai.dispatch.RunNarrator).StepChanged($this, from, newState)
 
         TCOMMIT
     }

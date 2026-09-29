@@ -121,13 +121,18 @@ ClassMethod ErrorText(platformStatus As %DynamicObject) As %String
 /// Destructiveness from the step-type catalog only (data-model §Destructiveness): rule 1, the
 /// class is unavailable → unknown; rule 2, a catalog entry names the class → its `destructive`;
 /// rule 3, the product's own scheduled task whose flow and step exist → the step type's
-/// `destructive`; rule 4, anything else → unknown. Never a guess.
+/// `destructive` (a flow's task, spec 015: destructive when any of the flow's steps is); rule 4,
+/// anything else → unknown. Never a guess.
 ClassMethod ApplyDestructiveness(task As %DynamicObject)
 {
     If 'task.%IsDefined("class") Do ..SetDestructive(task, 0, 1) Quit
     Set destructive = ##class(sentai.registry.StepType).DestructiveByClass(task.class, .known)
     If known Do ..SetDestructive(task, destructive, 0) Quit
-    If (task.class = "sentai.dispatch.ScheduledFlowTask") && task.%IsDefined("origin") && task.origin.flowExists {
+    If (task.class = "sentai.dispatch.ScheduledFlowTask") && task.%IsDefined("origin") && task.origin.flowExists && 'task.origin.%IsDefined("stepId") {
+        Set destructive = ##class(sentai.catalog.TaskOrigin).FlowIsDestructive(task.origin.flowId, .found)
+        If found Do ..SetDestructive(task, destructive, 0) Quit
+    }
+    If (task.class = "sentai.dispatch.ScheduledFlowTask") && task.%IsDefined("origin") && task.origin.flowExists && task.origin.%IsDefined("stepId") {
         Set type = ##class(sentai.catalog.TaskOrigin).StepTypeOf(task.origin.flowId, task.origin.stepId, .found)
         If found && ##class(sentai.registry.StepType).IsKnownType(type) {
             Do ..SetDestructive(task, ##class(sentai.registry.StepType).IsDestructive(type), 0)

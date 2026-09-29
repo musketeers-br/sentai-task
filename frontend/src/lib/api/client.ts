@@ -1,5 +1,6 @@
 // Typed calls to SENTAI.REST.Dispatcher (contracts/openapi.yaml). Every predictable failure
 // comes back as a value, and the platform's own words are kept verbatim (Constitution III, IV).
+import { fromWireRunSummary, pageParams, type RunSummaryView, type RunsQuery } from '$lib/runs/runs';
 import {
 	catalogQuery,
 	fromWireCatalogPage,
@@ -25,6 +26,7 @@ import {
 import type { ValidationReport } from '$lib/flow/report';
 import { fromWireRun, type RunView } from '$lib/run/run';
 import { session } from './session.svelte';
+import { fromWireScheduleRead, type ScheduleRead, type ScheduleRequest } from '$lib/shell/schedule';
 import type { FlowSummaryView } from '$lib/flows/list';
 import {
 	fromWireFlow,
@@ -38,9 +40,12 @@ import {
 
 const API_BASE = '/csp/sentai/api/v1';
 
+/** Spec 015: POST /flows/{id}/schedule. `residue` lists old items the platform would not remove. */
 export interface ScheduleResult {
-	taskIds: number[];
-	nextRun: string;
+	taskId: number;
+	nextRun: string | null;
+	describe: string;
+	residue: Array<{ task?: number; secret?: string; detail: string }>;
 }
 
 /** The platform's own error object, as spec 006 passes it through (never rewritten). */
@@ -59,6 +64,10 @@ export type ApiError =
 			detail: string;
 			platformStatus?: PlatformStatus;
 			platformInfo?: Record<string, unknown>;
+			/** Spec 015: a machine-readable code, the field or the instance a refusal is about. */
+			code?: string;
+			field?: string;
+			instance?: string;
 	  }
 	| { kind: 'network'; message: string };
 
@@ -130,7 +139,10 @@ async function request<T>(
 			title: String(json.title ?? res.statusText),
 			detail: String(json.detail ?? ''),
 			...(json.platformStatus === undefined ? {} : { platformStatus: json.platformStatus as PlatformStatus }),
-			...(json.platformInfo === undefined ? {} : { platformInfo: json.platformInfo as Record<string, unknown> })
+			...(json.platformInfo === undefined ? {} : { platformInfo: json.platformInfo as Record<string, unknown> }),
+			...(typeof json.code === 'string' ? { code: json.code } : {}),
+			...(typeof json.field === 'string' ? { field: json.field } : {}),
+			...(typeof json.instance === 'string' ? { instance: json.instance } : {})
 		}
 	};
 }
@@ -184,18 +196,25 @@ export const api = {
 		return request<ValidationReport>('POST', `/flows/${encodeURIComponent(id)}/validate`, {});
 	},
 
-	async schedule(
-		id: string,
-		body: { scheduleSpec: string; category?: string }
-	): Promise<ApiResult<ScheduleResult>> {
+	/** Spec 015: the body carries the run-as passwords; it is sent once and never kept. */
+	async schedule(id: string, body: ScheduleRequest): Promise<ApiResult<ScheduleResult>> {
 		return map(
-			await request<{ taskIds: Array<number | string>; nextRun: string }>(
-				'POST',
-				`/flows/${encodeURIComponent(id)}/schedule`,
-				body
-			),
-			(r) => ({ taskIds: r.taskIds.map(Number), nextRun: r.nextRun })
+			await request<Record<string, unknown>>('POST', `/flows/${encodeURIComponent(id)}/schedule`, body),
+			(r) => ({
+				taskId: Number(r.taskId),
+				nextRun: r.nextRun ? String(r.nextRun) : null,
+				describe: String(r.describe ?? ''),
+				residue: Array.isArray(r.residue) ? (r.residue as ScheduleResult['residue']) : []
+			})
 		);
+	},
+
+	async getSchedule(id: string): Promise<ApiResult<ScheduleRead>> {
+		return map(await request<Record<string, unknown>>('GET', `/flows/${encodeURIComponent(id)}/schedule`), fromWireScheduleRead);
+	},
+
+	async unschedule(id: string): Promise<ApiResult<{ removedTasks: number[]; removedSecrets: number; residue: ScheduleResult['residue'] }>> {
+		return request('DELETE', `/flows/${encodeURIComponent(id)}/schedule`);
 	},
 
 	/**
@@ -223,6 +242,13 @@ export const api = {
 				run.authorization
 			),
 			(r) => ({ guid: String(r.guid) })
+		);
+	},
+
+	/** Spec 012 US2: one page of runs, newest first; `before` is the last seq already shown. */
+	async listRuns(query: RunsQuery, before: number | null): Promise<ApiResult<RunSummaryView[]>> {
+		return map(await request<Record<string, unknown>[]>('GET', `/runs?${pageParams(query, before)}`), (list) =>
+			list.map(fromWireRunSummary)
 		);
 	},
 

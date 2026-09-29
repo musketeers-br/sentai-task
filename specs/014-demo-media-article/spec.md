@@ -4,7 +4,9 @@
 
 **Created**: 2026-09-28
 
-**Status**: Draft
+**Status**: In Progress
+
+**Status note**: 11/14 tasks. T008 waits for 011–013 to merge (refresh numbers, set the article ready). T013 (publish) and T014 (record page views on 2026-10-04) are team actions, marked [external].
 
 **Input**: Competitor analysis (2026-09-28): SentaiTask has 40 page views against about 83–100 for
 the most-viewed entries, and it is the only entry whose core is visual orchestration. Its fifth

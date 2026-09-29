@@ -1,0 +1,8 @@
+ // Spec 011 (research R-2): give every enabled account that holds a role, except the demo
+ // account, the host's secret. CSPSystem holds no role (and the web gateway keeps its password in
+ // CSP.ini), UnknownUser has no password. Run in %SYS through `iris session`, with the line
+ //   set secret="<value>"
+ // sent on stdin before this file: the secret never appears on a command line.
+ // Prints one "SECURED <user>" line per account and "RESULT:OK" or "RESULT:<error>".
+ if $get(secret)="" { write "RESULT:no secret on stdin",! } else { set ok=1,rs=##class(%SQL.Statement).%ExecDirect(,"SELECT Name, Roles FROM Security.Users WHERE Enabled = 1") while rs.%Next() { set name=rs.%Get("Name") if (rs.%Get("Roles")'="")&&(name'="sentai-demo")&&(name'="CSPSystem")&&(name'="UnknownUser") { kill p set p("Password")=secret,sc=##class(Security.Users).Modify(name,.p) if sc { write "SECURED ",name,! } else { set ok=0 write "FAILED ",name,": ",$system.Status.GetErrorText(sc),! } } } write "RESULT:",$select(ok:"OK",1:"some accounts were not secured"),! }
+ kill secret

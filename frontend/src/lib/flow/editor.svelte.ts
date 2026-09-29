@@ -4,6 +4,7 @@ import type { Edge, Node } from '@xyflow/svelte';
 import { api, describeError, type ApiResult, type ScheduleResult } from '$lib/api/client';
 import { defaultFlowName } from '$lib/flows/list';
 import { session } from '$lib/api/session.svelte';
+import { refusalField, type ScheduleRequest } from '$lib/shell/schedule';
 import { checkConnection, type EdgeRef } from './graph';
 import {
 	createStep,
@@ -30,7 +31,8 @@ export type ChangeKind = 'graph' | 'cosmetic';
 
 export type ScheduleOutcome =
 	| { ok: true; result: ScheduleResult }
-	| { ok: false; message: string; report: ValidationReport | null };
+	/** `field`: where the dialog shows the refusal (schedule.ts refusalField). */
+	| { ok: false; message: string; report: ValidationReport | null; field: string };
 
 const REJECTION_TEXT = {
 	self: 'A step cannot depend on itself.',
@@ -262,21 +264,20 @@ export class FlowEditor {
 		return { ok: false, message: `Not dispatched: ${describeError(result.error)}` };
 	}
 
-	async schedule(scheduleSpec: string, category: string): Promise<ScheduleOutcome> {
+	/** Spec 015: saves first (the schedule runs the saved flow), then schedules or replaces. */
+	async schedule(body: ScheduleRequest): Promise<ScheduleOutcome> {
 		if ((this.dirty || !this.id) && !(await this.save())) {
-			return { ok: false, message: this.notice?.text ?? 'Save failed.', report: null };
+			return { ok: false, message: this.notice?.text ?? 'Save failed.', report: null, field: 'form' };
 		}
-		const result = await api.schedule(this.id!, {
-			scheduleSpec,
-			...(category ? { category } : {})
-		});
+		const result = await api.schedule(this.id!, body);
 		if (result.ok) return { ok: true, result: result.value };
 		// A 422 is the same ValidationReport shape: show it on the canvas as well.
 		if (result.error.kind === 'validation') this.report = result.error.report;
 		return {
 			ok: false,
 			message: describeError(result.error),
-			report: result.error.kind === 'validation' ? result.error.report : null
+			report: result.error.kind === 'validation' ? result.error.report : null,
+			field: result.error.kind === 'problem' ? refusalField(result.error) : 'form'
 		};
 	}
 

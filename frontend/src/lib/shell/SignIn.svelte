@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Mark from './Mark.svelte';
 	import { session } from '$lib/api/session.svelte';
+	import { loadDemoInfo, type DemoInfo } from './demo-info';
 
 	// `notice` (spec 010 FR-012/FR-013): why a load shows this form — the kept sign-in ended, or
 	// this tab is a copy of another and needs its own sign-in.
@@ -10,6 +11,11 @@
 	let password = $state('');
 	let message = $state<string | null>(null);
 	let busy = $state(false);
+	// Spec 011 FR-009: only a public demo instance has demo.json; elsewhere this stays null.
+	let demo = $state<DemoInfo | null>(null);
+	$effect(() => {
+		void loadDemoInfo().then((info) => (demo = info));
+	});
 
 	async function onsubmit(event: SubmitEvent) {
 		event.preventDefault();
@@ -31,6 +37,13 @@
 				? 'Your session could not be renewed. Sign in again — your canvas is kept.'
 				: 'Sign in with your IRIS credentials.'}
 		</p>
+
+		{#if demo}
+			<p class="demo-hint" data-testid="demo-hint">
+				Demo account: <strong class="mono">{demo.account}</strong> / <strong class="mono">{demo.password}</strong>.
+				After signing in, open <strong>{demo.showcase}</strong> from <em>Open flow…</em> and choose <em>Run now</em>.
+			</p>
+		{/if}
 
 		<label for="user">User</label>
 		<input id="user" autocomplete="username" required bind:value={user} />
@@ -72,6 +85,22 @@
 		color: var(--color-text);
 		background: var(--color-surface);
 		border: 1px solid var(--color-border);
+		border-radius: var(--radius-control);
+	}
+
+	.mono {
+		font-family: var(--font-mono);
+	}
+
+	.demo-hint {
+		margin: 0 0 8px;
+		padding: 8px 10px;
+		font-size: var(--size-body);
+		line-height: 1.5;
+		color: var(--color-text);
+		background: var(--color-surface);
+		border: 1px solid var(--color-border);
+		border-left: 3px solid var(--state-completed);
 		border-radius: var(--radius-control);
 	}
 
