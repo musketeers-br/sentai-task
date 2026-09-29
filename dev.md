@@ -13,6 +13,19 @@ docker rm -f $(docker ps -qa)
 ```
 docker-compose build --no-cache --progress=plain
 ```
+
+## what `docker compose build; docker compose up -d` brings and resets
+
+Nothing manual after a rebuild — the build carries everything the app needs:
+
+- the module (loaded by `iris.script`), the canvas (`/opt/sentai-web`) and the semantic-search
+  provider row (`sentai-steps` → `sentai.search.EmbeddingService` → the compose `ollama` service)
+  are baked into the image;
+- the `all-minilm` model lives in the `ollama-models` named volume, so it survives too.
+
+What is **not** durable: IRISAPP's runtime data (flows, runs, targets) — the compose file mounts no
+IRIS data volume, so a rebuild starts a fresh database. The semantic-search corpus is a cache and
+rebuilds itself on the first search after the stack comes up (a few seconds, once).
 ## start iris container
 ```
 docker-compose up -d
