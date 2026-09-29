@@ -75,10 +75,10 @@ evidence; e2e flows use the prefix `us27-`.
 
 ## Phase 7: Polish
 
-- [ ] T018 Full regression (backend, unit, e2e); restore rewritten spec 002/007 evidence; counts in `evidence/README.md`; SC-001 timings per type.
+- [X] T018 Full regression (backend, unit, e2e); restore rewritten spec 002/007 evidence; counts in `evidence/README.md`; SC-001 timings per type.
 - [X] T019 [P] README: *Declared step types* gains the four types, with what each reads and the privilege observed in T001; the contest-area table cites them for *Security/Permissions*, *Web apps/REST*, *Logs/Monitoring* and *Secrets* (FR-013, SC-006).
 - [X] T020 [P] `docs/limitations.md`: what `SeriousAlerts` counts (T001); reads are instance-wide (namespace unused); the role cap of 200 accounts; reports are information and never corrective.
-- [ ] T021 Clean up `us27-` flows and runs (guarded helper, after the user approves).
+- [X] T021 Clean up `us27-` flows and runs (guarded helper, after the user approves).
 
 ## Dependencies
 

@@ -19,3 +19,13 @@ evidence) / 1 opt-in skipped.
   with findings first in the *Result* panel; the alerts gate (the dev instance had 5 serious
   alerts since its restart, so the check failed and the join kept step 02 from starting, with
   the log naming the input); a database size report's result readable in the canvas.
+
+## Full regression (T018, 2026-09-29)
+
+E2e full suite: **78 passed, 1 failed, 1 opt-in skipped** (80). The failure is `us19 duplicated
+tab`, which predates specs 011–013 (spec 011 evidence). Backend 322/322, unit 184/184.
+
+## Cleanup (T021)
+
+The `us24-`…`us27-` flows the regression created were deleted with their runs through
+`sentai.demo.Demo.DeleteFlow`.
