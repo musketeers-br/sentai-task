@@ -21,3 +21,6 @@ ui/dist/
 ui/.svelte-kit/
 scripts/sanitation/backup-*.zwr
 
+
+# Spec 011: env files of demo stacks (they hold SENTAI_DEMO_SECRET)
+.env.*

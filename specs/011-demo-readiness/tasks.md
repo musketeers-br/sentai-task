@@ -7,7 +7,7 @@ does not change.
 **Tests**: REQUIRED (TDD, Constitution V). In every phase the test is written first and seen
 failing for the reason the story fixes. Backend: IRIS `%UnitTest` (`zpm "test sentai-task -only"`
 after `LoadDir` of `src` **and** `tests`; check `git status` after every container-side run).
-Frontend: vitest and Playwright against the dev stack. Demo stack: `scripts/demo/acceptance.sh`
+Frontend: vitest and Playwright against the dev stack. Demo stack: `scripts/demo/acceptance.py` (Python: HTTP checks need no jq; the host scripts need only bash, Docker and curl)
 against an isolated compose project (quickstart A).
 
 **Hard rules**:
@@ -62,7 +62,7 @@ against an isolated compose project (quickstart A).
 
 - [X] T010 [US4] Add to `DemoTest`: `TestResetRefusesWithoutMarker`; `TestResetLeavesSettingsAlone` (the `^sentai("config")` keys other than the marker, and the target's address, are unchanged — FR-012); `TestResetRemovesVisitorFlows` (two visitor flows with runs, step runs and log entries → gone; seeded flows kept with their runs); `TestResetRecordsLastReset`; `TestStatusShape` (fields and counts of data-model §4). See them fail.
 - [X] T011 [US4] Implement `Demo.Reset()` and `Demo.Status()` (plan D-14, D-15). T010 passes.
-- [ ] T012 [US4] Write `scripts/demo/reset.sh` and `scripts/demo/status.sh` (`--env-file`, `COMPOSE_PROJECT_NAME`, `flock`, `Monitor.Clear` and demo password restore on both instances through `demo-account.script`, exit codes), and write `scripts/demo/acceptance.sh` item 7 first, seen failing.
+- [X] T012 [US4] Write `scripts/demo/reset.sh` and `scripts/demo/status.sh` (`--env-file`, `COMPOSE_PROJECT_NAME`, `flock`, `Monitor.Clear` and demo password restore on both instances through `demo-account.script`, exit codes), and write `scripts/demo/acceptance.sh` item 7 first, seen failing.
 
 ---
 
@@ -70,10 +70,10 @@ against an isolated compose project (quickstart A).
 
 **Independent test**: `acceptance.sh` items 1–6 and 8.
 
-- [ ] T013 [US2] Write `acceptance.sh` items 1–6 and 8 (quickstart A). Run against nothing → fails.
-- [ ] T014 [P] [US2] `scripts/demo/secure-accounts.script` and `scripts/demo/demo-account.script` (ObjectScript for `iris session … -U %SYS`, secret on stdin, rule R-2, role from T001).
-- [ ] T015 [P] [US2] `docker-compose.demo.yml` (plan D-5) and `demo/Caddyfile` (D-6).
-- [ ] T016 [US2] `scripts/demo/up.sh` in the order of plan D-9, writing `demo.json` (data-model §2) into `/opt/sentai-web` and calling `Demo.Setup(1)`. Run `acceptance.sh` on an isolated project: all items pass. Record the output (secret redacted) in `evidence/t016-acceptance.txt`.
+- [X] T013 [US2] Write `acceptance.sh` items 1–6 and 8 (quickstart A). Run against nothing → fails.
+- [X] T014 [P] [US2] `scripts/demo/secure-accounts.script` and `scripts/demo/demo-account.script` (ObjectScript for `iris session … -U %SYS`, secret on stdin, rule R-2, role from T001).
+- [X] T015 [P] [US2] `docker-compose.demo.yml` (plan D-5) and `demo/Caddyfile` (D-6).
+- [X] T016 [US2] `scripts/demo/up.sh` in the order of plan D-9, writing `demo.json` (data-model §2) into `/opt/sentai-web` and calling `Demo.Setup(1)`. Run `acceptance.sh` on an isolated project: all items pass. Record the output (secret redacted) in `evidence/t016-acceptance.txt`.
 
 **Checkpoint**: the demo can be deployed.
 
@@ -81,14 +81,14 @@ against an isolated compose project (quickstart A).
 
 ## Phase 6: User Story 3 (part 2) — Sign-in hint
 
-- [ ] T017 [P] [US3] Write `frontend/src/lib/shell/demo-info.test.ts` (valid, missing field, wrong types, oversize, non-JSON → null) and `frontend/tests/us23-demo-sign-in-hint.spec.ts` (route `**/demo.json` fulfilled → hint with account and showcase name; 404 → no hint). See them fail.
-- [ ] T018 [US3] Implement `demo-info.ts` and the hint in `SignIn.svelte` (plan D-13). T017 passes; the full e2e suite stays green.
+- [X] T017 [P] [US3] Write `frontend/src/lib/shell/demo-info.test.ts` (valid, missing field, wrong types, oversize, non-JSON → null) and `frontend/tests/us23-demo-sign-in-hint.spec.ts` (route `**/demo.json` fulfilled → hint with account and showcase name; 404 → no hint). See them fail.
+- [X] T018 [US3] Implement `demo-info.ts` and the hint in `SignIn.svelte` (plan D-13). T017 passes; the full e2e suite stays green.
 
 ---
 
 ## Phase 7: User Story 1 — README first screen
 
-- [ ] T019 [US1] Add `acceptance.sh --readme`: checks the heading order of FR-001 and that every relative link in the *Try it* block and the area table resolves to a file or anchor. See it fail on today's README.
+- [X] T019 [US1] Add `acceptance.sh --readme`: checks the heading order of FR-001 and that every relative link in the *Try it* block and the area table resolves to a file or anchor. See it fail on today's README.
 - [ ] T020 [US1] Copy the picture to `assets/sentai-run.png` (plan D-4) and restructure `README.md` (D-1, D-2, D-3), add the "Public demo" section (up, reset, status, cron, "never `down`, use `restart`"), and update the roadmap (010 done; 011–015 named). T019 passes.
 - [ ] T021 [US1] After the VM is up (team action, outside the repo), replace the demo address placeholder with the real one and update the Open Exchange demo link (team action; confirm with the user before any outward-facing change).
 

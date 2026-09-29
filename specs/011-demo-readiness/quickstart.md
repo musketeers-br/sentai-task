@@ -11,10 +11,10 @@ stack is not touched (the clean-checkout pattern from 2026-09-27):
 export COMPOSE_PROJECT_NAME=sentai-demo-check DEMO_HTTP_PORT=8080 DEMO_HTTPS_PORT=8443
 printf 'SENTAI_DEMO_SECRET=%s\n' "$(openssl rand -base64 24)" > .env.demo-check
 scripts/demo/up.sh --env-file .env.demo-check          # no DEMO_HOST → plain HTTP on :8080
-scripts/demo/acceptance.sh --base http://localhost:8080
+python3 scripts/demo/acceptance.py --base http://localhost:8080 --env-file .env.demo-check
 ```
 
-`acceptance.sh` checks, printing PASS/FAIL per line:
+`acceptance.py` checks, printing PASS/FAIL per line:
 
 1. `up.sh` without a secret exits non-zero before starting anything.
 2. `GET /csp/sentai/` → 200; `GET /csp/sys/UtilHome.csp` → 404; `GET /api/atelier/` → 404.

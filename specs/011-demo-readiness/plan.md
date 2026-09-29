@@ -61,7 +61,7 @@ stack). No new npm or IPM dependency.
 - vitest for `cancelRaisesAlert` and the `demo.json` parser.
 - Playwright `us22-cancel-alert-notice.spec.ts` and `us23-demo-sign-in-hint.spec.ts` against the
   dev stack.
-- A shell acceptance script `scripts/demo/acceptance.sh` for US2 and US4 against a demo stack
+- A shell acceptance script `scripts/demo/acceptance.py` for US2 and US4 against a demo stack
   started under a separate compose project name on alternate ports (the clean-checkout pattern
   used on 2026-09-27), so the dev stack is not touched.
 
@@ -220,10 +220,10 @@ Unit tests 145 → ~155; e2e 65 → ~69; backend 269 → ~279.
 |---|---|---|---|
 | 1 | US5 cancel notice | `cancel-alert.test.ts`; `us22` (notice present with running integrity check, absent with in-process only) | helper, two dialogs, tooltip |
 | 2 | US3 seed | `DemoTest.TestSeedCreatesShowcase`, `TestSeedIsIdempotent`, `TestExampleMatchesCanvas` | `sentai.demo.Demo.Seed` |
-| 3 | US4 reset/status | `DemoTest.TestResetRefusesWithoutMarker`, `TestResetRemovesVisitorFlows`, `TestStatusShape`; `acceptance.sh` part B | `Reset`, `Status`, `reset.sh`, `status.sh` |
-| 4 | US2 demo stack | `acceptance.sh` part A (default password refused on both; portal 404; demo account runs showcase; missing secret refused) | override, Caddyfile, `secure-accounts.script`, `demo-account.script`, `up.sh` |
+| 3 | US4 reset/status | `DemoTest.TestResetRefusesWithoutMarker`, `TestResetRemovesVisitorFlows`, `TestStatusShape`; `acceptance.py` part B | `Reset`, `Status`, `reset.sh`, `status.sh` |
+| 4 | US2 demo stack | `acceptance.py` part A (default password refused on both; portal 404; demo account runs showcase; missing secret refused) | override, Caddyfile, `secure-accounts.script`, `demo-account.script`, `up.sh` |
 | 5 | US3 hint | `demo-info.test.ts`; `us23` (hint shown when `demo.json` exists, absent otherwise) | `SignIn.svelte` hint |
-| 6 | US1 README | a README lint check in `acceptance.sh` part C (order of headings, links resolve) | README edit, picture |
+| 6 | US1 README | a README lint check in `acceptance.py` part C (order of headings, links resolve) | README edit, picture |
 
 ## Project Structure
 
@@ -250,7 +250,7 @@ scripts/demo/reset.sh              # new
 scripts/demo/status.sh             # new
 scripts/demo/secure-accounts.script   # new (ObjectScript for iris session, %SYS)
 scripts/demo/demo-account.script      # new (ObjectScript for iris session, %SYS)
-scripts/demo/acceptance.sh         # new
+scripts/demo/acceptance.py         # new
 src/sentai/demo/Demo.cls           # new: Setup, Seed, Reset, Status
 tests/sentai/unittest/DemoTest.cls # new
 frontend/src/lib/run/cancel-alert.ts (+ .test.ts)   # new
