@@ -11,29 +11,38 @@ Class sentai.registry.StepType Extends %RegisteredObject
 XData Catalog [ MimeType = application/json ]
 {
 [
-  { "type": "integrity-check",        "label": "Integrity check",        "class": "%SYS.Task.IntegrityCheck",          "category": "verification", "executor": "platform-api", "destructive": false, "pausable": false, "available": true  },
-  { "type": "compact-globals",        "label": "Compact globals",        "class": "%SYS.Task.CompactGlobals",          "category": "storage",      "executor": "platform-api", "destructive": false, "pausable": false, "available": false },
-  { "type": "defragment-globals",     "label": "Defragment globals",     "class": "%SYS.Task.Defragment",              "category": "storage",      "executor": "platform-api", "destructive": false, "pausable": false, "available": false },
+  { "type": "integrity-check",        "label": "Integrity check",        "class": "%SYS.Task.IntegrityCheck",          "category": "verification", "executor": "platform-api", "destructive": false, "pausable": false, "available": true,
+    "description": "Check that the database's internal structures are sound and report anything broken" },
+  { "type": "compact-globals",        "label": "Compact globals",        "class": "%SYS.Task.CompactGlobals",          "category": "storage",      "executor": "platform-api", "destructive": false, "pausable": false, "available": false,
+    "description": "Merge each global's data blocks to reclaim unused space inside the database" },
+  { "type": "defragment-globals",     "label": "Defragment globals",     "class": "%SYS.Task.Defragment",              "category": "storage",      "executor": "platform-api", "destructive": false, "pausable": false, "available": false,
+    "description": "Move globals' blocks so that the space they occupy sits together, for faster reads" },
   { "type": "switch-journal",         "label": "Switch journal",         "class": "%SYS.Task.SwitchJournal",           "category": "journal",      "executor": "in-process",   "destructive": false, "pausable": false, "available": true ,
+    "description": "Roll the journal over to a new file so a long-running maintenance window does not outgrow the current one",
     "parameters": [] },
   { "type": "purge-audit-records",    "label": "Purge audit records",    "class": "%SYS.Task.PurgeAudit",              "category": "purge",        "executor": "platform-api", "destructive": true,  "pausable": true,  "available": false,
+    "description": "Delete audit log entries older than the retention period, reclaiming space in a database that records every login and change",
     "parameters": [
       { "name": "daysToKeep", "property": "KeepDays", "type": "integer", "required": true, "min": 1,
         "description": "Days of audit records to keep" }
     ] },
   { "type": "purge-task-history",     "label": "Purge task history",     "class": "%SYS.Task.PurgeTaskHistory",        "category": "purge",        "executor": "in-process",   "destructive": true,  "pausable": false, "available": true,
+    "description": "Delete the history of finished maintenance tasks, keeping the most recent days and dropping the rest",
     "parameters": [
       { "name": "keepDays", "property": "KeepDays", "type": "integer", "required": false, "default": 30, "min": 0,
         "description": "Days of task history to keep" }
     ] },
   { "type": "storage-headroom-check", "label": "Storage headroom check", "class": "sentai.steps.StorageHeadroomCheck", "category": "storage",      "executor": "in-process",   "destructive": false, "pausable": false, "available": true ,
+    "description": "Warn when disk space is running low, so a purge or compaction can be planned before the database fills up",
     "parameters": [
       { "name": "minFreePercent", "property": "MinFreePercent", "type": "number", "required": false, "default": 10, "min": 0, "max": 100,
         "description": "Fail when any database or journal location has less free space than this percentage" }
     ] },
   { "type": "db-size-report",         "label": "Database size report",   "class": "sentai.steps.DatabaseSizeReport",   "category": "verification", "executor": "in-process",   "destructive": false, "pausable": false, "available": true ,
+    "description": "Report how much space each database and journal file occupies, to show where the growth is going",
     "parameters": [] },
-  { "type": "custom",                 "label": "Custom (legacy)",        "class": "",                                  "category": "custom",       "executor": "platform-api", "destructive": false, "pausable": false, "available": false }
+  { "type": "custom",                 "label": "Custom (legacy)",        "class": "",                                  "category": "custom",       "executor": "platform-api", "destructive": false, "pausable": false, "available": false,
+    "description": "Placeholder from an earlier version for an operator-declared class; kept only so saved flows still load, and never runnable" }
 ]
 }
 

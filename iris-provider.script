@@ -1,0 +1,22 @@
+    // Spec 011: the dev stack's semantic-search provider, baked with the image so the palette
+    // works as soon as the container comes up - nothing manual after `docker compose up -d`.
+    // Run as its own iris session AFTER iris.script has loaded the module: the row's validating
+    // trigger needs the provider class to exist, and the zpm shell inside iris.script consumes
+    // the rest of its stdin, so this cannot live in the same script.
+    //
+    // The row names this module's own provider class (OpenAI-compatible /v1/embeddings), which
+    // the compose `ollama` service serves as all-minilm (384 dimensions). Idempotent and
+    // sovereignty-preserving: installed only when no row named "sentai-steps" exists, so an
+    // operator's own row (a different provider, FR-012) is never overwritten. Installs made
+    // without the compose stack pick their own provider instead - see README (### IPM):
+    // %Embedding.SentenceTransformers needs no sidecar at all.
+    zn "IRISAPP"
+    set providerCfg = ##class(%DynamicObject).%New()
+    do providerCfg.%Set("host","ollama"), providerCfg.%Set("port",11434), providerCfg.%Set("https",0)
+    do providerCfg.%Set("path","/v1/embeddings"), providerCfg.%Set("model","all-minilm")
+    set rs = ##class(%SQL.Statement).%ExecDirect(, "SELECT COUNT(*) AS present FROM %Embedding.Config WHERE Name = ?", "sentai-steps")
+    set present = 1
+    if ((rs.%SQLCODE = 0) && rs.%Next()) set present = +rs.%Get("present")
+    if (present = 0) set rs = ##class(%SQL.Statement).%ExecDirect(, "INSERT INTO %Embedding.Config (Name, EmbeddingClass, Configuration, VectorLength, Description) VALUES (?, ?, ?, ?, ?)", "sentai-steps", "sentai.search.EmbeddingService", providerCfg.%ToJSON(), 384, "Step-type search, local Ollama (installed by the dev build)")
+    if ((present = 0) && (rs.%SQLCODE < 0)) write "provider row install failed: ", rs.%Message, !
+    halt

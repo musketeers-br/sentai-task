@@ -27,3 +27,30 @@ services:
       context: .
       dockerfile: Dockerfile_target
     restart: always
+
+  # Spec 011: the default embedding provider, local to this stack. all-minilm is 43.8 MB
+  # (BERT, 23M parameters, embedding length 384) and the product talks to it over the
+  # OpenAI-compatible POST /v1/embeddings.
+  #
+  # Not published on the host: `iris` reaches it on this network as http://ollama:11434.
+  # That name does NOT resolve to any pre-existing ollama container — an unrelated one is
+  # on the triageaide_fhir-net network — so declaring it here is what makes it reproducible.
+  ollama:
+    image: ollama/ollama:latest
+    restart: always
+    volumes:
+      - ollama-models:/root/.ollama
+    # The image ships no model. Pulling on first boot keeps `docker compose up -d`
+    # a single step, and is a no-op once the volume already holds it.
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        ollama serve &
+        until ollama list 2>/dev/null | grep -q all-minilm; do
+          ollama pull all-minilm
+        done
+        wait
+
+volumes:
+  ollama-models:

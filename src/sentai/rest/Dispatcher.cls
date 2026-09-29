@@ -40,6 +40,7 @@ XData UrlMap [ XMLNamespace = "http://www.intersystems.com/urlmap" ]
     <Route Url="/runs/:runGuid/steps/:stepGuid/pause" Method="POST" Call="PauseStep"/>
     <Route Url="/runs/:runGuid/steps/:stepGuid/rerun" Method="POST" Call="RerunStep"/>
     <Route Url="/catalog/step-types" Method="GET" Call="ListStepTypes"/>
+    <Route Url="/catalog/step-types/search" Method="GET" Call="SearchStepTypes"/>
     <Route Url="/catalog/tasks" Method="GET" Call="ListCatalogTasks"/>
     <Route Url="/catalog/tasks/:taskId" Method="GET" Call="ReadCatalogTask"/>
     <Route Url="/catalog/tasks/:taskId/suspend" Method="POST" Call="SuspendCatalogTask"/>
@@ -682,6 +683,26 @@ ClassMethod RerunStep(runGuid As %String, stepGuid As %String) As %Status
 ClassMethod ListStepTypes() As %Status
 {
     Quit ..WriteJSON(200, ##class(sentai.registry.StepType).GetCatalog())
+}
+
+/// Ranks the closed catalog against the operator's text (spec 011, contracts/api-delta.md).
+///
+/// Routing and translation only. The service owns the ranking, the corpus and the failure reasons;
+/// there is no SQL, no embedding call and no business logic here (R-010, Constitution II). Both
+/// answers it can produce are `200`: a ranking, and a typed `unavailable` — a degraded provider is
+/// never a `5xx`, because the product's answer then is today's working palette (R-007).
+ClassMethod SearchStepTypes() As %Status
+{
+    // Blankness is decided with `$TRANSLATE` over space, tab, CR and LF. This build has neither
+    // `$TRIM` nor `$ZTRIM` (R-014), and a `q` of only tabs or newlines is not empty, so a test that
+    // only checked `""` would let it through as a real question and spend a provider call on it.
+    Set q = %request.Get("q")
+    If ($TRANSLATE(q, " "_$CHAR(9,10,13)) = "") {
+        Quit ..WriteProblem(400, "Bad Request", "q is required and must not be blank")
+    }
+    // The provider receives the operator's own words, unaltered: no case folding, no punctuation
+    // stripping, and the value is passed as data rather than into any statement (FR-010, R-001).
+    Quit ..WriteJSON(200, ##class(sentai.search.StepSearchService).Search(q))
 }
 
 /// --- /catalog/tasks (spec 006: every value is the platform's own, read with the caller's token) ---
