@@ -585,7 +585,11 @@ ClassMethod PollInFlightSteps(run As sentai.model.Run, bearerToken As %String) A
             Set stepRun.result = ##class(sentai.dispatch.InProcessExecutor).FitResult(body."result".%ToJSON())
             Do stepRun.TransitionTo("completed")
         } ElseIf (state = "Error") || (state = "Failed") {
-            Set reason = $S($IsObject(body."status") && (body."status"."summary" '= ""):body."status"."summary", 1:"Administrative job reported "_state)
+            // Spec 011 T025 (D2): IRIS 2026.2 gives the job's own reason in result.FailureReason
+            // (with an empty status.summary); it is the platform's word, so it comes first.
+            Set jobReason = $S($IsObject(body."result"):body."result"."FailureReason", 1:"")
+            Set summary = $S($IsObject(body."status"):body."status"."summary", 1:"")
+            Set reason = $S(jobReason '= "":jobReason, summary '= "":summary, 1:"Administrative job reported "_state)
             Do stepRun.TransitionTo("failed", reason)
         }
     }

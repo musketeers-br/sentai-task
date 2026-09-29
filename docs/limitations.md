@@ -100,9 +100,8 @@ SentaiTask v1 only promises what was proven on IRIS 2026.2 (spec `004-backend-ha
   platform settings reachable through the management API, such as WQM categories; on a
   disposable demo this is accepted, and the daily reset does not restore platform settings
   (it resets the product's flows and runs, the demo password and the alert state).
-- **Found by the spec 011 spike, being fixed (spec 011 T025).** A platform SQL refusal while
-  reading a flow's steps is treated as "no steps" (validation passes, dispatch creates a run that
-  never ends), and a platform job that ends `Failed` shows "Administrative job reported Failed"
-  instead of the platform's own reason.
-
+- **Fixed in spec 011 (T025).** A platform SQL refusal while reading a flow (an operator with
+  no SQL privilege on the product's tables) is now reported by validation as `PLATFORM_REFUSED`
+  with the platform's text, so dispatch refuses it (422) instead of starting a run with no steps.
+  A platform job that ends `Failed` now records the platform's own `FailureReason` verbatim.
 ---
