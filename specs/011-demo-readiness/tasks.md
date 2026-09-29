@@ -50,9 +50,9 @@ against an isolated compose project (quickstart A).
 
 **Independent test**: `DemoTest` seed cases.
 
-- [ ] T007 [P] [US3] Create the fixture `tests/sentai/unittest/fixtures/example-flow.json` from `exampleDefinition()` and add a case to `frontend/src/lib/flows/example.test.ts` that compares both (R-6). It passes now (the fixture is taken from the code), and it must fail if either changes.
-- [ ] T008 [US3] Write `tests/sentai/unittest/DemoTest.cls`: `TestSetupRefusesOnDevWithoutFlag` (Setup without the `force` argument on an instance without the marker writes nothing and returns ok=false); `TestSeedCreatesShowcase` (steps, edges and join exactly as data-model §5; `FlowValidator.Validate` gives 0 errors with a registered target double); `TestSeedIsIdempotent` (a second Seed changes neither id nor revision); `TestSeedRepairsChangedShowcase` (after deleting step 04, Seed restores it); `TestExampleMatchesFixture`; `TestShowcaseMatchesFixture` (against `tests/sentai/unittest/fixtures/showcase-flow.json`, created in this task; spec 014's recorder reads the same file). Every test removes what it creates (SentaiTestCase). See them fail.
-- [ ] T009 [US3] Implement `src/sentai/demo/Demo.cls`: `Setup(force)`, `Seed()`, `ExampleDefinition()`, `ShowcaseDefinition()`, returning the outcome value of data-model §4. T008 passes; full backend suite green.
+- [X] T007 [P] [US3] Create the fixture `tests/fixtures/example-flow.json` (outside the ObjectScript test package, so `LoadDir` never reads it) from `exampleDefinition()` and add a case to `frontend/src/lib/flows/example.test.ts` that compares both (R-6). It passes now (the fixture is taken from the code), and it must fail if either changes.
+- [X] T008 [US3] Write `tests/sentai/unittest/DemoTest.cls`: `TestSetupRefusesOnDevWithoutFlag` (Setup without the `force` argument on an instance without the marker writes nothing and returns ok=false); `TestSeedCreatesShowcase` (steps, edges and join exactly as data-model §5; `FlowValidator.Validate` gives 0 errors with a registered target double); `TestSeedIsIdempotent` (a second Seed changes neither id nor revision); `TestSeedRepairsChangedShowcase` (after deleting step 04, Seed restores it); `TestExampleMatchesFixture`; `TestShowcaseMatchesFixture` (against `tests/fixtures/showcase-flow.json`, created in this task; spec 014's recorder reads the same file). Every test removes what it creates (SentaiTestCase). See them fail.
+- [X] T009 [US3] Implement `src/sentai/demo/Demo.cls`: `Setup(force)`, `Seed()`, `ExampleDefinition()`, `ShowcaseDefinition()`, returning the outcome value of data-model §4. T008 passes; full backend suite green.
 
 ---
 
@@ -60,8 +60,8 @@ against an isolated compose project (quickstart A).
 
 **Independent test**: `DemoTest` reset/status cases; `acceptance.sh` item 7.
 
-- [ ] T010 [US4] Add to `DemoTest`: `TestResetRefusesWithoutMarker`; `TestResetLeavesSettingsAlone` (the `^sentai("config")` keys other than the marker, and the target's address, are unchanged — FR-012); `TestResetRemovesVisitorFlows` (two visitor flows with runs, step runs and log entries → gone; seeded flows kept with their runs); `TestResetRecordsLastReset`; `TestStatusShape` (fields and counts of data-model §4). See them fail.
-- [ ] T011 [US4] Implement `Demo.Reset()` and `Demo.Status()` (plan D-14, D-15). T010 passes.
+- [X] T010 [US4] Add to `DemoTest`: `TestResetRefusesWithoutMarker`; `TestResetLeavesSettingsAlone` (the `^sentai("config")` keys other than the marker, and the target's address, are unchanged — FR-012); `TestResetRemovesVisitorFlows` (two visitor flows with runs, step runs and log entries → gone; seeded flows kept with their runs); `TestResetRecordsLastReset`; `TestStatusShape` (fields and counts of data-model §4). See them fail.
+- [X] T011 [US4] Implement `Demo.Reset()` and `Demo.Status()` (plan D-14, D-15). T010 passes.
 - [ ] T012 [US4] Write `scripts/demo/reset.sh` and `scripts/demo/status.sh` (`--env-file`, `COMPOSE_PROJECT_NAME`, `flock`, `Monitor.Clear` and demo password restore on both instances through `demo-account.script`, exit codes), and write `scripts/demo/acceptance.sh` item 7 first, seen failing.
 
 ---
