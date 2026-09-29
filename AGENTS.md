@@ -1,20 +1,7 @@
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/011-semantic-step-search/plan.md
-
-Current feature: semantic step-type search over the closed catalog. The design decisions, with the
-measurements behind them, are in `specs/011-semantic-step-search/research.md`; the shapes are in
-`data-model.md` and `contracts/`. Three things a coding agent must not re-derive:
-
-- `src/sentai` is **flat** — 26 classes, no nested package. New classes are `sentai.<domain>.<Class>`
-  and new tests sit flat under `tests/sentai/unittest/<domain>/`.
-- The step-type catalog (`src/sentai/registry/StepType.cls`) is the **only** place a capability is
-  declared. Search reads its `type`, `label` and `description` through `GetCatalog()` and never a
-  class name. New prose goes in the catalog's XData entry, reviewed in a pull request.
-- An embedding provider is a row in the platform's `%Embedding.Config` naming
-  `sentai.search.EmbeddingService`; the endpoint, model and key live in that row's `Configuration`
-  JSON, never in code. The dev stack serves `all-minilm` on the `ollama` compose service.
+at specs/017-in-process-embeddings/plan.md
 <!-- SPECKIT END -->
 
 # SentaiTask — notes for coding agents
@@ -28,7 +15,8 @@ lists what v1 deliberately does not do.
 
 - `docker compose up -d` brings `iris` (primary, `127.0.0.1:52773`) and `iris-target` (compose
   network only — remote-step behaviour and its e2e tests need it up).
-- `docker-compose.override.yml` applies automatically: it rebinds 1972/52773/53773 to loopback and
+- `docker-compose.override.yml` applies automatically: it rebinds 1972/52773 to loopback, publishes
+  the container's 53773 as `127.0.0.1:55773` (Windows often reserves the range around 53773), and
   mounts the repo **read-only** at `/home/irisowner/dev`. LAN access needs the base file spelled out:
   `docker compose -f docker-compose.yml up -d`.
 - Dev credentials `_SYSTEM` / `SYS`. The module's globals live in `IRISAPP`.
