@@ -1,0 +1,5 @@
+## step 19 — new entry, asked for by its description (q=see which backups are due)
+{"available":true,"matches":[{"type":"backup-due-report","score":0.8285970091819763184},{"type":"purge-task-history","score":0.3826057910919189453},{"type":"db-size-report","score":0.3245126903057098389}]}
+## step 20 — corpus matches the catalog; one version across rows; idempotent re-search
+RESULT: rows=10 versions=1
+{"available":true,"matches":[{"type":"backup-due-report","score":0.8285970091819763184},{"type":"purge-task-history","score":0.3826057910919189453},{"type":"db-size-report","score":0.3245126903057098389}]}

@@ -1,0 +1,9 @@
+## step 9 — provider stopped (docker compose stop ollama), q=free up disk space
+ Container sentai-task-ollama-1 Stopped 
+HTTP 200
+{"available":false,"reason":"unreachable"}
+## restore provider
+ Container sentai-task-ollama-1 Started 
+## step 11 — row deleted, q=free up disk space
+<ERRTRAP>
+{"available":false,"reason":"not-configured"}

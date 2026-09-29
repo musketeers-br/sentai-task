@@ -1,0 +1,40 @@
+# Build bootstrap verification — 2026-09-28
+
+Requirement: the dev stack comes up with semantic search working — `docker compose build iris &&
+docker compose up -d`, nothing manual.
+
+## What the build now carries
+
+- Module (iris.script), canvas (/opt/sentai-web), and the semantic-search provider row
+  (iris-provider.script, run as its own session because the zpm shell inside iris.script
+  consumes the rest of its stdin — anything after `zpm "load"` in the same script never runs).
+- The all-minilm model lives in the ollama-models named volume (survives rebuilds).
+
+## Verified on a fresh image (no manual steps, fresh IRISAPP database)
+
+- SELECT COUNT(*) FROM %Embedding.Config = 1; Configuration =
+  {"host":"ollama","port":11434,"https":0,"path":"/v1/embeddings","model":"all-minilm"}
+- q=check my globals are sound -> integrity-check 0.473, defragment-globals 0.202 (corpus
+  built itself on the first request; the table starts empty by design — it is a cache).
+- q=structure -> {"available":true,"matches":[]} — the single word scores below the 0.20 floor
+  (R-008); intent sentences are the semantic path, single keywords are the local path.
+- Playwright against the fresh image: us22 x2 + us23 (which stops ollama mid-run to prove
+  degradation still renders today's palette) — 3 passed.
+- zpm "test sentai-task -only": 302 total, 302 passed, 0 failed (2081 assertions) — with the
+  baked row present; the fixtures capture and restore it per test, and after the suite the row
+  is still there (rows after suite = 1).
+- The first no-bake attempt failed in a way worth recording: the row block inside iris.script
+  was silently swallowed by the zpm shell's stdin consumption — no error, no row. The separate
+  session in the Dockerfile is the fix, and the Dockerfile comment says why.
+
+## Docs updated alongside
+
+- README.md: ### IPM now routes the zpm-install persona to a provider row (sidecar-free
+  %Embedding.SentenceTransformers recommended, with the verified row shape; OpenAI-compatible
+  endpoint; %Embedding.OpenAI with the query-text-leaves warning); the provider section notes
+  the dev stack bakes the row.
+- quickstart.md: prerequisites note the baked row; the two `zn "SQL"` + bare-SQL heredocs (which
+  fail in a terminal session with <NAMESPACE>/<SYNTAX>) were replaced with working bound-SQL
+  forms; the publish-script path was corrected to the repository root.
+- dev.md: what a rebuild brings (module, canvas, provider row, model volume) and what it resets
+  (IRISAPP runtime data; no IRIS data volume in the compose file).

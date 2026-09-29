@@ -1,0 +1,15 @@
+{
+  "evidence_id": "us22-semantic-search",
+  "captured_at": "2026-09-28T23:21:12.069Z",
+  "request": {
+    "query": "free up disk space",
+    "suggestedFirst": "storage-headroom-check"
+  },
+  "response": {
+    "addedByDrag": "storage-headroom-check",
+    "duplicatesOfSuggested": 0
+  },
+  "notes": [
+    "The SUGGESTED group renders ahead of today’s list (FR-001), the suggested entry appears once (FR-003), and dragging it adds the step (FR-021)."
+  ]
+}

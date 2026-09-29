@@ -1,22 +1,50 @@
 <script lang="ts">
+	import { api } from '$lib/api/client';
 	import { STEP_TYPE_MIME } from '$lib/canvas/dnd';
-	import { paletteGroups, typeLabel, type StepTypeInfo } from '$lib/flow/document';
+	import { createSequence } from '$lib/catalog/catalog';
+	import { typeLabel, type StepTypeInfo } from '$lib/flow/document';
+	import { paletteSections, type StepSearchOutcome } from '$lib/palette/search';
 
 	let { registry, onadd }: { registry: StepTypeInfo[]; onadd: (type: string) => void } = $props();
 
 	let query = $state('');
+	let outcome = $state<StepSearchOutcome | null>(null);
 
-	const groups = $derived.by(() => {
-		const q = query.trim().toLowerCase();
-		const matches = registry.filter(
-			(t) =>
-				!q ||
-				t.type.includes(q) ||
-				typeLabel(t).toLowerCase().includes(q) ||
-				t.className.toLowerCase().includes(q)
-		);
-		// Spec 007 D-6: in-process types and legacy custom under Custom; the rest by category.
-		return paletteGroups(matches).map((g) => ({ category: g.id, types: g.types }));
+	// Latest-wins for the debounced search request only; the filtering itself stays synchronous.
+	const sequence = createSequence();
+
+	const groups = $derived.by(() =>
+		// Spec 011: the filtering logic left the component — this widens a category group with
+		// the one group the ranking adds (contracts/palette-search.md).
+		paletteSections(registry, query, outcome).map((section) => ({
+			category: section.id,
+			suggested: section.id === 'suggested',
+			types: section.types
+		}))
+	);
+
+	// Spec 011 input timing: the same effect-debounce as CatalogScreen's search box — the cleanup
+	// clears the previous timer, so only the final keystroke within 150 ms asks (R-012). The
+	// local filter above still narrows on every keystroke, so the list is useful before any
+	// request is made.
+	$effect(() => {
+		const text = query;
+		if (!text.trim()) {
+			outcome = null; // never ask with an empty q (FR-005)
+			return;
+		}
+		const timer = setTimeout(async () => {
+			const ticket = sequence.next();
+			const result = await api.searchStepTypes(text.trim());
+			// A slow response for an old keystroke is discarded, never applied (FR-002). There is
+			// no abort of an in-flight request — a superseded response is simply not used.
+			if (!sequence.isLatest(ticket)) return;
+			// A failed request never reaches the palette as a failure: a transport failure, a 5xx
+			// and an unparseable body all collapse to the same degraded state, and none of them
+			// can masquerade as "no results" (FR-023, FR-025).
+			outcome = result.ok ? result.value : { available: false, reason: 'unreachable' };
+		}, 150);
+		return () => clearTimeout(timer);
 	});
 
 	function ondragstart(event: DragEvent, type: string) {
@@ -55,6 +83,7 @@
 						draggable={t.available ? 'true' : 'false'}
 						style:--entry-category={`var(--category-${t.category})`}
 						data-step-type={t.type}
+						data-suggested={group.suggested ? 'true' : undefined}
 						title={t.available
 							? 'Drag onto the canvas, or press Enter to add'
 							: 'Not supported on the target platform in v1'}
