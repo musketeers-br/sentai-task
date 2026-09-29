@@ -13,6 +13,8 @@ import {
 	type WireCatalogTask
 } from '$lib/catalog/catalog';
 import type { FlowDefinition, FlowDocument, StepTypeInfo } from '$lib/flow/document';
+// Spec 011: the search answer type lives with the view model, not here — the client only carries it.
+import type { StepSearchOutcome } from '$lib/palette/search';
 import {
 	fromWireTarget,
 	fromWireTargetStatus,
@@ -29,6 +31,7 @@ import type { FlowSummaryView } from '$lib/flows/list';
 import {
 	fromWireFlow,
 	fromWireFlowSummary,
+	fromWireStepSearch,
 	fromWireStepTypes,
 	type WireFlow,
 	type WireFlowSummary,
@@ -151,6 +154,21 @@ function map<A, B>(result: ApiResult<A>, fn: (a: A) => B): ApiResult<B> {
 export const api = {
 	async stepTypes(): Promise<ApiResult<StepTypeInfo[]>> {
 		return map(await request<WireStepType[]>('GET', '/catalog/step-types'), fromWireStepTypes);
+	},
+
+	/**
+	 * Spec 011: rank the closed catalog against the operator's text.
+	 *
+	 * Returns `ApiResult` like every other method here, and never throws into the component. A
+	 * `400` — which normal operation never produces, because the palette never asks with a blank
+	 * query — arrives here as `!ok` like any other failure, and the component collapses it to the
+	 * same degraded state (FR-005, FR-023).
+	 */
+	async searchStepTypes(q: string): Promise<ApiResult<StepSearchOutcome>> {
+		return map(
+			await request<unknown>('GET', `/catalog/step-types/search?q=${encodeURIComponent(q)}`),
+			fromWireStepSearch
+		);
 	},
 
 	/** Spec 010 FR-002: every flow the platform returns for the operator; never cached. */

@@ -112,6 +112,22 @@ Method TestEveryEntryHasLabelAndExecutor()
     Do $$$AssertEquals(##class(sentai.registry.StepType).GetExecutor("bogus"), "")
 }
 
+/// Spec 011 T026 (FR-015, SC-009): every entry carries the reviewed prose its searchability is
+/// made of. A capability with no description cannot be merged, because an empty description
+/// would embed empty text and make the entry unfindable by intent — silently, which is the
+/// worst way for a capability to disappear from search. Beside TestEveryEntryHasLabelAndExecutor,
+/// in its shape, because it is the same kind of catalog-wide invariant.
+Method TestEveryEntryHasADescription()
+{
+    Set iter = ##class(sentai.registry.StepType).GetCatalog().%GetIterator()
+    While iter.%GetNext(.k, .entry) {
+        Do $$$AssertTrue(entry.description '= "", entry.type_" has a description")
+        // A description that only restates the label is not prose: search by intent needs what
+        // the capability is *for* in the operator's terms (spec 011 T003's review rule).
+        Do $$$AssertTrue(entry.description '= entry.label, entry.type_" description is not its label")
+    }
+}
+
 /// Spec 005 T002 (data-model.md §Entries): the two shipped declared types and their schemas.
 Method TestShippedDeclaredTypes()
 {
