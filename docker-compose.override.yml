@@ -1,0 +1,19 @@
+# Local development defaults. `docker compose up -d` merges this file automatically; the public
+# demo does not, because scripts/demo/lib.sh names its compose files explicitly. For LAN access,
+# spell out the base file only: `docker compose -f docker-compose.yml up -d`.
+services:
+  iris:
+    # Loopback only: the dev instance answers to _SYSTEM / SYS and must not be reachable from the
+    # network. `!override` replaces the base list instead of appending to it (Compose >= 2.24).
+    #
+    # The host side of 53773 moves to 55773: on Windows with Hyper-V / WSL the range around
+    # 53773 is often reserved (`netsh interface ipv4 show excludedportrange protocol=tcp`), and the
+    # bind fails with "access forbidden by its access permissions". Nothing on the host uses it.
+    ports: !override
+      - "127.0.0.1:1972:1972"
+      - "127.0.0.1:52773:52773"
+      - "127.0.0.1:55773:53773"
+    # Read-only: the container compiles from the checkout but never writes into it. Tools that
+    # must write a file (e.g. the orphan-sanitation backup) write under /home/irisowner instead.
+    volumes: !override
+      - ./:/home/irisowner/dev:ro

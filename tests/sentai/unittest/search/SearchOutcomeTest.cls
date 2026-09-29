@@ -25,7 +25,7 @@ Method TestEmptyRankingIsAvailableNotUnavailable()
 /// produces rather than a list the frontend has to defend against.
 Method TestEveryDocumentedReasonIsPreserved()
 {
-    For reason = "not-configured", "unreachable", "slow", "incompatible", "error" {
+    For reason = "not-configured", "unreachable", "slow", "incompatible", "warming", "error" {
         Set outcome = ##class(sentai.search.SearchOutcome).Unavailable(reason)
         Do $$$AssertNotTrue(##class(sentai.search.SearchOutcome).IsAvailable(outcome), reason)
         Do $$$AssertEquals(outcome.reason, reason)
@@ -75,6 +75,16 @@ Method TestMatchesPassesThroughWhatItWasGiven()
     Do $$$AssertEquals(got."0"."score", 0.9)
     // A malformed available outcome still reads as an empty array rather than throwing at a caller.
     Do $$$AssertEquals(##class(sentai.search.SearchOutcome).Matches({}).%ToJSON(), "[]")
+}
+
+/// Spec 017 FR-004a: `warming` is a reason of its own — the in-process provider is still loading —
+/// so it reaches the canvas by name instead of being narrowed to `error`.
+Method TestWarmingIsAKnownReason()
+{
+    Set outcome = ##class(sentai.search.SearchOutcome).Unavailable("warming")
+    Do $$$AssertEquals(outcome.reason, "warming")
+    Do $$$AssertNotTrue(outcome.%IsDefined("matches"), "an unavailable outcome carries no matches key (FR-025)")
+    Do $$$AssertEquals(##class(sentai.search.SearchOutcome).NormalizeReason("WARMING"), "warming")
 }
 
 }
