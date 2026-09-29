@@ -77,7 +77,8 @@ USER ${ISC_PACKAGE_MGRUSER}
 RUN --mount=type=bind,src=.,dst=. \
     iris start IRIS && \
     iris merge iris ./merge.cpf && \
-	iris session IRIS < iris.script && \
+    iris session IRIS < iris.script && \
     iris session IRIS -U $NAMESPACE < iris-provider.script && \
+    iris session IRIS -U $NAMESPACE < iris-demo.script && \
     ([ $TESTS -eq 0 ] || iris session iris -U $NAMESPACE "##class(%ZPM.PackageManager).Shell(\"test $MODULE -v -only\",1,1)") && \
     iris stop IRIS quietly
