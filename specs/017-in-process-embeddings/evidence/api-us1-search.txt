@@ -1,0 +1,17 @@
+# T033 — the R-5 queries through GET /csp/sentai/api/v1/catalog/step-types/search
+# stack: docker compose up -d --build (spec 017 image), provider sentai.search.LocalEmbedding; corpus empty at start
+# format: query | HTTP status, total time | matches (score >= 0.20)
+## free up disk space | 200 0.732446s
+  storage-headroom-check=0.594, compact-globals=0.487, db-size-report=0.451, purge-audit-records=0.400, purge-task-history=0.292, defragment-globals=0.289
+## check my globals are sound | 200 0.045322s
+  integrity-check=0.474, system-alerts-check=0.229, defragment-globals=0.202
+## get rid of old audit records | 200 0.037003s
+  purge-audit-records=0.705, purge-task-history=0.332, switch-journal=0.291, compact-globals=0.289, db-size-report=0.279, storage-headroom-check=0.229
+## rotate the journal | 200 0.037464s
+  switch-journal=0.555, db-size-report=0.320, purge-audit-records=0.218
+## order me a pizza | 200 0.036897s
+  (no match)
+## send an email to my manager | 200 0.037201s
+  (no match)
+## banana | 200 0.037576s
+  (no match)

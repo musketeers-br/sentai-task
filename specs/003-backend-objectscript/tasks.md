@@ -267,7 +267,7 @@ tasks can be written for them; they are recorded in `HANDOFF.md`.
 - [X] T075 [P] Forward step and run cancellation to the platform via `POST /api/admin/v2/async-result/cancel?id=<id>` (spec 001 evidence 08c) from `WaveDispatcher.CancelStep`/`CancelRun` (F-2, FR-027) — **done by spec 008 T009: `WaveDispatcher.ForwardJobControl` forwards cancel/pause to the instance running the job**
 - [X] T076 [P] Add a `FlowValidator` rule reporting a step whose WQM category does not exist on the platform, so it fails at validation instead of at enqueue (F-3) — **done by spec 004 T007: `CATEGORY_NOT_FOUND` at validation, against the platform's category list**
 - [X] T077 [P] Align the category nesting invariant with platform-reported values (`MaxTotalWorkers = 0`, `Dynamic (N)`) before it is applied to built-in categories (F-4) — **done by spec 004 T005: `0` in `maxWorkers`/`maxTotalWorkers` means unbounded (`Category.SatisfiesInvariant`)**
-- [ ] T078 [P] Stop `DispatchEndpointTest` from starting real background jobs, and have the suite leave no `running` runs behind (F-5)
+- [x] T078 [P] Stop `DispatchEndpointTest` from starting real background jobs, and have the suite leave no `running` runs behind (F-5)
 
 ---
 

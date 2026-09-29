@@ -13,6 +13,30 @@ docker rm -f $(docker ps -qa)
 ```
 docker-compose build --no-cache --progress=plain
 ```
+
+## what `docker compose build; docker compose up -d` brings and resets
+
+Nothing manual after a rebuild — the build carries everything the app needs:
+
+- the module (loaded by `iris.script`), the canvas (`/opt/sentai-web`) and the semantic-search
+  provider row (`sentai-steps` → `sentai.search.LocalEmbedding`, in-process) are baked into the
+  image;
+- so are the search's Python packages (`/usr/irissys/mgr/python`, CPU-only torch) and its model
+  (`/usr/irissys/mgr/sentai-models`, `all-MiniLM-L6-v2`); the image sets `HF_HUB_OFFLINE=1` and
+  `TRANSFORMERS_OFFLINE=1`, so nothing is downloaded at run time;
+- the image's command starts the search worker (`sentai.search.EmbeddingWorker`, one process,
+  ≈450 MB) right after IRIS starts; it is ready about seven seconds after the container is healthy.
+  Check it with `##class(sentai.search.EmbeddingWorker).State()` in an `iris session` (`ready`), and
+  the whole setup with `bash scripts/check-search-image.sh`.
+
+**Coming from a stack built before spec 017** (with an `ollama` service): rebuild, `docker compose
+up -d --build --remove-orphans`. Without `--build` the old image's row still points at `ollama`, and
+intent search answers `unreachable` (the palette keeps its local filter). The leftover
+`ollama-models` volume and `ollama/ollama` image are no longer used and can be removed.
+
+What is **not** durable: IRISAPP's runtime data (flows, runs, targets) — the compose file mounts no
+IRIS data volume, so a rebuild starts a fresh database. The semantic-search corpus is a cache and
+rebuilds itself on the first search after the stack comes up (a few seconds, once).
 ## start iris container
 ```
 docker-compose up -d

@@ -1,0 +1,12 @@
+# T035 §2 — warming: a search as soon as the API answers after a restart, before the worker is ready
+API answering +4 s after restart
++4 s  {"available":false,"reason":"warming"}  [HTTP 200, 0.072853 s]
++6 s  {"available":false,"reason":"warming"}  [HTTP 200, 0.054665 s]
++7 s  {"available":false,"reason":"warming"}  [HTTP 200, 0.040300 s]
++13 s  {"available":true,"matches":[{"type":"storage-headroom-check","score":0.5938519835472106934},{"type":"compact-globals","score":0.487364351749420166},{"type":"db-size-report","score":0.450972437858581543},{"type":"purge-audit-records","score":0.3996717333793640137},{"type":"purge-task-history","score":0.2919834554195404053},{"type":"defragment-globals","score":0.2888586223125457764}]}  [HTTP 200, 0.054457 s]
+
+# T035 §3 — offline: container disconnected from every network, worker restarted, then a search from inside
+disconnected; huggingface.co resolves: no
+worker ready=1 after 7.4 s (research R-3: 146 s without the offline settings)
+search: {"available":true,"matches":[{"type":"switch-journal","score":0.5550734996795654297},{"type":"db-size-report","score":0.3196335136890411377},{"type":"purge-audit-records","score":0.2176262587308883667}]}
+reconnected with alias iris; iris-target resolves iris: yes

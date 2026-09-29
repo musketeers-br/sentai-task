@@ -1,0 +1,24 @@
+    // Spec 011: the dev stack's semantic-search provider, baked with the image so the palette
+    // works as soon as the container comes up - nothing manual after `docker compose up -d`.
+    // Run as its own iris session AFTER iris.script has loaded the module: the row's validating
+    // trigger needs the provider class to exist, and the zpm shell inside iris.script consumes
+    // the rest of its stdin, so this cannot live in the same script.
+    //
+    // Spec 017: the row names this module's in-process provider, sentai.search.LocalEmbedding,
+    // with the model the Dockerfile baked into /usr/irissys/mgr/sentai-models (all-MiniLM-L6-v2,
+    // 384 dimensions). No similarity service runs beside IRIS. The row's validating trigger checks
+    // that the packages import and the model is in the cache, so a broken image says so here, in
+    // the build log ("provider row install failed"), and scripts/check-search-image.sh fails. Idempotent and sovereignty-preserving: installed only when no row named
+    // "sentai-steps" exists, so an operator's own row (a different provider, FR-012) is never
+    // overwritten. Every build starts from a fresh instance, so a rebuild is also how a stack
+    // that still had the spec 011 `ollama` row moves over (research R-6). IPM installs write no
+    // row at all - see README (### IPM).
+    zn "IRISAPP"
+    set providerCfg = ##class(%DynamicObject).%New()
+    do providerCfg.%Set("modelName","sentence-transformers/all-MiniLM-L6-v2"), providerCfg.%Set("cachePath","/usr/irissys/mgr/sentai-models")
+    set rs = ##class(%SQL.Statement).%ExecDirect(, "SELECT COUNT(*) AS present FROM %Embedding.Config WHERE Name = ?", "sentai-steps")
+    set present = 1
+    if ((rs.%SQLCODE = 0) && rs.%Next()) set present = +rs.%Get("present")
+    if (present = 0) set rs = ##class(%SQL.Statement).%ExecDirect(, "INSERT INTO %Embedding.Config (Name, EmbeddingClass, Configuration, VectorLength, Description) VALUES (?, ?, ?, ?, ?)", "sentai-steps", "sentai.search.LocalEmbedding", providerCfg.%ToJSON(), 384, "Step-type search, in-process (installed by the dev build)")
+    if ((present = 0) && (rs.%SQLCODE < 0)) write "provider row install failed: ", rs.%Message, !
+    halt

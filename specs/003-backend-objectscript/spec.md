@@ -4,7 +4,9 @@
 
 **Created**: 2026-09-22
 
-**Status**: Accepted with Follow-up Required
+**Status**: Implemented
+
+**Status note**: Was "Accepted with Follow-up Required"; the last follow-up, T078 (suite starts no real jobs, leaves no runs), landed in PR #13 (commit 35d51a4).
 
 **Input**: User description: "Define the expected behavior of the backend so that it persists
 flows, validates them before use and before execution, executes them respecting dependencies

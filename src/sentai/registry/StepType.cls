@@ -11,39 +11,50 @@ Class sentai.registry.StepType Extends %RegisteredObject
 XData Catalog [ MimeType = application/json ]
 {
 [
-  { "type": "integrity-check",        "label": "Integrity check",        "class": "%SYS.Task.IntegrityCheck",          "category": "verification", "executor": "platform-api", "destructive": false, "pausable": false, "available": true  },
-  { "type": "compact-globals",        "label": "Compact globals",        "class": "%SYS.Task.CompactGlobals",          "category": "storage",      "executor": "platform-api", "destructive": false, "pausable": false, "available": false },
-  { "type": "defragment-globals",     "label": "Defragment globals",     "class": "%SYS.Task.Defragment",              "category": "storage",      "executor": "platform-api", "destructive": false, "pausable": false, "available": false },
+  { "type": "integrity-check",        "label": "Integrity check",        "class": "%SYS.Task.IntegrityCheck",          "category": "verification", "executor": "platform-api", "destructive": false, "pausable": false, "available": true,
+    "description": "Check that the database's internal structures are sound and report anything broken" },
+  { "type": "compact-globals",        "label": "Compact globals",        "class": "%SYS.Task.CompactGlobals",          "category": "storage",      "executor": "platform-api", "destructive": false, "pausable": false, "available": false,
+    "description": "Merge each global's data blocks to reclaim unused space inside the database" },
+  { "type": "defragment-globals",     "label": "Defragment globals",     "class": "%SYS.Task.Defragment",              "category": "storage",      "executor": "platform-api", "destructive": false, "pausable": false, "available": false,
+    "description": "Move globals' blocks so that the space they occupy sits together, for faster reads" },
   { "type": "switch-journal",         "label": "Switch journal",         "class": "%SYS.Task.SwitchJournal",           "category": "journal",      "executor": "in-process",   "destructive": false, "pausable": false, "available": true ,
+    "description": "Roll the journal over to a new file so a long-running maintenance window does not outgrow the current one",
     "parameters": [] },
   { "type": "purge-audit-records",    "label": "Purge audit records",    "class": "%SYS.Task.PurgeAudit",              "category": "purge",        "executor": "platform-api", "destructive": true,  "pausable": true,  "available": false,
+    "description": "Delete audit log entries older than the retention period, reclaiming space in a database that records every login and change",
     "parameters": [
       { "name": "daysToKeep", "property": "KeepDays", "type": "integer", "required": true, "min": 1,
         "description": "Days of audit records to keep" }
     ] },
   { "type": "purge-task-history",     "label": "Purge task history",     "class": "%SYS.Task.PurgeTaskHistory",        "category": "purge",        "executor": "in-process",   "destructive": true,  "pausable": false, "available": true,
+    "description": "Delete the history of finished maintenance tasks, keeping the most recent days and dropping the rest",
     "parameters": [
       { "name": "keepDays", "property": "KeepDays", "type": "integer", "required": false, "default": 30, "min": 0,
         "description": "Days of task history to keep" }
     ] },
   { "type": "storage-headroom-check", "label": "Storage headroom check", "class": "sentai.steps.StorageHeadroomCheck", "category": "storage",      "executor": "in-process",   "destructive": false, "pausable": false, "available": true ,
+    "description": "Warn when disk space is running low, so a purge or compaction can be planned before the database fills up",
     "parameters": [
       { "name": "minFreePercent", "property": "MinFreePercent", "type": "number", "required": false, "default": 10, "min": 0, "max": 100,
         "description": "Fail when any database or journal location has less free space than this percentage" }
     ] },
   { "type": "db-size-report",         "label": "Database size report",   "class": "sentai.steps.DatabaseSizeReport",   "category": "verification", "executor": "in-process",   "destructive": false, "pausable": false, "available": true ,
+    "description": "Report how much space each database and journal file occupies, to show where the growth is going",
     "parameters": [] },
   { "type": "security-posture-report", "label": "Security posture report", "class": "sentai.steps.reports.SecurityPosture", "category": "security", "executor": "platform-read", "destructive": false, "pausable": false, "available": true,
+    "description": "Read the platform's security settings and list what looks weak or risky, without changing anything",
     "parameters": [
       { "name": "failOnFindings", "property": "FailOnFindings", "type": "boolean", "required": false, "default": false,
         "description": "Fail the step when any high finding exists" }
     ] },
   { "type": "web-app-inventory",      "label": "Web application inventory", "class": "sentai.steps.reports.WebAppInventory", "category": "security", "executor": "platform-read", "destructive": false, "pausable": false, "available": true,
+    "description": "List the web applications the platform serves and flag the ones that are open or unauthenticated",
     "parameters": [
       { "name": "failOnFindings", "property": "FailOnFindings", "type": "boolean", "required": false, "default": false,
         "description": "Fail the step when any high finding exists" }
     ] },
   { "type": "system-alerts-check",    "label": "System alerts check",    "class": "sentai.steps.reports.SystemAlerts",  "category": "monitoring",   "executor": "platform-read", "destructive": false, "pausable": false, "available": true,
+    "description": "Check the platform's serious alerts, application errors and resource status, and fail when they exceed the limits you set",
     "parameters": [
       { "name": "maxSeriousAlerts", "property": "MaxSeriousAlerts", "type": "integer", "required": false, "default": 0, "min": 0,
         "description": "Fail when the platform reports more serious alerts than this" },
@@ -53,23 +64,28 @@ XData Catalog [ MimeType = application/json ]
         "description": "Fail when any system resource status is not Normal" }
     ] },
   { "type": "secrets-inventory",      "label": "Secrets inventory",      "class": "sentai.steps.reports.SecretsInventory", "category": "security", "executor": "platform-read", "destructive": false, "pausable": false, "available": true,
+    "description": "List where the platform holds stored credentials and secrets, without showing their values",
     "parameters": [] },
   { "type": "certificate-expiry-check", "label": "Certificate expiry check", "class": "sentai.steps.reports.CertificateExpiry", "category": "security", "executor": "platform-read", "destructive": false, "pausable": false, "available": true,
+    "description": "Check x509 certificates for expiry and list SSL/TLS configurations; fail when a certificate has expired or expires within the warning window",
     "parameters": [
       { "name": "warnDays", "property": "WarnDays", "type": "integer", "required": false, "default": 30, "min": 1, "max": 365,
         "description": "Fail when a certificate expires within this many days (or has expired)" }
     ] },
   { "type": "permissions-inventory",  "label": "Permissions inventory",  "class": "sentai.steps.reports.PermissionsInventory", "category": "security", "executor": "platform-read", "destructive": false, "pausable": false, "available": true,
+    "description": "List roles with the resources they grant and resources with their public permission, flagging risky public access and roles that grant %All",
     "parameters": [
       { "name": "failOnFindings", "property": "FailOnFindings", "type": "boolean", "required": false, "default": false,
         "description": "Fail the step when any high finding exists" }
     ] },
   { "type": "oauth-inventory",        "label": "OAuth inventory",        "class": "sentai.steps.reports.OAuthInventory", "category": "security", "executor": "platform-read", "destructive": false, "pausable": false, "available": true,
+    "description": "List the OAuth 2.0 configuration: authorization server, clients, server definitions and resource servers, without secrets",
     "parameters": [
       { "name": "failOnFindings", "property": "FailOnFindings", "type": "boolean", "required": false, "default": false,
         "description": "Fail the step when any high finding exists" }
     ] },
-  { "type": "custom",                 "label": "Custom (legacy)",        "class": "",                                  "category": "custom",       "executor": "platform-api", "destructive": false, "pausable": false, "available": false }
+  { "type": "custom",                 "label": "Custom (legacy)",        "class": "",                                  "category": "custom",       "executor": "platform-api", "destructive": false, "pausable": false, "available": false,
+    "description": "Placeholder from an earlier version for an operator-declared class; kept only so saved flows still load, and never runnable" }
 ]
 }
 

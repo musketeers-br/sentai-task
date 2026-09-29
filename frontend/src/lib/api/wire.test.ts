@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { fromWireFlow, fromWireFlowSummary, fromWireStepTypes, type WireFlow } from './wire';
+import {
+	fromWireFlow,
+	fromWireFlowSummary,
+	fromWireStepSearch,
+	fromWireStepTypes,
+	type WireFlow
+} from './wire';
 
 // Shapes copied from specs/003-backend-objectscript/evidence/quickstart-http-20260923.json
 const wireFlow: WireFlow = {
@@ -108,5 +114,71 @@ describe('fromWireFlowSummary (spec 010 FR-002)', () => {
 			savedAt: null
 		});
 		expect(fromWireFlowSummary({ id: '3', name: 'B', revision: '' })).toEqual({ id: '3', name: 'B', revision: 0, savedAt: null });
+	});
+});
+
+describe('fromWireStepSearch (spec 011)', () => {
+	it('maps an available body, keeping the API’s order and scores', () => {
+		expect(
+			fromWireStepSearch({
+				available: true,
+				matches: [
+					{ type: 'switch-journal', score: 0.79 },
+					{ type: 'integrity-check', score: 0.42 }
+				]
+			})
+		).toEqual({
+			available: true,
+			matches: [
+				{ type: 'switch-journal', score: 0.79 },
+				{ type: 'integrity-check', score: 0.42 }
+			]
+		});
+	});
+
+	it('carries each documented reason through verbatim', () => {
+		for (const reason of ['not-configured', 'unreachable', 'slow', 'incompatible', 'warming', 'error']) {
+			expect(fromWireStepSearch({ available: false, reason })).toEqual({
+				available: false,
+				reason
+			});
+		}
+	});
+
+	it('maps an unrecognised reason to error — a reason the contract does not name is still a reason, never a throw', () => {
+		expect(fromWireStepSearch({ available: false, reason: 'on-fire' })).toEqual({
+			available: false,
+			reason: 'error'
+		});
+		expect(fromWireStepSearch({ available: false })).toEqual({ available: false, reason: 'error' });
+	});
+
+	it('maps a malformed body to error rather than throwing into the component', () => {
+		// Both answers are 200, so anything that is neither shape is a defect — but FR-023 still
+		// says a malformed server answer must degrade the palette, not become an error state.
+		expect(fromWireStepSearch(null)).toEqual({ available: false, reason: 'error' });
+		expect(fromWireStepSearch('nope')).toEqual({ available: false, reason: 'error' });
+		expect(fromWireStepSearch({ available: true })).toEqual({ available: false, reason: 'error' });
+		expect(fromWireStepSearch({ available: true, matches: 'x' })).toEqual({
+			available: false,
+			reason: 'error'
+		});
+	});
+
+	it('drops a match without a usable type or score instead of offering it as a ranked result', () => {
+		expect(
+			fromWireStepSearch({
+				available: true,
+				matches: [
+					// Kept: wire.ts tolerates the backend's numbers-as-strings (see the header), like
+					// fromWireFlow does for `revision`.
+					{ type: 'switch-journal', score: '0.79' },
+					// Dropped: a match that names nothing renderable or carries no score.
+					{ type: '', score: 0.9 },
+					{ type: 'integrity-check', score: 'high' },
+					{ type: 'purge-task-history' }
+				]
+			})
+		).toEqual({ available: true, matches: [{ type: 'switch-journal', score: 0.79 }] });
 	});
 });

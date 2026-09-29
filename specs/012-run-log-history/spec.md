@@ -4,7 +4,9 @@
 
 **Created**: 2026-09-28
 
-**Status**: Draft
+**Status**: Merged
+
+**Status note**: PR #19. 21/21 tasks; regression record in evidence/.
 
 **Input**: Competitor analysis (2026-09-28): the contest's *Logs* area is covered only by per-step
 states and failure reasons. Review of the product: the live-run view has a **RUN LOG** panel that

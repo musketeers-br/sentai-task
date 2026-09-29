@@ -24,6 +24,14 @@ function irisSys(script: string, namespace = '%SYS'): string {
 }
 
 /**
+ * Runs ObjectScript in IRISAPP and returns the terminal's answer, for evidence that reads
+ * state the API does not expose (spec 011: the corpus row count behind the palette).
+ */
+export function runInIrisApp(script: string): string {
+	return irisSys(script, 'IRISAPP');
+}
+
+/**
  * A user who can sign in and call the product API but holds no task privilege (spec 006
  * quickstart recipe: `%DB_IRISAPP_CODE:R, %DB_IRISAPP_DATA:RW`, nothing else).
  */

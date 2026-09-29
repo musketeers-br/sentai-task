@@ -28,3 +28,10 @@ no match for `PRIVATE KEY`, `PrivateKeyPassword`, `ClientSecret`).
 
 Clean-up (T030): no `sentai-e2e-020-*` credential, no OAuth server definition, no `SentaiTask:`
 task, no `sched-test`/`probe020` account and no `us29-` flow is left on the dev instance.
+
+## After merging `master` (specs 011–015 merged, 017 semantic search added)
+
+Conflicts resolved in the step-type catalog (017 gave every entry a `description`; the three new
+entries got one), `docs/limitations.md` (both sections kept) and `.specify/feature.json`. Then:
+backend **418/418** (2938 assertions), vitest **216/216**, svelte-check 0 errors, e2e us29 + us27
+**8/8** against a republished canvas.
