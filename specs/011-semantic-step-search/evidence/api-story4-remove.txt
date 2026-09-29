@@ -1,0 +1,3 @@
+## step 21 — entry removed; q=see which backups are due
+{"available":true,"matches":[{"type":"purge-task-history","score":0.3826057910919189453},{"type":"db-size-report","score":0.3245126903057098389}]}
+RESULT: rows=9

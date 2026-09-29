@@ -1,0 +1,51 @@
+# Gates — 2026-09-28
+
+## Backend gate: no %Embedding.Config row (the CI state)
+[IRISAPP|sentai-task]	Initialize SUCCESS
+[IRISAPP|sentai-task]	requirements.txt SUCCESS
+[IRISAPP|sentai-task]	Reload SUCCESS
+[IRISAPP|sentai-task]	Validate SUCCESS
+[IRISAPP|sentai-task]	Compile SUCCESS
+[IRISAPP|sentai-task]	Configure SUCCESS
+[IRISAPP|sentai-task]	Activate SUCCESS
+Methods: 302 total, 282 passed, 20 failed
+Assertions: 2081 total, 2061 passed, 20 failed
+[sentai-task]	Test FAILURE
+RESULT: SELECT COUNT(*) FROM %EMBEDDING.Config = 0
+
+Methods: 302 total, 302 passed, 0 failed
+Assertions: 2081 total, 2081 passed, 0 failed
+(with NO %Embedding.Config row installed — the CI state)
+RESULT: SELECT COUNT(*) FROM %EMBEDDING.Config = 0
+
+## Backend gate: the fixture defect the no-row state exposed, fixed
+
+The first no-row run failed 20 methods, all on one teardown assertion ("the platform's own
+provider row is put back"): the test classes stored the captured row in a
+`Property SavedProvider As %DynamicObject`, and assigning "" — the "there was no row" sentinel —
+to an object-typed property coerces it into an oref-shaped value, so the restore guard
+`If saved = ""` never fired and the teardown tried to write a garbage row. The dev machine always
+carried a row, so the CI state had never been exercised until this gate. Fixed by declaring the
+property `%RawString` in StepSearchServiceTest / StepCorpusTest / StepTypeSearchTest; the suite
+then passed 302/302 with count = 0, as recorded above.
+
+## Frontend gates
+
+svelte-check: 0 errors, 0 warnings
+vitest: 19 files, 170/170 tests passed
+
+## Playwright (full suite, 2026-09-28, published bundle of this tree)
+
+64 passed, 3 failed, 1 skipped (12.4 m). The 3 failures — us18 perf (Open-flow filter
+651 ms vs the 150 ms budget), us19 duplicated tab (90 s timeout), us9 catalog-filters SC-003 —
+are **pre-existing on master**: the same 3 fail with this feature's tree stashed
+(published baseline bundle, same commands), on this machine. They are timing-sensitive specs
+for other features (specs 009/010), none of them touch the palette path, and the 010 evidence
+README documents the same environment-dependent pattern for this machine. The feature's own
+specs — us22-semantic-search and us23-search-degradation — pass against the final published
+bundle (re-verified after the last publish).
+
+## End state
+
+The instance is left as CI runs: SELECT COUNT(*) FROM %Embedding.Config = 0.
+The quickstart documents the one INSERT that brings the dev stack's provider back.

@@ -172,6 +172,29 @@ In an IRIS instance with the IPM client:
 USER>zpm "install sentai-task"
 ```
 
+The app runs immediately; the palette narrows by entry text. For **semantic** search ("describe
+the job, get the step type"), install one row in `%Embedding.Config` — in the namespace the module
+runs in — and pick the provider that fits the machine. Until a row exists the palette simply
+stays on its local filter; everything else works.
+
+**No sidecar at all** — the platform's own in-process provider. Requires Embedded Python with the
+`sentence-transformers` package; the `INSERT` itself checks that and downloads the model once, so
+a failure names exactly what is missing (`hfCachePath` is where the model lands — pick a writable
+directory):
+
+```sql
+INSERT INTO %Embedding.Config (Name, EmbeddingClass, Configuration, VectorLength, Description)
+VALUES ('sentai-steps', '%Embedding.SentenceTransformers',
+        '{"modelName":"sentence-transformers/all-MiniLM-L6-v2","hfCachePath":"/home/irisowner/hf-cache"}',
+        384, 'Step-type search, in-process');
+```
+
+**Alternatives, all the same one row:** `sentai.search.EmbeddingService` with any
+OpenAI-compatible `Configuration` — a local [ollama](https://ollama.com) (it also installs
+natively; no container needed) or any server speaking `POST /v1/embeddings` — or
+`%Embedding.OpenAI` for a hosted provider, which **sends the operator's query text off the
+machine**. Delete the row to drop semantic search again; nothing else changes.
+
 ### Public demo (hosts)
 
 A public machine runs the same compose stack behind a proxy that forwards only the canvas and
@@ -336,7 +359,7 @@ run then renews its own credential and erases it when it ends. The canvas does t
 | Flows | `GET/POST /flows` · `GET/PUT /flows/{id}` · `POST /flows/{id}/validate` · `POST /flows/{id}/dispatch` · `POST /flows/{id}/schedule` |
 | Runs | `GET /runs` · `GET /runs/{guid}` · `GET /runs/{guid}/events` (SSE) · `POST /runs/{guid}/cancel` · `POST /runs/{guid}/pause` |
 | Steps | `POST /runs/{guid}/steps/{stepGuid}/cancel` · `…/pause` · `…/rerun` |
-| Catalog | `GET /catalog/step-types` · `GET /catalog/tasks` · `GET /catalog/tasks/{id}` · `POST /catalog/tasks/{id}/suspend` |
+| Catalog | `GET /catalog/step-types` · `GET /catalog/step-types/search?q=…` · `GET /catalog/tasks` · `GET /catalog/tasks/{id}` · `POST /catalog/tasks/{id}/suspend` |
 | WQM | `GET /wqm/categories` · `GET/PUT /wqm/categories/{name}` |
 | Targets | `GET/POST /targets` · `GET/PUT/DELETE /targets/{name}` · `POST /targets/{name}/online` · `POST /targets/{name}/sign-in` · `GET /targets/{name}/status` |
 
@@ -379,6 +402,74 @@ of the step's category, inside IRIS.
 - **Result.** A class's `Result` is shown as `result` in the run read (`{}` when none), at most
   8000 characters: a larger report keeps the first elements of its largest list and adds
   `"truncated": true, "omitted": <n>`.
+
+#### 🔎 Semantic step-type search and the embedding provider
+
+The palette's search box also accepts a sentence — "free up disk space", "rotate the journal" —
+and offers the closest catalog entries first, above today's list. The ranking is cosine similarity
+between the query's embedding and the description each catalog entry carries, so what a
+capability is *for* in the operator's terms is what makes it findable.
+
+Try it in the palette's search box: type the **job**, not the tool's name — the closest entries
+appear under **SUGGESTED** within a beat of the last keystroke (scores below as measured on the
+dev stack's `all-minilm`; `q` is the query, `matches` rank best-first and only what clears the
+0.20 floor):
+
+| You type | SUGGESTED offers first |
+|---|---|
+| `free up disk space` | Storage headroom check (0.59), Compact globals (0.49) |
+| `get rid of old audit records` | Purge audit records (0.71), Purge task history (0.33) |
+| `rotate the journal` | Switch journal (0.55) |
+| `check my globals are sound` | Integrity check (0.47) |
+
+The same query over the API:
+
+```sh
+curl -s -H "Authorization: Bearer $TOKEN" --get \
+  --data-urlencode 'q=free up disk space' \
+  http://localhost:52773/csp/sentai/api/v1/catalog/step-types/search
+# {"available":true,"matches":[{"type":"storage-headroom-check","score":0.59}, …]}
+```
+
+Two answers that look empty but are working correctly: `order me a pizza` answers
+`{"available":true,"matches":[]}` — nothing in the catalog is close, and below the floor the
+palette offers nothing rather than something wrong; and a lone keyword like `structure` stays
+below the floor too (one word against nine full sentences) — **intent sentences are the semantic
+path, keywords are today's substring path** (which keeps working underneath: typing `journal`
+still narrows to Switch journal on every keystroke, before any request).
+
+The embedding provider is **a row in the platform's `%Embedding.Config` table, never code**. With
+no row at all the app runs exactly as before — search narrows by entry text, and nothing about the
+palette changes (that is also the state CI runs in). On the dev stack this row is **installed by the build** (`iris-provider.script`), so
+`docker compose up -d` comes up with search working and nothing manual; delete the row to run the
+stack without a provider, and it stays deleted until the next image rebuild.
+
+One row, in `IRISAPP`, is the whole setup:
+
+```sql
+INSERT INTO %Embedding.Config (Name, EmbeddingClass, Configuration, VectorLength, Description)
+VALUES ('sentai-steps', 'sentai.search.EmbeddingService',
+        '{"host":"ollama","port":11434,"https":0,"path":"/v1/embeddings","model":"all-minilm"}',
+        384, 'Step-type search, local Ollama');
+```
+
+`Configuration` is the provider endpoint, in JSON: `host`, `port`, `https` (`0`/`1`), `path` (the
+OpenAI-compatible `POST` route, normalized onto a leading slash), `model`, and an optional `apiKey`
+(sent as `Authorization: Bearer …` only when present). Nothing is hardcoded: the dev stack serves
+`all-minilm` on the compose network's `ollama` service, and the row's validating trigger rejects a
+configuration missing `host`, `path` or `model` at insert time, with the platform's own message.
+
+**Pointing at a different provider is a row change, not a code change.** The table names the class:
+`%Embedding.SentenceTransformers` or `%Embedding.OpenAI` are rows in the same table with their own
+`Configuration`, and `sentai.search.EmbeddingService` itself speaks the OpenAI-compatible shape
+any such provider serves.
+
+> **A hosted provider sends the operator's query text off the machine.** What you type into the
+> palette's search box travels, as the request body, to whatever host the row names. A local
+> provider keeps it on the compose network; a hosted one does not — that is the trade-off, and it
+> belongs to whoever writes the row. If the provider is unconfigured, unreachable, too slow, or
+> returns vectors the stored corpus cannot compare with, the answer is today's palette — no error,
+> no toast, and never a masquerading "no results".
 
 #### 🐍 Where SentaiTask uses Embedded Python, and why
 
