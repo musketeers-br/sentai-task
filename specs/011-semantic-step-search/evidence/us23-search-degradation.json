@@ -1,0 +1,15 @@
+{
+  "evidence_id": "us23-search-degradation",
+  "captured_at": "2026-09-28T23:21:28.480Z",
+  "request": {
+    "provider": "ollama stopped (docker compose stop ollama)"
+  },
+  "response": {
+    "suggestedGroups": 0,
+    "pageErrors": 0,
+    "noMatchMessage": "today’s own"
+  },
+  "notes": [
+    "With the similarity service down, the palette narrows by entry text exactly as before, shows today’s no-match message, and raises no error (FR-023)."
+  ]
+}

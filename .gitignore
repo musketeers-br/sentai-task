@@ -29,3 +29,7 @@ scripts/sanitation/backup-*.zwr
 assets/media/*.mp4
 assets/media/review-*.png
 frontend/media-results/
+
+# Local agent/tunnel session state, regenerated per machine — never product
+.opencode/
+.tunnel/

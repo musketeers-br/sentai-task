@@ -4,6 +4,9 @@
 // that knows about that.
 import type { FlowDocument, FlowStep, ParameterSpec, Position, StepCategory, StepTypeInfo } from '$lib/flow/document';
 import type { FlowSummaryView } from '$lib/flows/list';
+// R-011: `StepTypeInfo` gains no `description`. The catalog response carries one, and this module
+// deliberately does not model it — the palette does not display it in this feature.
+import type { StepSearchOutcome, UnavailableReason } from '$lib/palette/search';
 
 export interface WireStepType {
 	type: string;
@@ -103,8 +106,7 @@ export function fromWireFlow(w: WireFlow): FlowDocument {
 	};
 }
 
-export function fromWireStepTypes(list: WireStepType[]): StepTypeInfo[] {
-	return list.map((t) => ({
+export function fromWireStepTypes(list: WireStepType[]): StepTypeInfo[] {	return list.map((t) => ({
 		type: t.type,
 		className: t.class,
 		category: t.category as StepCategory,
@@ -134,3 +136,46 @@ export function fromWireStepTypes(list: WireStepType[]): StepTypeInfo[] {
 			: {})
 	}));
 }
+
+/**
+ * Spec 011: the search answer, validated on the way in.
+ *
+ * Both answers are `200`, so a body that is neither shape is a defect rather than a degraded
+ * provider — it still degrades the palette rather than throwing into the component, because a
+ * malformed server answer must never be able to become an error state on screen (Constitution IV,
+ * FR-023). An unrecognised `reason` becomes `error` for the same reason: it is still a reason, and
+ * the reason is never rendered anyway.
+ */
+export function fromWireStepSearch(body: unknown): StepSearchOutcome {
+	const degraded: StepSearchOutcome = { available: false, reason: 'error' };
+	if (typeof body !== 'object' || body === null) return degraded;
+	const record = body as Record<string, unknown>;
+	if (record.available === true) {
+		if (!Array.isArray(record.matches)) return degraded;
+		const matches: { type: string; score: number }[] = [];
+		for (const item of record.matches) {
+			if (typeof item !== 'object' || item === null) return degraded;
+			const { type, score } = item as Record<string, unknown>;
+			// A match without a type names nothing the palette could render, and a score that is not
+			// a number is not a score: the entry is dropped rather than offered as a ranked result.
+			if (typeof type !== 'string' || type === '') continue;
+			const n = Number(score);
+			if (!Number.isFinite(n)) continue;
+			matches.push({ type, score: n });
+		}
+		return { available: true, matches };
+	}
+	const reason = record.reason;
+	return {
+		available: false,
+		reason: REASONS.has(reason as UnavailableReason) ? (reason as UnavailableReason) : 'error'
+	};
+}
+
+const REASONS = new Set<UnavailableReason>([
+	'not-configured',
+	'unreachable',
+	'slow',
+	'incompatible',
+	'error'
+]);
