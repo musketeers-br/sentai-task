@@ -23,7 +23,7 @@ against an isolated compose project (quickstart A).
 
 ## Phase 1: Setup
 
-- [ ] T001 Spike on an isolated compose project (not the dev stack), recorded in `specs/011-demo-readiness/evidence/t001-demo-role.md`:
+- [X] T001 Spike on an isolated compose project (not the dev stack), recorded in `specs/011-demo-readiness/evidence/t001-demo-role.md`:
   - (a) secure the privileged accounts with the rule of research R-2 and prove `_SYSTEM:SYS` → 401 on both instances, the canvas still loads, and `iris session` still works from the host;
   - (b) find the least-privilege resource set of role `SentaiDemo` by running the example and showcase flows as `sentai-demo` (R-4), adding one resource per verbatim refusal;
   - (c) prove `GET /api/admin/v2/security/users` → 403 and `purge-task-history` refused for that account;
@@ -98,6 +98,7 @@ against an isolated compose project (quickstart A).
 
 - [ ] T022 Full regression: backend, unit, e2e (with `iris-target` up), `acceptance.sh`. Restore any spec 002/007 evidence the e2e run rewrote. Record the counts in `evidence/README.md`.
 - [ ] T023 [P] `docs/limitations.md`: add a stable anchor to the cancel-alert item (used by the notice link) and a "Public demo" note (the demo account sees verbatim refusals by design; categories are not restored by the reset).
+- [ ] T025 Fix the two product defects found by T001 (evidence D1, D2), each with its failing test first: (D1) a platform SQL refusal while reading a flow's steps/edges/joins in `FlowValidator.Validate`, `WaveDispatcher.CreateRun`/`CheckConfirmations` and the run loop is returned as a problem with the platform's text (validation error `PLATFORM_REFUSED` with the SQL message; dispatch 403 verbatim; the loop fails the run instead of dying); (D2) `PollInFlightSteps` records `result.FailureReason` verbatim when the job ends `Failed`/`Error` (falling back to `status.summary`, then the generic text).
 - [ ] T024 Deploy on the VM (team), run `status.sh` there, and record SC-002 (time to up) and SC-004 (visitor to showcase finished) in `evidence/README.md`.
 
 ## Dependencies

@@ -145,10 +145,12 @@ Unit tests 145 → ~155; e2e 65 → ~69; backend 269 → ~279.
   `CSP.ini`, so it is left alone. Changing it would break the gateway and gain nothing.
   `UnknownUser` has no password.
 - **D-8 Demo account.** User `sentai-demo`, password `sentai-demo-2026` (published), role
-  `SentaiDemo`, on both instances. The role holds exactly the resources the T001 spike proves
-  necessary to run the example and showcase flows and to read the catalog and categories
-  ([R-4](research.md)); it holds **no** `%Admin_Secure`. The account is recreated with the
-  published password by every reset.
+  `SentaiDemo`, on both instances. The role holds exactly the resources the T001 spike proved
+  necessary ([evidence](evidence/t001-demo-role.md)): primary `%DB_IRISAPP_CODE:R,
+  %DB_IRISAPP_DATA:RW, %Admin_Manage:U, %DB_IRISSYS:RW, %Admin_Operate:U` plus SQL `SELECT,
+  INSERT, UPDATE, DELETE ON SCHEMA sentai_model` and `EXECUTE ON %SYS.DatabaseQuery_FreeSpace`;
+  target `%DB_USER:R, %Admin_Manage:U, %DB_IRISSYS:RW, %Admin_Operate:U`. It holds **no**
+  `%Admin_Secure`. The account is recreated with the published password by every reset.
 - **D-9 Order in `up.sh`.** (1) refuse without `SENTAI_DEMO_SECRET`; (2) `compose up -d --build
   iris iris-target --wait`; (3) secure both instances; (4) create the demo role and account on
   both; (5) `Demo.Setup(1)` on the primary (the explicit `1` is required, so an accidental call on a normal installation does nothing; it sets the demo marker, registers `iris-target`, seeds the
