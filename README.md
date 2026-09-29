@@ -17,7 +17,7 @@ journal switches as a flow, run them in parallel waves that converge at join poi
 instance and on other IRIS servers, and watch every step live.
 
 <p align="center">
-  <img src="./assets/sentai-run.png" alt="A finished SentaiTask run: three integrity checks, one of them on a second IRIS server, converge on a join before the final step" width="880">
+  <img src="./assets/media/sentai-run.gif" alt="SentaiTask running a flow: three integrity checks, one of them on a second IRIS server, and two security reports run in parallel, converge on a join, and the final report opens with its findings; then the run log and the run history" width="880">
 </p>
 
 ## 🚀 Try it

@@ -1,0 +1,91 @@
+#!/usr/bin/env bash
+# Spec 014 US1: records the showcase and writes the media into assets/media/.
+#   bash scripts/media/make-media.sh
+# Needs the dev stack with iris-target (docker compose up -d) and the frontend toolchain. ffmpeg
+# runs in a throw-away container (FR-006). Nothing is written to assets/media unless every check
+# passes (FR-004).
+set -euo pipefail
+export MSYS_NO_PATHCONV=1
+REPO="$(cd "$(dirname "$0")/../.." && pwd)"
+FFMPEG_IMAGE="jrottenberg/ffmpeg:7-alpine"
+WORK="$(mktemp -d "${TMPDIR:-/tmp}/sentai-media.XXXXXX")"
+trap 'rm -rf "$WORK"' EXIT
+# Node and Docker on Windows need the native path of the work directory (Git Bash's /tmp is not C:	mp).
+HOSTWORK="$(cygpath -m "$WORK" 2>/dev/null || echo "$WORK")"
+
+ff()      { docker run --rm -v "$HOSTWORK:/w" "$FFMPEG_IMAGE" -hide_banner -loglevel error -y "$@"; }
+seconds() { docker run --rm -v "$HOSTWORK:/w" --entrypoint ffprobe "$FFMPEG_IMAGE" -v error -show_entries format=duration -of csv=p=0 "/w/$1"; }
+bytes()   { wc -c < "$WORK/$1" | tr -d ' '; }
+
+record() {
+	local timelapse="$1"
+	rm -rf "$WORK/rec"
+	(cd "$REPO/frontend" && SENTAI_MEDIA_OUT="$HOSTWORK/rec" SENTAI_MEDIA_TIMELAPSE="$timelapse" \
+		npx playwright test -c playwright.media.config.ts -g "the recording")
+	local video
+	video="$(find "$WORK/rec" -name '*.webm' | head -n 1)"
+	[ -n "$video" ] || { echo "no video was recorded" >&2; exit 1; }
+	cp "$video" "$WORK/run.webm"
+}
+
+echo "== recording (pass 1)"
+record 1
+dur="$(seconds run.webm)"
+factor="$(awk -v d="$dur" 'BEGIN { f = d / 28; if (f < 1) f = 1; printf "%.2f", f }')"
+echo "   video ${dur}s; speed factor ${factor}"
+if awk -v f="$factor" 'BEGIN { exit !(f > 1.5) }'; then
+	echo "== recording (pass 2, captions say time-lapse ×${factor})"
+	record "$factor"
+	dur="$(seconds run.webm)"
+	factor="$(awk -v d="$dur" 'BEGIN { f = d / 28; if (f < 1) f = 1; printf "%.2f", f }')"
+fi
+
+echo "== converting"
+# The video keeps real time unless it would exceed 90 s (FR-002).
+vfactor="$(awk -v d="$dur" 'BEGIN { f = d / 85; if (f < 1) f = 1; printf "%.2f", f }')"
+ff -i /w/run.webm -vf "setpts=PTS/${vfactor},scale=1280:720:flags=lanczos,format=yuv420p" -c:v libx264 -preset slow -crf 22 -movflags +faststart /w/sentai-run.mp4
+gif() { # $1 name, $2 width, $3 fps
+	ff -i /w/run.webm -vf "setpts=PTS/${factor},fps=$3,scale=$2:-1:flags=lanczos,palettegen=stats_mode=diff" /w/palette.png
+	ff -i /w/run.webm -i /w/palette.png -lavfi "setpts=PTS/${factor},fps=$3,scale=$2:-1:flags=lanczos[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=5" "/w/$1"
+}
+# Largest first; step down width and frame rate until each variant fits its budget (R-2).
+fit() { # $1 name, $2 byte budget, then "width fps" pairs
+	local name="$1" budget="$2"; shift 2
+	for wf in "$@"; do
+		gif "$name" ${wf% *} ${wf#* }
+		[ "$(bytes "$name")" -le "$budget" ] && { echo "   $name: ${wf% *} px, ${wf#* } fps, $(bytes "$name") bytes"; return 0; }
+	done
+	echo "   $name: still over budget at the smallest setting"
+}
+fit sentai-run.gif 8000000 "960 12" "960 10" "800 8" "720 8" "640 8"
+fit sentai-run-small.gif 3000000 "640 8" "560 6" "480 6" "400 5"
+
+echo "== checking (FR-002)"
+ok=1
+check() { if eval "$2"; then echo "PASS $1"; else echo "FAIL $1"; ok=0; fi; }
+g="$(seconds sentai-run.gif)"; s="$(seconds sentai-run-small.gif)"; m="$(seconds sentai-run.mp4)"
+check "animated capture ≤ 30 s (${g}s)" "awk -v x=$g 'BEGIN{exit !(x<=30.5)}'"
+check "animated capture ≤ 8 MB ($(bytes sentai-run.gif) bytes)" "[ $(bytes sentai-run.gif) -le 8000000 ]"
+check "small capture ≤ 3 MB ($(bytes sentai-run-small.gif) bytes)" "[ $(bytes sentai-run-small.gif) -le 3000000 ]"
+check "video ≤ 90 s (${m}s)" "awk -v x=$m 'BEGIN{exit !(x<=90.5)}'"
+[ "$ok" = 1 ] || { echo "media checks failed; assets/media left unchanged" >&2; exit 1; }
+
+echo "== stills"
+(cd "$REPO/frontend" && SENTAI_MEDIA_OUT="$HOSTWORK/stills-run" SENTAI_MEDIA_STILLS="$HOSTWORK/stills" \
+	npx playwright test -c playwright.media.config.ts -g "stills")
+[ "$(ls "$WORK/stills" | wc -l)" -ge 12 ] || { echo "expected 12 stills" >&2; exit 1; }
+
+echo "== publishing into assets/media"
+mkdir -p "$REPO/assets/media/stills"
+cp "$WORK/sentai-run.gif" "$WORK/sentai-run-small.gif" "$WORK/sentai-run.mp4" "$REPO/assets/media/"
+cp "$WORK/stills/"*.png "$REPO/assets/media/stills/"
+commit="$(cd "$REPO" && git rev-parse --short HEAD)"
+version="$(grep -o '<Version>[^<]*' "$REPO/module.xml" | head -n 1 | cut -d'>' -f2)"
+cat > "$REPO/assets/media/manifest.json" <<JSON
+{ "recordedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)", "commit": "$commit", "moduleVersion": "$version", "timelapse": $factor,
+  "files": { "gif": {"path": "sentai-run.gif", "bytes": $(bytes sentai-run.gif), "seconds": $g},
+             "gifSmall": {"path": "sentai-run-small.gif", "bytes": $(bytes sentai-run-small.gif), "seconds": $s},
+             "video": {"path": "sentai-run.mp4", "seconds": $m, "committed": false},
+             "stills": [$(cd "$WORK/stills" && ls *.png | sed 's/.*/"stills\/&"/' | paste -sd, -)] } }
+JSON
+echo "done: assets/media ($(ls "$REPO/assets/media" | wc -l) entries)"
