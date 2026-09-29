@@ -2,7 +2,7 @@
 /// descriptions and only descriptions (so rewording a label never invalidates stored vectors),
 /// a rebuild is idempotent (the same catalog yields the same rows and the same stamp), and rows
 /// the catalog does not declare do not survive a rebuild.
-///
+/// 
 /// The provider row is captured and restored exactly as StepSearchServiceTest does it, because
 /// the corpus builds only through the service.
 Class sentai.unittest.search.StepCorpusTest Extends sentai.unittest.SentaiTestCase
@@ -118,6 +118,24 @@ ClassMethod StoredVectorText(type As %String) As %String
     Set rs = ##class(%SQL.Statement).%ExecDirect(, "SELECT vector FROM sentai_search.StepCorpus WHERE type = ?", type)
     If 'rs.%Next() Quit ""
     Quit ##class(%Library.Vector).LogicalToDisplay(rs.%Get("vector"))
+}
+
+/// Spec 017 T022, FR-007: a stored row carries the identity of the provider that embedded it, and a
+/// row without one — every row spec 011 wrote — is not current, so the first search after the
+/// upgrade rebuilds once.
+Method TestRowsCarryProviderIdentity()
+{
+    Set outcome = ##class(sentai.search.StepSearchService).Search("rotate the journal")
+    Do $$$AssertTrue(##class(sentai.search.SearchOutcome).IsAvailable(outcome), "the corpus is built")
+    Set current = ##class(sentai.search.StepSearchService).ProviderIdentity()
+    Do $$$AssertTrue(current [ "sentai.unittest.search.FakeEmbeddingService", current)
+    Set rs = ##class(%SQL.Statement).%ExecDirect(, "SELECT COUNT(*) AS n FROM sentai_search.StepCorpus WHERE providerIdentity = ?", current)
+    Do rs.%Next()
+    Do $$$AssertEquals(+rs.%Get("n"), ##class(sentai.registry.StepType).GetCatalog().%Size(), "every row names the provider that embedded it")
+    Set catalog = ##class(sentai.registry.StepType).GetCatalog()
+    Do $$$AssertTrue(##class(sentai.search.StepSearchService).CorpusIsCurrent(catalog), "a corpus built by the current provider is current")
+    Set rs = ##class(%SQL.Statement).%ExecDirect(, "UPDATE sentai_search.StepCorpus SET providerIdentity = NULL")
+    Do $$$AssertNotTrue(##class(sentai.search.StepSearchService).CorpusIsCurrent(catalog), "rows with no identity, as spec 011 wrote them, are not current")
 }
 
 }

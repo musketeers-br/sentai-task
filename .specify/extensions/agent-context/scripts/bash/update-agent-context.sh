@@ -84,7 +84,9 @@ fi
 
 _opts_lines=()
 while IFS= read -r _line || [[ -n "$_line" ]]; do
-  _opts_lines+=("$_line")
+  # A Python on Windows ends its lines with CRLF; keep the CR out of the values (it made
+  # context_file "AGENTS.md\r", which cannot be opened).
+  _opts_lines+=("${_line%$'\r'}")
 done < <(printf '%s\n' "$_raw_opts")
 if (( ${#_opts_lines[@]} < 3 )); then
   echo "agent-context: malformed config parser output; expected 3 lines (context_file, marker_start, marker_end), got ${#_opts_lines[@]}; skipping update." >&2
@@ -134,9 +136,12 @@ plans = sorted(
     key=lambda p: p.stat().st_mtime,
     reverse=True,
 )
-print(plans[0] if plans else "")
+# Relative, with forward slashes: on Windows the absolute path is "C:\..." and would never
+# match the "/c/..." form of $PROJECT_ROOT that is stripped below.
+print(plans[0].relative_to(specs.parent).as_posix() if plans else "")
 PY
 )"
+  _plan_abs="${_plan_abs%$'\r'}"
   if [[ -n "$_plan_abs" ]]; then
     PLAN_PATH="${_plan_abs#"$PROJECT_ROOT/"}"
   fi

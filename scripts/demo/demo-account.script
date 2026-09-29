@@ -10,6 +10,9 @@
  // On the primary (`set sqlschema="sentai_model"` on stdin), the role also needs SQL privileges on
  // the product's tables, and EXECUTE on the platform's free-space query that the in-process
  // storage steps call: without them the platform refuses with SQLCODE -99.
- if (err="")&&($get(sqlschema)'="") { new $namespace set $namespace="IRISAPP" set st=##class(%SQL.Statement).%ExecDirect(,"GRANT SELECT, INSERT, UPDATE, DELETE ON SCHEMA "_sqlschema_" TO SentaiDemo") set:st.%SQLCODE<0 err="SQL grant: "_st.%Message if err="" { set st=##class(%SQL.Statement).%ExecDirect(,"GRANT EXECUTE ON %SYS.DatabaseQuery_FreeSpace TO SentaiDemo") set:st.%SQLCODE<0 err="SQL grant: "_st.%Message } }
+ // Spec 017: intent search reads the provider row (%EMBEDDING.Config, read only — the row is the
+ // operator's) and keeps its corpus in sentai_search, which the first search after a change
+ // rebuilds; both are dynamic SQL, so without these the demo's search answers `error`.
+ if (err="")&&($get(sqlschema)'="") { new $namespace set $namespace="IRISAPP" set st=##class(%SQL.Statement).%ExecDirect(,"GRANT SELECT, INSERT, UPDATE, DELETE ON SCHEMA "_sqlschema_" TO SentaiDemo") set:st.%SQLCODE<0 err="SQL grant: "_st.%Message if err="" { set st=##class(%SQL.Statement).%ExecDirect(,"GRANT EXECUTE ON %SYS.DatabaseQuery_FreeSpace TO SentaiDemo") set:st.%SQLCODE<0 err="SQL grant: "_st.%Message } if err="" { set st=##class(%SQL.Statement).%ExecDirect(,"GRANT SELECT, INSERT, UPDATE, DELETE ON SCHEMA sentai_search TO SentaiDemo") set:st.%SQLCODE<0 err="SQL grant: "_st.%Message } if err="" { set st=##class(%SQL.Statement).%ExecDirect(,"GRANT SELECT ON %EMBEDDING.Config TO SentaiDemo") set:st.%SQLCODE<0 err="SQL grant: "_st.%Message } }
  write "RESULT:",$select(err="":"OK",1:err),!
  kill demopw,resources,sqlschema

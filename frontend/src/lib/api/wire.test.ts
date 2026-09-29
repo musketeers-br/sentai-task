@@ -137,7 +137,7 @@ describe('fromWireStepSearch (spec 011)', () => {
 	});
 
 	it('carries each documented reason through verbatim', () => {
-		for (const reason of ['not-configured', 'unreachable', 'slow', 'incompatible', 'error']) {
+		for (const reason of ['not-configured', 'unreachable', 'slow', 'incompatible', 'warming', 'error']) {
 			expect(fromWireStepSearch({ available: false, reason })).toEqual({
 				available: false,
 				reason

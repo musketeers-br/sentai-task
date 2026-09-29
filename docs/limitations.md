@@ -103,6 +103,12 @@ SentaiTask v1 only promises what was proven on IRIS 2026.2 (spec `004-backend-ha
   IRIS 2026.2 it keeps counting severe `messages.log` entries after `$SYSTEM.Monitor.Clear()`, so an
   instance that raised alerts since it started fails `system-alerts-check` at the default
   threshold 0 until it restarts or the threshold is raised. Reports never correct anything.
+- **Semantic search (spec 017).** The in-process search model loads in one worker process after the
+  instance starts; until it is loaded (≈7–11 s measured, research R-2) searches answer `warming`
+  and the palette keeps its local filter. The worker is started by the container image and, on any
+  other install, by the first search. It serves searches one at a time (≈12 ms each, three
+  concurrent callers ≈33 ms each), and holds ≈500 MB. A model that fails to load answers `error`
+  until the configuration row changes or the worker is restarted.
 - **Run log (spec 012).** Runs dispatched before this version have no log; the run view says so.
   The SSE stream still emits only `step-state-changed` and `run-terminal`: the `log-entry` event of
   spec 003's protocol was never implemented, and the canvas reads the log by polling the run.
