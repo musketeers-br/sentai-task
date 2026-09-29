@@ -177,5 +177,6 @@ const REASONS = new Set<UnavailableReason>([
 	'unreachable',
 	'slow',
 	'incompatible',
+	'warming',
 	'error'
 ]);

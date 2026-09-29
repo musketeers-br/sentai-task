@@ -84,6 +84,10 @@ fi
 
 _opts_lines=()
 while IFS= read -r _line || [[ -n "$_line" ]]; do
+  # A Python on Windows ends its lines with CRLF; keep the CR out of the values (it made
+  # context_file "AGENTS.md\r", which cannot be opened).
+  # Unquoted on purpose: inside double quotes $'\r' is not a CR.
+  _line=${_line%$'\r'}
   _opts_lines+=("$_line")
 done < <(printf '%s\n' "$_raw_opts")
 if (( ${#_opts_lines[@]} < 3 )); then
@@ -134,9 +138,12 @@ plans = sorted(
     key=lambda p: p.stat().st_mtime,
     reverse=True,
 )
-print(plans[0] if plans else "")
+# Relative, with forward slashes: on Windows the absolute path is "C:\..." and would never
+# match the "/c/..." form of $PROJECT_ROOT that is stripped below.
+print(plans[0].relative_to(specs.parent).as_posix() if plans else "")
 PY
 )"
+  _plan_abs=${_plan_abs%$'\r'}
   if [[ -n "$_plan_abs" ]]; then
     PLAN_PATH="${_plan_abs#"$PROJECT_ROOT/"}"
   fi
