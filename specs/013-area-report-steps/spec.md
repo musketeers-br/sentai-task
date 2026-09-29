@@ -4,7 +4,9 @@
 
 **Created**: 2026-09-28
 
-**Status**: Draft
+**Status**: Implemented
+
+**Status note**: 21/21 tasks; full regression record in evidence/.
 
 **Input**: Competitor analysis (2026-09-28): the contest asks for coverage of six management areas.
 SentaiTask covers task management and the Work Queue Manager in depth, but touches *security*,
