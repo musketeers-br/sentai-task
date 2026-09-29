@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 # Checks that every specs/*/spec.md **Status** agrees with its tasks.md ("Spec status" in AGENTS.md).
+# Usage: check-spec-status.sh [specs/NNN-slug ...]   (default: every spec)
 # Exit 0 = consistent, 1 = at least one spec says something its tasks contradict.
 set -u
 cd "$(dirname "$0")/.."
 VALID='^(Draft|Planned|In Progress|Implemented|Merged|Superseded by [0-9]{3})$'
 bad=0
-for spec in specs/*/spec.md; do
-  dir=$(dirname "$spec"); name=$(basename "$dir")
+if [[ $# -gt 0 ]]; then targets=("$@"); else targets=(specs/*/); fi
+for t in "${targets[@]}"; do
+  dir=${t%/}; spec="$dir/spec.md"; name=$(basename "$dir")
   status=$(grep -m1 -E '^\*\*Status\*\*:' "$spec" | sed -E 's/^\*\*Status\*\*:[[:space:]]*//; s/[[:space:]]*<!--.*$//; s/[[:space:]]+$//')
   tasks="$dir/tasks.md"
   if [[ -f $tasks ]]; then
