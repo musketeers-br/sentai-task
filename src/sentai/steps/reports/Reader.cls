@@ -22,9 +22,11 @@ ClassMethod For(baseUrl As %String, token As %String) As sentai.steps.reports.Re
 /// otherwise returns "" and sets `problem` to the platform's words, verbatim:
 ///   "Administrative endpoint <path> returned HTTP <status>: <summary>" (as the platform steps do),
 ///   or "Target did not answer: <transport error>".
-Method Get(path As %String, Output problem As %String)
+/// Spec 020: `errorId` is the platform's own id of its first status error (for example
+/// `OAuth2NoConfiguration`), "" when there is none — so a report can tell a state from a refusal.
+Method Get(path As %String, Output problem As %String, Output errorId As %String)
 {
-    Set problem = "", httpStatus = 0, location = "", transportError = ""
+    Set problem = "", errorId = "", httpStatus = 0, location = "", transportError = ""
     Set ..Reads = ..Reads + 1
     Set body = ##class(sentai.dispatch.AdminApiClient).Get(path, ..Token, .httpStatus, .location, ..BaseUrl, .transportError)
     If (transportError '= "") {
@@ -33,6 +35,10 @@ Method Get(path As %String, Output problem As %String)
     }
     If (httpStatus '= 200) || '$IsObject(body) {
         Set summary = $S($IsObject(body) && $IsObject(body."status"):body."status"."summary", 1:"")
+        If $IsObject(body) && $IsObject(body."status") && $IsObject(body."status"."errors") && (body."status"."errors".%Size() > 0) {
+            Set first = body."status"."errors".%Get(0)
+            Set:$IsObject(first) errorId = first.id
+        }
         Set problem = "Administrative endpoint "_path_" returned HTTP "_httpStatus_$S(summary '= "":": "_summary, 1:"")
         Quit ""
     }

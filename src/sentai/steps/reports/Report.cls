@@ -12,6 +12,9 @@ Class sentai.steps.reports.Report Extends %RegisteredObject [ Abstract ]
 
 /// Subclasses implement the reads and rules. `parameters` holds the declared parameters with their
 /// defaults applied (ReadExecutor.Parameters).
+/// Spec 020: the most items a report reads one by one (roles, credentials, configurations…).
+Parameter CAP = 200;
+
 ClassMethod Build(reader As sentai.steps.reports.Reader, parameters As %DynamicObject, Output report As %DynamicObject) As %Status [ Abstract ]
 {
 }
@@ -19,7 +22,8 @@ ClassMethod Build(reader As sentai.steps.reports.Reader, parameters As %DynamicO
 /// A new, empty report of `type`.
 ClassMethod NewReport(type As %String) As %DynamicObject
 {
-    Quit {"type": (type), "summary": {"high": 0, "medium": 0, "info": 0, "itemsRead": 0, "itemsOmitted": 0}, "findings": [], "details": {}}
+    // Spec 020: `asOf` is the instance's date and time the report was built at.
+    Quit {"type": (type), "summary": {"high": 0, "medium": 0, "info": 0, "itemsRead": 0, "itemsOmitted": 0, "asOf": ($ZDATETIME($HOROLOG, 3))}, "findings": [], "details": {}}
 }
 
 ClassMethod AddFinding(report As %DynamicObject, severity As %String, rule As %String, item As %String, detail As %String = "")
@@ -41,6 +45,40 @@ ClassMethod Pick(source As %DynamicObject, fields As %List) As %DynamicObject
         If (type = "boolean") { Do out.%Set(f, source.%Get(f), "boolean") } Else { Do out.%Set(f, source.%Get(f)) }
     }
     Quit out
+}
+
+/// Spec 020: whole days from `asOf` to `notAfter` (both "YYYY-MM-DD hh:mm:ss"); negative when the
+/// date is past. "" when `notAfter` is not a date.
+ClassMethod DaysLeft(asOf As %String, notAfter As %String) As %String
+{
+    Set to = $ZDATEH($P(notAfter, " "), 3, , , , , , , "")
+    Quit:(to = "") ""
+    Quit to - $ZDATEH($P(asOf, " "), 3)
+}
+
+/// Spec 020: one of a report's reads was refused while others succeeded: kept as a finding with the
+/// platform's words (FR-011).
+ClassMethod AddIncompleteRead(report As %DynamicObject, part As %String, text As %String)
+{
+    Do ..AddFinding(report, "medium", "INCOMPLETE_READ", part, text)
+}
+
+/// Spec 020: items beyond the per-report cap were not read.
+ClassMethod AddNotAllRead(report As %DynamicObject, part As %String, omitted As %Integer)
+{
+    Do ..AddFinding(report, "info", "NOT_ALL_READ", part, omitted_" item"_$S(omitted = 1:"", 1:"s")_" not read (limit "_..#CAP_")")
+    Set report.summary.itemsOmitted = report.summary.itemsOmitted + omitted
+}
+
+/// Spec 020: an address that is not https, loopback excepted (http://localhost, 127.0.0.1, [::1]).
+ClassMethod IsInsecureAddress(url As %String) As %Boolean
+{
+    Quit:(url = "") 0
+    Set lower = $ZCVT(url, "L")
+    Quit:($E(lower, 1, 8) = "https://") 0
+    Set host = $P($P($P(lower, "://", 2), "/", 1), "@", *)
+    Set host = $S($E(host) = "[":$P(host, "]", 1)_"]", 1:$P(host, ":", 1))
+    Quit '$LISTFIND($LB("localhost", "127.0.0.1", "[::1]"), host)
 }
 
 /// Whether the JSON array `list` contains `value` (case-sensitive, as the platform spells it).

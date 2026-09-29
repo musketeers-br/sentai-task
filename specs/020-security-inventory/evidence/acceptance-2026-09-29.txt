@@ -1,0 +1,14 @@
+PASS test certificate expiring in 10 days
+PASS run-as account with security reads
+PASS flow created — HTTP 201
+PASS scheduled as the run-as account — HTTP 201 
+… waiting for the task to fire at 21:58 (instance time)
+PASS SC-001 a scheduled run fired and ended
+PASS SC-001 the scheduled run failed on the certificate — run failed, step failed
+PASS SC-001 the reason names the certificate — ERROR #5001: 1 certificate(s) expired or expiring within 30 days: sentai-e2e-020-5d63de (2026-10-09 21:56:08)
+PASS the check ran as the run-as account — sched-test
+PASS SC-003 OAuth not configured completes — completed
+PASS SC-004 no key material in the stored results
+PASS unscheduled, no task left
+11/11 checks passed
+EXIT 0
