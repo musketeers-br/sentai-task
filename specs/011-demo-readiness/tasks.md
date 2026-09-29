@@ -37,10 +37,10 @@ against an isolated compose project (quickstart A).
 
 **Independent test**: us22 — notice present when a platform job runs, absent for in-process only.
 
-- [ ] T003 [P] [US5] Write `frontend/src/lib/run/cancel-alert.test.ts`: running local integrity check → true; running remote integrity check → true; queued integrity check → false; running `db-size-report` → false; unknown type → false; `stepCancelRaisesAlert` per step. See it fail (no module).
-- [ ] T004 [P] [US5] Write `frontend/tests/us22-cancel-alert-notice.spec.ts`: (1) flow `us22-ic` with one integrity check on USER, *Run now*, wait for `running`, open *Cancel wave* → `cancel-alert-notice` visible with a link to `docs/limitations.md`; choose *Keep running*; (2) click the step's *Cancel* → a confirmation with the notice; *Keep running* → still running; then cancel the run through the API and clear the alert (`Monitor.Clear` via `tests/iris.ts`); (3) the spec 010 example, *Run now*, *Cancel wave* before it ends → no notice; (4) the step *Cancel* tooltip equals the D-19 text. See it fail.
-- [ ] T005 [US5] Implement `frontend/src/lib/run/cancel-alert.ts` (plan D-17). T003 passes.
-- [ ] T006 [US5] `RunScreen.svelte`: notice paragraph in *Cancel wave?* when `cancelRaisesAlert`; `RunNode.svelte`: confirmation dialog for such steps, one-click cancel otherwise, tooltip text D-19. Gate: `npm test && npm run check && npm run build && bash ../scripts/publish-canvas.sh && npx playwright test us22 us4`. T004 passes; us4 unchanged.
+- [X] T003 [P] [US5] Write `frontend/src/lib/run/cancel-alert.test.ts`: running local integrity check → true; running remote integrity check → true; queued integrity check → false; running `db-size-report` → false; unknown type → false; `stepCancelRaisesAlert` per step. See it fail (no module).
+- [X] T004 [P] [US5] Write `frontend/tests/us22-cancel-alert-notice.spec.ts`: (1) flow `us22-ic` with one integrity check on USER, *Run now*, wait for `running`, open *Cancel wave* → `cancel-alert-notice` visible with a link to `docs/limitations.md`; choose *Keep running*; (2) click the step's *Cancel* → a confirmation with the notice; *Keep running* → still running; then cancel the run through the API and clear the alert (`Monitor.Clear` via `tests/iris.ts`); (3) the spec 010 example, *Run now*, *Cancel wave* before it ends → no notice; (4) the step *Cancel* tooltip equals the D-19 text. See it fail.
+- [X] T005 [US5] Implement `frontend/src/lib/run/cancel-alert.ts` (plan D-17). T003 passes.
+- [X] T006 [US5] `RunScreen.svelte`: notice paragraph in *Cancel wave?* when `cancelRaisesAlert`; `RunNode.svelte`: confirmation dialog for such steps, one-click cancel otherwise, tooltip text D-19. Gate: `npm test && npm run check && npm run build && bash ../scripts/publish-canvas.sh && npx playwright test us22 us4`. T004 passes; us4 unchanged.
 
 **Checkpoint**: US5 shippable on its own.
 
