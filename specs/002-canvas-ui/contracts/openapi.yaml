@@ -81,20 +81,38 @@ paths:
 
   /flows/{flowId}/schedule:
     parameters: [ { $ref: "#/components/parameters/FlowId" } ]
+    get:
+      tags: [flows]
+      summary: The flow's schedule (spec 015), with the platform's live next run
+      responses:
+        "200":
+          description: "`{scheduled: false, instanceTime}` or the schedule, runAs, targets, taskId, nextRun, lastRun, instanceTime"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ScheduleRead" }
     post:
       tags: [flows]
-      summary: Compile the flow into native Task Manager definitions
-      description: Constitution V — creates %SYS.Task entries; never starts a private scheduler.
+      summary: Schedule the flow as one native Task Manager task, running as a run-as account (spec 015)
+      description: >-
+        Constitution V — creates one %SYS.Task through the platform's management API with the
+        operator's token; never starts a private scheduler. The passwords are checked by signing
+        in, then kept only in the IRIS Wallet (collection SentaiTask). The body is never logged or
+        echoed. Scheduling again replaces the task (one task per flow).
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [scheduleSpec]
+              required: [schedule, runAs, password]
               properties:
-                scheduleSpec: { type: string, example: "WEEKLY SAT 03:00" }
-                category: { type: string, example: "SENTAI.NIGHT" }
+                schedule: { $ref: "#/components/schemas/Schedule" }
+                runAs: { type: string, example: "nightly-ops" }
+                password: { type: string, format: password }
+                targetPasswords:
+                  type: array
+                  description: Exactly one per target the flow's steps use.
+                  items: { type: object, properties: { target: { type: string }, password: { type: string, format: password } } }
       responses:
         "201":
           description: Scheduled
@@ -103,22 +121,20 @@ paths:
               schema:
                 type: object
                 properties:
-                  taskIds: { type: array, items: { type: integer } }
-                  nextRun: { type: string, format: date-time }
-        "403":
-          description: >-
-            The platform refused this operator: the task create (`POST /api/admin/v2/task`, with
-            `platformStatus` verbatim) or the read of the flow's steps (`SQLCODE -99: …`). Tasks
-            already created by the request are deleted.
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/Problem" }
-        "422": { $ref: "#/components/responses/ValidationError" }
-        "502":
-          description: "SCHEDULE_NOT_CONFIRMED: the platform accepted a create but lists no task of that name (rolled back), or PLATFORM_UNREACHABLE."
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/Problem" }
+                  taskId: { type: integer }
+                  nextRun: { type: string, example: "2026-10-03 03:00:00" }
+                  describe: { type: string, example: "Weekly on Sat at 03:00" }
+                  residue: { type: array, items: { type: object }, description: "Old tasks or secrets the platform would not remove, with its text" }
+        "400": { description: "SCHEDULE_FORMAT (the spec 001 body), SCHEDULE_INVALID (with `field`), TARGET_PASSWORDS_MISMATCH", content: { application/json: { schema: { $ref: "#/components/schemas/Problem" } } } }
+        "403": { description: "The platform refused the task create (platformStatus verbatim) or the wallet write (WALLET_REFUSED)", content: { application/json: { schema: { $ref: "#/components/schemas/Problem" } } } }
+        "422": { description: "ValidationReport, or CREDENTIAL_REFUSED with `instance` (primary or a target)" }
+        "502": { description: "SCHEDULE_NOT_CONFIRMED or PLATFORM_UNREACHABLE", content: { application/json: { schema: { $ref: "#/components/schemas/Problem" } } } }
+    delete:
+      tags: [flows]
+      summary: Remove the flow's task(s) and stored passwords; idempotent
+      responses:
+        "200":
+          description: "`{removedTasks: [ids], removedSecrets: n, residue: []}`"
 
   /flows/{flowId}/dispatch:
     parameters: [ { $ref: "#/components/parameters/FlowId" } ]
@@ -171,6 +187,7 @@ paths:
       parameters:
         - { name: flowId, in: query, schema: { type: string } }
         - { name: state, in: query, schema: { type: string, enum: [running, completed, failed, cancelled] } }
+        - { name: trigger, in: query, schema: { type: string, enum: [manual, scheduled] }, description: "spec 015; 400 TRIGGER_UNKNOWN otherwise" }
         - { name: limit, in: query, schema: { type: integer, default: 50, minimum: 1, maximum: 200 } }
         - name: before
           in: query
@@ -380,6 +397,27 @@ components:
       content: { application/json: { schema: { $ref: "#/components/schemas/ValidationReport" } } }
 
   schemas:
+    Schedule:
+      type: object
+      required: [kind, startTime]
+      properties:
+        kind: { type: string, enum: [daily, weekly, monthly, hourly] }
+        startTime: { type: string, example: "03:00", description: "HH:MM, the instance's local time" }
+        days: { type: array, items: { type: integer, minimum: 1, maximum: 7 }, description: "weekly; 1 = Monday" }
+        dayOfMonth: { type: integer, minimum: 1, maximum: 31 }
+        everyHours: { type: integer, minimum: 1, maximum: 12 }
+    ScheduleRead:
+      type: object
+      properties:
+        scheduled: { type: boolean }
+        instanceTime: { type: string }
+        schedule: { $ref: "#/components/schemas/Schedule" }
+        describe: { type: string }
+        runAs: { type: string }
+        targets: { type: array, items: { type: string } }
+        taskId: { type: integer }
+        nextRun: { type: string }
+        lastRun: { type: object, nullable: true, properties: { guid: { type: string }, state: { type: string }, startedAt: { type: string } } }
 
     StepState:
       type: string
@@ -470,6 +508,7 @@ components:
         startedAt: { type: string, format: date-time }
         finishedAt: { type: string, format: date-time, nullable: true }
         dispatchedBy: { type: string }
+        trigger: { type: string, enum: [manual, scheduled], description: "spec 015: how the run started" }
 
     RunSummary:
       allOf:

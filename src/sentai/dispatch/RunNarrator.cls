@@ -15,6 +15,18 @@ ClassMethod Dispatched(runId As %String, dispatchedBy As %String, revision As %I
     Quit ..Write(runId, "", "info", "Run dispatched by "_dispatchedBy_" (flow revision "_revision_", "_steps_" step"_$S(steps = 1:"", 1:"s")_")", 0)
 }
 
+/// Spec 015: the first entry of a run started by a flow's schedule.
+ClassMethod ScheduledStart(runId As %String, flowName As %String, runAs As %String, revision As %Integer, steps As %Integer) As %Status
+{
+    Quit ..Write(runId, "", "info", "Run started by the schedule of flow "_flowName_" as "_runAs_" (flow revision "_revision_", "_steps_" step"_$S(steps = 1:"", 1:"s")_")", 0)
+}
+
+/// Spec 015 (data-model §4): the only entry of a scheduled run that could not start.
+ClassMethod ScheduledStartFailed(runId As %String, reason As %String) As %Status
+{
+    Quit ..Write(runId, "", "error", "Scheduled run could not start: "_reason, 0)
+}
+
 /// Every state change, from StepRun.TransitionTo (plan D-2).
 ClassMethod StepChanged(stepRun As sentai.model.StepRun, from As %String, to As %String) As %Status
 {

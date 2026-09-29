@@ -72,9 +72,32 @@ ClassMethod Respond(urlPath As %String, method As %String, ByRef httpStatus As %
 ClassMethod Login(baseUrl As %String, user As %String, ByRef httpStatus As %Integer, ByRef transportError As %String) As %DynamicObject
 {
     Quit:..IsDown(baseUrl, .httpStatus, .location, .transportError) ""
-    Set ^sentaiTestDouble("login", baseUrl) = user
+    Set ^sentaiTestDouble("login", $S(baseUrl = "":"primary", 1:baseUrl)) = user
     Set transportError = ""
     Quit ..Respond(baseUrl_"/api/admin/login", "POST", .httpStatus, .location)
+}
+
+/// Spec 015: a sign-in with a wallet secret. Records which secret was used on which instance and
+/// answers from the script for `baseUrl/api/admin/login`; `ScriptSecretRefused` makes the platform
+/// refuse the secret's use (as `#822` would) before any request.
+ClassMethod LoginWithSecret(baseUrl As %String, secretName As %String, ByRef httpStatus As %Integer, ByRef transportError As %String, ByRef secretRefused As %Boolean) As %DynamicObject
+{
+    Set secretRefused = 0
+    Quit:..IsDown(baseUrl, .httpStatus, .location, .transportError) ""
+    Set ^sentaiTestDouble("loginSecret", $S(baseUrl = "":"primary", 1:baseUrl)) = secretName
+    If $D(^sentaiTestDouble("secretRefused", secretName)) {
+        Set httpStatus = 0, transportError = ^sentaiTestDouble("secretRefused", secretName), secretRefused = 1
+        Quit ""
+    }
+    Set transportError = ""
+    Quit ..Respond(baseUrl_"/api/admin/login", "POST", .httpStatus, .location)
+}
+
+/// Test helper: the platform refuses to let this process use `secretName`.
+ClassMethod ScriptSecretRefused(secretName As %String, text As %String = "ERROR #822: Access Denied") As %Status
+{
+    Set ^sentaiTestDouble("secretRefused", secretName) = text
+    Quit $$$OK
 }
 
 /// True, with status 0 and the scripted transport error, when `baseUrl` was scripted down.

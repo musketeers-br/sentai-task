@@ -5,9 +5,14 @@ import { formatClock, type RunState } from '$lib/run/run';
 export const RUN_STATES: RunState[] = ['running', 'completed', 'failed', 'cancelled'];
 export const DEFAULT_PAGE_SIZE = 50;
 
+/** Spec 015: how a run started. */
+export type RunTrigger = 'manual' | 'scheduled';
+export const RUN_TRIGGERS: RunTrigger[] = ['manual', 'scheduled'];
+
 export interface RunsQuery {
 	flow?: string;
 	state?: RunState;
+	trigger?: RunTrigger;
 	/** 1–200; the default is 50 (tests use a small page to exercise paging). */
 	pageSize?: number;
 }
@@ -31,6 +36,7 @@ export interface RunSummaryView {
 	startedAt: string | null;
 	finishedAt: string | null;
 	dispatchedBy: string;
+	trigger: RunTrigger;
 	totalDurationMs: number;
 	stepCounts: StepCounts;
 }
@@ -43,6 +49,8 @@ export function queryFromUrl(url: URL): RunsQuery {
 	if (flow) q.flow = flow;
 	const state = url.searchParams.get('runsState');
 	if (state && (RUN_STATES as string[]).includes(state)) q.state = state as RunState;
+	const trigger = url.searchParams.get('runsTrigger');
+	if (trigger && (RUN_TRIGGERS as string[]).includes(trigger)) q.trigger = trigger as RunTrigger;
 	const size = Number(url.searchParams.get('pageSize'));
 	if (Number.isInteger(size) && size >= 1 && size <= 200) q.pageSize = size;
 	return q;
@@ -51,10 +59,11 @@ export function queryFromUrl(url: URL): RunsQuery {
 /** The same address showing `query` on the Runs screen (other parameters dropped, `run` too). */
 export function urlForQuery(url: URL, query: RunsQuery): URL {
 	const next = new URL(url);
-	for (const key of ['runsFlow', 'runsState', 'run', 'from']) next.searchParams.delete(key);
+	for (const key of ['runsFlow', 'runsState', 'runsTrigger', 'run', 'from']) next.searchParams.delete(key);
 	next.searchParams.set('view', 'runs');
 	if (query.flow) next.searchParams.set('runsFlow', query.flow);
 	if (query.state) next.searchParams.set('runsState', query.state);
+	if (query.trigger) next.searchParams.set('runsTrigger', query.trigger);
 	return next;
 }
 
@@ -73,6 +82,7 @@ export function pageParams(query: RunsQuery, before: number | null): string {
 	const p = new URLSearchParams();
 	if (query.flow) p.set('flowId', query.flow);
 	if (query.state) p.set('state', query.state);
+	if (query.trigger) p.set('trigger', query.trigger);
 	p.set('limit', String(query.pageSize ?? DEFAULT_PAGE_SIZE));
 	if (before !== null) p.set('before', String(before));
 	return p.toString();
@@ -94,6 +104,7 @@ export function fromWireRunSummary(w: Wire): RunSummaryView {
 		startedAt: t(w.startedAt),
 		finishedAt: t(w.finishedAt),
 		dispatchedBy: String(w.dispatchedBy ?? ''),
+		trigger: w.trigger === 'scheduled' ? 'scheduled' : 'manual',
 		totalDurationMs: n(w.totalDurationMs),
 		stepCounts: {
 			queued: n(c.queued),
@@ -128,6 +139,7 @@ export function countsLine(c: StepCounts): string {
 export const durationText = (ms: number): string => formatClock(ms);
 
 export function emptyText(query: RunsQuery): string {
+	if (query.trigger === 'scheduled' && !query.state) return query.flow ? 'No scheduled runs for this flow yet.' : 'No scheduled runs yet.';
 	if (query.flow && query.state) return `No ${query.state} runs for this flow.`;
 	if (query.flow) return 'No runs for this flow yet.';
 	if (query.state) return `No ${query.state} runs.`;

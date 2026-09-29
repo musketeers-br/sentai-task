@@ -191,6 +191,7 @@ ClassMethod DeclaredStepFindings(stepId As %String, type As %String, schema As %
 /// no approved mechanism supplies SC-006's typed confirmation at fire time (spec.md Change Log
 /// 2026-09-22). Scoped to scheduling only: /validate and /dispatch keep calling Validate(), so
 /// destructive steps stay valid for manual dispatch with typed confirmation (FR-017).
+/// Spec 015 D-6: in-process steps are schedulable — a scheduled run acts as its run-as account.
 ClassMethod ValidateForSchedule(flowId As %String, bearerToken As %String = "") As %DynamicObject
 {
     Set report = ..Validate(flowId, bearerToken)
@@ -202,11 +203,6 @@ ClassMethod ValidateForSchedule(flowId As %String, bearerToken As %String = "") 
         Set stepId = stepResult.%Get("id"), type = stepResult.%Get("type")
         If ##class(sentai.registry.StepType).IsDestructive(type) {
             Do report."errors".%Push({"stepId": (stepId), "code": "DESTRUCTIVE_NOT_SCHEDULABLE", "message": ("Step type '"_type_"' is destructive; flows with destructive steps are not schedulable in v1 and must be dispatched manually with typed confirmation")})
-        }
-        // Spec 005 ID-3: an in-process step runs as the dispatching operator; a scheduled run has
-        // none (it would run as the Task Manager's run-as user), so it is not schedulable.
-        If (##class(sentai.registry.StepType).GetExecutor(type) = "in-process") {
-            Do report."errors".%Push({"stepId": (stepId), "code": "IN_PROCESS_NOT_SCHEDULABLE", "message": ("Step '"_stepId_"' ("_type_") runs inside the platform as the dispatching operator and cannot run in a scheduled run")})
         }
     }
     Quit report

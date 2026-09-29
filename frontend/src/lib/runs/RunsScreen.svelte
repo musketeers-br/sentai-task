@@ -7,6 +7,7 @@
 	import {
 		DEFAULT_PAGE_SIZE,
 		RUN_STATES,
+		RUN_TRIGGERS,
 		countsLine,
 		durationText,
 		emptyText,
@@ -40,6 +41,7 @@
 		// Re-read from the first page whenever the filters change.
 		void query.flow;
 		void query.state;
+		void query.trigger;
 		untrack(() => void loadFirst());
 	});
 
@@ -96,7 +98,18 @@
 			<option value="">Any outcome</option>
 			{#each RUN_STATES as s (s)}<option value={s}>{s}</option>{/each}
 		</select>
-		{#if query.flow || query.state}
+		<!-- Spec 015 FR-016: runs started by a schedule, or by an operator. -->
+		<label for="runs-trigger">Started</label>
+		<select
+			id="runs-trigger"
+			value={query.trigger ?? ''}
+			onchange={(e) =>
+				onquery({ ...query, trigger: ((e.currentTarget as HTMLSelectElement).value || undefined) as RunsQuery['trigger'] })}
+		>
+			<option value="">Any way</option>
+			{#each RUN_TRIGGERS as t (t)}<option value={t}>{t === 'scheduled' ? 'by a schedule' : 'manually'}</option>{/each}
+		</select>
+		{#if query.flow || query.state || query.trigger}
 			<button type="button" class="quiet" onclick={() => onquery({ pageSize: query.pageSize })}>Clear filters</button>
 		{/if}
 	</header>
@@ -127,7 +140,10 @@
 							</td>
 							<td class="mono">{started(r)}</td>
 							<td class="mono">{durationText(r.totalDurationMs)}</td>
-							<td class="mono">{r.dispatchedBy}</td>
+							<td class="mono">
+								{r.dispatchedBy}
+								{#if r.trigger === 'scheduled'}<span class="trigger" data-testid="run-trigger" title="Started by the flow's schedule">scheduled</span>{/if}
+							</td>
 							<td class="mono muted">{countsLine(r.stepCounts)}</td>
 						</tr>
 					{/each}
@@ -276,5 +292,15 @@
 		display: flex;
 		justify-content: center;
 		padding: 12px;
+	}
+
+	.trigger {
+		margin-left: 6px;
+		padding: 1px 6px;
+		font-family: var(--font-sans, inherit);
+		font-size: var(--size-caption);
+		color: var(--color-text-muted);
+		border: 1px solid var(--color-border);
+		border-radius: 999px;
 	}
 </style>

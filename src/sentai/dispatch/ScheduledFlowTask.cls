@@ -1,34 +1,25 @@
-/// Native %SYS.Task.Definition subclass created by POST /flows/{id}/schedule
-/// (research.md R-007/OQ-1). Only the task compiled for a step with no incoming edges
-/// actually starts a run on OnTask(); tasks for downstream steps exist solely to satisfy
-/// "one task identifier per scheduled step" (FR-031) and no-op at fire time — the run they
-/// belong to, if any, will already have carried them to a terminal state via
-/// WaveDispatcher's own wave progression.
-/// Only non-destructive flows are ever scheduled (/schedule refuses the rest, TD-06), so the
-/// dispatch below carries no typed confirmation; should a destructive step be added to the flow
-/// after scheduling, WaveDispatcher.Dispatch refuses the run (SC-006) and nothing starts.
+/// The native Task Manager task of a scheduled flow (spec 015 plan D-4): one per flow, named
+/// "SentaiTask: <flowId> <flow name>", created by sentai.schedule.ScheduleService through the
+/// platform's management API with `RunAsUser` = the schedule's run-as account and
+/// `Settings {FlowId}`. On firing it starts the flow (sentai.schedule.ScheduledStart).
+/// Tasks of the legacy one-task-per-step form (spec 001, `StepId` set) never start anything; they
+/// are deleted on the flow's next schedule or unschedule.
 Class sentai.dispatch.ScheduledFlowTask Extends %SYS.Task.Definition
 {
 
 Property FlowId As %String(MAXLEN = 32);
 
+/// Legacy form only.
 Property StepId As %String(MAXLEN = 8);
 
+/// Legacy form only.
 Property IsRoot As %Boolean;
 
 Method OnTask() As %Status
 {
-    Quit:'..IsRoot $$$OK
-
-    // Highest-risk assumption of this plan (R-007/OQ-1): firing calls back into the same
-    // dispatch path a manual operator would use, so edge ordering is preserved by
-    // WaveDispatcher rather than reimplemented in the scheduler.
-    Set errorCode = "", errorDetail = "", report = ""
-    Set run = ##class(sentai.dispatch.WaveDispatcher).Dispatch(..FlowId, [], "$SCHEDULER", .errorCode, .errorDetail, .report)
-    Quit:(run = "") $$$OK
-
-    Do ##class(sentai.dispatch.WaveDispatcher).StartBackgroundLoop(run.guid, "")
-    Quit $$$OK
+    Quit:(..StepId '= "") $$$OK
+    Quit:(..FlowId = "") $$$ERROR($$$GeneralError, "SentaiTask: this task has no FlowId setting")
+    Quit ##class(sentai.schedule.ScheduledStart).Fire(..FlowId)
 }
 
 }

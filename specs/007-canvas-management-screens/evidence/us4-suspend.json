@@ -1,9 +1,9 @@
 {
   "evidence_id": "us4-suspend",
-  "captured_at": "2026-09-27T04:42:17.710Z",
+  "captured_at": "2026-09-29T09:54:59.121Z",
   "request": {
     "method": "POST",
-    "path": "/csp/sentai/api/v1/catalog/tasks/1045/suspend",
+    "path": "/csp/sentai/api/v1/catalog/tasks/2647/suspend",
     "bodies": [
       {
         "suspended": true
@@ -20,18 +20,17 @@
     ],
     "bodies": [
       {
-        "taskId": 1045,
-        "name": "SentaiTask: 191#01",
+        "taskId": 2647,
+        "name": "SentaiTask: 7397 us10 suspend 1790675696686",
         "namespace": "IRISAPP",
         "origin": {
-          "flowId": "191",
-          "stepId": "01",
+          "flowId": "7397",
           "flowExists": true
         },
         "class": "sentai.dispatch.ScheduledFlowTask",
         "runAsUser": "_SYSTEM",
-        "timePeriod": "Daily",
-        "nextRun": "2026-09-28 00:00:00",
+        "timePeriod": "Weekly",
+        "nextRun": "2026-10-03 03:00:00",
         "lastStarted": "",
         "lastFinished": "",
         "status": "1",
@@ -43,18 +42,17 @@
         "isDestructive": false
       },
       {
-        "taskId": 1045,
-        "name": "SentaiTask: 191#01",
+        "taskId": 2647,
+        "name": "SentaiTask: 7397 us10 suspend 1790675696686",
         "namespace": "IRISAPP",
         "origin": {
-          "flowId": "191",
-          "stepId": "01",
+          "flowId": "7397",
           "flowExists": true
         },
         "class": "sentai.dispatch.ScheduledFlowTask",
         "runAsUser": "_SYSTEM",
-        "timePeriod": "Daily",
-        "nextRun": "2026-09-28 00:00:00",
+        "timePeriod": "Weekly",
+        "nextRun": "2026-10-03 03:00:00",
         "lastStarted": "",
         "lastFinished": "",
         "status": "1",
@@ -68,7 +66,7 @@
     ]
   },
   "notes": [
-    "Task 1045 was created by scheduling test flow 191; it and the flow were deleted afterwards.",
+    "Task 2647 was created by scheduling test flow 7397; it and the flow were deleted afterwards.",
     "Each button was disabled while its call was pending; detail and row then showed the state in the answer, and a fresh GET agreed."
   ]
 }

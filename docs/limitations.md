@@ -13,9 +13,11 @@ SentaiTask v1 only promises what was proven on IRIS 2026.2 (spec `004-backend-ha
   `CATEGORY_NOT_FOUND`. On IRIS 2026.2 those resources are also enough for the platform to allow
   the task-history purge (it refuses the journal switch without `%Admin_Operate:USE`) — the
   platform decides, not SentaiTask.
-- **Scheduling is not operational.** `/schedule` validates the flow and registers native tasks
-  (through the platform, see below), but scheduled runs cannot authenticate to the platform in v1 and are not a supported execution
-  path. Use manual dispatch.
+- **Schedules (spec 015).** Times are the instance's local clock. Overlapping runs of the same flow
+  are not prevented. The flow list's next run is the platform's value as of the last schedule read
+  or change; the schedule dialog always reads it live. A time already past today starts tomorrow.
+  Destructive steps cannot be scheduled. The run-as account needs `SentaiSchedule:U`; without it the
+  platform refuses the stored password (`ERROR #822`) and the attempt is recorded as a failed run.
 - **Run credential.** A dispatched run calls the platform with an access token that expires 60 s
   after it was issued, and refreshing a token revokes the previous one. The canvas therefore asks
   for the password at *Run now*, dispatches under a separate sign-in, and passes that sign-in's
@@ -67,10 +69,11 @@ SentaiTask v1 only promises what was proven on IRIS 2026.2 (spec `004-backend-ha
   by the platform at each call, and its refusal is returned verbatim (e.g. 403 with
   `platformStatus` from the catalog, or `SQLCODE -99` when the operator has no SQL privilege on
   the product's tables).
-- **Scheduling creates tasks through the platform.** `/schedule` creates each native task with
-  `POST /api/admin/v2/task` and the operator's token (the platform accepts `%Admin_Task` or
-  `%Admin_Operate`); a refusal is returned verbatim and tasks already created by the same request
-  are deleted. The task runs as the operator who scheduled it.
+- **Scheduling creates the task through the platform.** `/schedule` creates the flow's one
+  native task with `POST /api/admin/v2/task` and the operator's token (the platform accepts
+  `%Admin_Task` or `%Admin_Operate`); a refusal is returned verbatim, and the passwords stored for
+  that request are removed. The task runs as the schedule's run-as account. Tasks of the spec 001
+  form (one per step) are removed on the flow's next schedule or unschedule; they never start a run.
 - **A refused WQM category read is reported as `CATEGORY_NOT_FOUND`.** Validation says the
   category "does not exist" when the platform actually refused the read (operator without
   `%Admin_Manage:USE` and read on IRISSYS; `%Admin_Operate:USE` alone is refused — spec 005

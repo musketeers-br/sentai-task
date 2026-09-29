@@ -11,6 +11,10 @@
       <Resource Name="sentai.PKG"/>
       <UnitTest Name="/tests" Package="sentai.unittest" Phase="test"/>
 
+      <!-- Spec 015: the resource SentaiSchedule and the wallet collection SentaiTask that holds
+           the scheduled runs' credentials (sentai.schedule.Install, idempotent). -->
+      <Invoke Class="sentai.schedule.Install" Method="Run" Phase="Activate" When="After" CheckStatus="true"/>
+
       <!-- REST surface (research.md R-002): password + JWT authentication, never
            Unauthenticated; same 60 s access-token mechanism as /api/admin. No MatchRoles:
            the operator runs with their own platform roles (Constitution III). -->

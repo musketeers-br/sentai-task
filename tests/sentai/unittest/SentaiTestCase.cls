@@ -13,6 +13,9 @@ Property TargetIdBefore As %Integer [ InitialExpression = 0 ];
 /// it, so the suite leaves no `running` run behind.
 Property RunIdBefore As %Integer [ InitialExpression = 0 ];
 
+/// Spec 015: the schedules a test creates are removed after it.
+Property ScheduleIdBefore As %Integer [ InitialExpression = 0 ];
+
 Method OnBeforeOneTest() As %Status
 {
     Set max = 0
@@ -21,6 +24,9 @@ Method OnBeforeOneTest() As %Status
     Set max = 0
     &sql(SELECT MAX(%ID) INTO :max FROM sentai_model.Run)
     Set ..RunIdBefore = +$G(max)
+    Set max = 0
+    &sql(SELECT MAX(%ID) INTO :max FROM sentai_model.Schedule)
+    Set ..ScheduleIdBefore = +$G(max)
     Do ##class(sentai.unittest.AdminApiDouble).Reset()
     Do ##class(sentai.unittest.AdminApiDouble).Enable()
     // The platform's category list (spec 001 evidence 09 shape): the three built-ins report
@@ -60,6 +66,8 @@ Method OnAfterOneTest() As %Status
     Set floor = ..TargetIdBefore
     &sql(DELETE FROM sentai_model.Target WHERE %ID > :floor)
     Do ..RemoveRunsAfter(..RunIdBefore)
+    Set floor = ..ScheduleIdBefore
+    &sql(DELETE FROM sentai_model.Schedule WHERE %ID > :floor)
     Do ##class(sentai.unittest.AdminApiDouble).Reset()
     Quit $$$OK
 }
@@ -122,8 +130,9 @@ Method NonDestructiveFlowPayload(namePrefix As %String = "NonDestructive") As %D
 /// Count of native scheduled tasks created by /schedule for `flowId` (named "SentaiTask: <flowId>#<stepId>").
 ClassMethod NativeTaskCountFor(flowId As %String) As %Integer
 {
-    Set prefix = "SentaiTask: "_flowId_"#"
-    &sql(SELECT COUNT(*) INTO :count FROM %SYS.Task WHERE Name %STARTSWITH :prefix)
+    // Both forms: the flow's task (spec 015) and the legacy per-step task.
+    Set legacy = "SentaiTask: "_flowId_"#", flow = "SentaiTask: "_flowId_" "
+    &sql(SELECT COUNT(*) INTO :count FROM %SYS.Task WHERE Name %STARTSWITH :legacy OR Name %STARTSWITH :flow)
     Quit +$G(count)
 }
 
