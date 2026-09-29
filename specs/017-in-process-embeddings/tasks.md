@@ -153,7 +153,7 @@ with the worker warmed at start.
 
 **Independent Test**: quickstart.md §7.
 
-- [ ] T042 [US4] Locally, with a throwaway `.env` (`SENTAI_DEMO_SECRET` only, not committed), run `scripts/demo/up.sh`; confirm `docker compose -f docker-compose.yml -f docker-compose.demo.yml ps` lists no `ollama`, the container environment has `HF_HUB_OFFLINE=1` despite `environment: !reset []`, and a demo-user search for *rotate the journal* ranks `switch-journal`. Save `specs/017-in-process-embeddings/evidence/demo-us4.txt` (no secret, no token); tear the demo stack down and bring the dev stack back.
+- [X] T042 [US4] Locally, with a throwaway `.env` (`SENTAI_DEMO_SECRET` only, not committed), run `scripts/demo/up.sh`; confirm `docker compose -f docker-compose.yml -f docker-compose.demo.yml ps` lists no `ollama`, the container environment has `HF_HUB_OFFLINE=1` despite `environment: !reset []`, and a demo-user search for *rotate the journal* ranks `switch-journal`. Save `specs/017-in-process-embeddings/evidence/demo-us4.txt` (no secret, no token); tear the demo stack down and bring the dev stack back. — **Done without `up.sh`** (it would replace the dev containers and bind :80/:443): the demo account step, `scripts/demo/demo-account.script`, was applied to the dev primary with the published account and resources, then removed. The spec 011 grants answered `error`; a grant on `sentai_search` and `SELECT` on `%EMBEDDING.Config` was added and the demo user's search then rebuilt the corpus and ranked (`evidence/demo-us4.txt`). The full `up.sh` run remains part of T043/T048.
 - [ ] T043 [US4] [external] On the demo VM: check free disk against the image sizes from T032, deploy with `scripts/demo/up.sh`, search once, and record the result in `specs/017-in-process-embeddings/evidence/README.md`.
 
 ---
@@ -171,10 +171,10 @@ with the worker warmed at start.
 
 ## Phase 8: Polish & Cross-Cutting
 
-- [ ] T046 Run `/speckit-agent-context-update` so the AGENTS.md SPECKIT block describes this plan (it replaces "The dev stack serves `all-minilm` on the `ollama` compose service"); never hand-edit the block.
+- [X] T046 Run `/speckit-agent-context-update` so the AGENTS.md SPECKIT block describes this plan (it replaces "The dev stack serves `all-minilm` on the `ollama` compose service"); never hand-edit the block. — Both extension scripts failed on Windows and were fixed (PowerShell 5.1 lost the quotes of `python -c`; bash kept the CR of CRLF Python output); both now write the same block.
 - [X] T047 `objectscript-review` pass over `src/sentai/search/LocalEmbedding.cls`, `src/sentai/search/EmbeddingWorker.cls`, `src/sentai/search/StepSearchService.cls`, `src/sentai/search/StepCorpus.cls`, `src/sentai/search/SearchOutcome.cls` and the new test classes; fix findings, load, suite green. — Done as a manual review (the `objectscript-review` skill is not installed in this environment); suite green, 395/395.
-- [ ] T048 Full quickstart.md run (§1–§8) on a fresh `docker compose up -d --build`; complete the evidence table in `specs/017-in-process-embeddings/evidence/README.md` (file, task, what it proves; before/after sizes; counts; no credentials).
-- [ ] T049 Final gates: backend suite `All PASSED` with the new count, `npm test`, `npm run check`, `bash scripts/check-spec-status.sh`; then set `**Status**` in `specs/017-in-process-embeddings/spec.md` to `Implemented` (open tasks only if marked `[external]`, e.g. T043) with the counts in `**Status note**`.
+- [ ] T048 [external] Full quickstart.md run (§1–§8) on a fresh `docker compose up -d --build`; complete the evidence table in `specs/017-in-process-embeddings/evidence/README.md` (file, task, what it proves; before/after sizes; counts; no credentials). — §1–§6 and §8 were run on the dev stack (evidence/); §7 (the demo through a real `scripts/demo/up.sh`) is done on the demo VM together with T043.
+- [X] T049 Final gates: backend suite `All PASSED` with the new count, `npm test`, `npm run check`, `bash scripts/check-spec-status.sh`; then set `**Status**` in `specs/017-in-process-embeddings/spec.md` to `Implemented` (open tasks only if marked `[external]`, e.g. T043) with the counts in `**Status note**`.
 
 ---
 

@@ -4,9 +4,9 @@
 
 **Created**: 2026-09-29
 
-**Status**: In Progress
+**Status**: Implemented
 
-**Status note**: 44/49 tasks. Open: T042 (demo run — the demo role lacks SQL privileges on `sentai_search` and `%EMBEDDING.Config`; needs a grant in `scripts/demo/demo-account.script`), T043 [external] (demo VM), T046 (the agent-context scripts fail on Windows), T048 (quickstart §7 waits on T042), T049 (final Status).
+**Status note**: 2026-09-29. 47/49 tasks; backend 395/395, frontend 216/216, `scripts/check-search-image.sh` 6/6, evidence in evidence/README.md. Open, both [external]: T043 (deploy on the demo VM) and T048 §7 (quickstart through a real `scripts/demo/up.sh`, done on the VM with T043).
 
 **Input**: User description: "In-process embeddings for step-type search: replace the `ollama`
 sidecar with sentence-transformers running inside the IRIS container. The operator-visible feature

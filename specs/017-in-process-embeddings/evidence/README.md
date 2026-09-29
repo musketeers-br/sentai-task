@@ -10,6 +10,7 @@ No credentials, tokens or secrets appear in any file here.
 | this README, "US1" | T032 | Build, sizes, services, worker warm-up, `scripts/check-search-image.sh` |
 | `api-us1-search.txt` | T033 | The R-5 queries through the REST API: same top results and scores as the ollama baseline (SC-003) |
 | `timing-us1.txt` | T034 | Five fresh starts, first search ranked in ≈0.1 s; 20 warm searches, 0 above one second (SC-004) |
+| `demo-us4.txt` | T042 | The demo account's search answered `error` with spec 011's grants and ranks with spec 017's (grant on `sentai_search`, `SELECT` on `%EMBEDDING.Config`) |
 | `migration-us5.txt` | T044 | The pre-017 image with no `ollama` answers `unreachable` (HTTP 200); the rebuilt stack ranks |
 | `api-us1-warming-offline.txt` | T035 | `warming` right after a restart (HTTP 200), then ranked; the worker loads with no network (7.4 s) |
 
@@ -98,14 +99,14 @@ machine and can be removed by hand).
 
 Before the image change the same script failed 5 of 6 checks (T026).
 
-## Final gates so far (T049, partial)
+## Final gates (T049)
 
 | Gate | Result |
 |---|---|
 | Backend suite, on the spec 017 image with the real worker `ready` | All PASSED — 395 methods, 2732 assertions; the real worker and the `sentai-steps` row are untouched by the suite |
 | Frontend `npm test` / `npm run check` | 216 passed / 0 errors |
 | `scripts/check-search-image.sh` | 6 of 6 ok |
-| `scripts/check-spec-status.sh` | consistent (Status `In Progress`) |
+| `scripts/check-spec-status.sh` | consistent (Status `Implemented`; open tasks T043 and T048 are `[external]`) |
 
 Observed, not changed (spec 011 behaviour): with the `ollama` host gone, the HTTP provider takes
 ≈5.4 s to answer `unreachable` (connection timeout), above the one-second budget.
