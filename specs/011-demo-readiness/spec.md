@@ -4,7 +4,9 @@
 
 **Created**: 2026-09-28
 
-**Status**: Draft
+**Status**: In Progress
+
+**Status note**: 22/25 tasks. T002 (baseline counts in evidence/README.md) is still open. T021 and T024 need the team's VM and are marked [external]; record SC-002 and SC-004 in evidence/README.md when done.
 
 **Input**: Competitor analysis of the contest (2026-09-28, "Analise_concorrentes.pdf", 37 approved
 apps, voting 2026-09-28 → 2026-10-04). Its top risk: the application's demo link is a free
