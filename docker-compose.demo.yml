@@ -1,0 +1,35 @@
+# Spec 011: public demo override. Use only through scripts/demo/up.sh:
+#   docker compose -f docker-compose.yml -f docker-compose.demo.yml ...
+# Nothing of IRIS is published on the host; the Caddy proxy is the only public entry and
+# serves the canvas (/csp/sentai/*) and the management API the canvas signs in to
+# (/api/admin/*). The management portal and every other web application answer 404.
+services:
+  iris:
+    ports: !reset []
+    # No bind mount of the checkout on a public machine: the image already carries the
+    # module, the canvas build and the merged configuration (merge.cpf runs at build time).
+    volumes: !reset []
+    environment: !reset []
+
+  iris-target:
+    ports: !reset []
+
+  caddy:
+    image: caddy:2-alpine
+    restart: always
+    depends_on:
+      - iris
+    environment:
+      # Empty → plain HTTP on :80 (research R-3); a DNS name → automatic HTTPS for it.
+      - DEMO_SITE=${DEMO_HOST:-:80}
+    ports:
+      - "${DEMO_HTTP_PORT:-80}:80"
+      - "${DEMO_HTTPS_PORT:-443}:443"
+    volumes:
+      - ./demo/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:
