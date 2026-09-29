@@ -8,7 +8,7 @@ Run against an isolated demo project, never the dev stack:
 Prints PASS/FAIL per check and exits 1 on any failure. The privileged secret is read from the env
 file only to check that it works; it is never printed.
 """
-import argparse, base64, json, os, pathlib, re, shutil, subprocess, sys, time, urllib.error, urllib.request
+import argparse, base64, json, os, pathlib, re, shutil, subprocess, sys, time, urllib.error, urllib.parse, urllib.request
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 DEMO = ("sentai-demo", "sentai-demo-2026")
@@ -231,7 +231,7 @@ def status_counts(text):
 
 def readme_checks():
     text = (REPO / "README.md").read_text(encoding="utf-8")
-    headings = [m.group(0) for m in re.finditer(r"^#{1,3} .+$", text, re.M)]
+    headings = [m.group(0) for m in re.finditer(r"^#{1,6} .+$", text, re.M)]
     order = [i for i, h in enumerate(headings) if re.search(r"SentaiTask 戦隊|Try it|Contest areas covered|Motivation", h)]
     names = [headings[i] for i in order]
     wanted = ["SentaiTask 戦隊", "Try it", "Contest areas covered", "Motivation"]
@@ -249,7 +249,7 @@ def readme_checks():
         if link.startswith(("http://", "https://")):
             continue
         if link.startswith("#"):
-            if link[1:] not in anchors:
+            if urllib.parse.unquote(link[1:]) not in anchors:
                 bad.append(link)
         elif not (REPO / link.split("#")[0]).exists():
             bad.append(link)
@@ -257,8 +257,10 @@ def readme_checks():
 
 
 def slug(heading):
+    """GitHub's anchor: lower case, punctuation and symbols dropped (emoji too), the emoji
+    variation selector U+FE0F kept, spaces to hyphens."""
     h = re.sub(r"^#+\s*", "", heading).strip().lower()
-    h = re.sub(r"[^\w\- ]", "", h)
+    h = re.sub(r"[^\w\- \uFE0F]", "", h)
     return h.replace(" ", "-")
 
 

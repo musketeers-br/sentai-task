@@ -89,7 +89,7 @@ against an isolated compose project (quickstart A).
 ## Phase 7: User Story 1 — README first screen
 
 - [X] T019 [US1] Add `acceptance.sh --readme`: checks the heading order of FR-001 and that every relative link in the *Try it* block and the area table resolves to a file or anchor. See it fail on today's README.
-- [ ] T020 [US1] Copy the picture to `assets/sentai-run.png` (plan D-4) and restructure `README.md` (D-1, D-2, D-3), add the "Public demo" section (up, reset, status, cron, "never `down`, use `restart`"), and update the roadmap (010 done; 011–015 named). T019 passes.
+- [X] T020 [US1] Copy the picture to `assets/sentai-run.png` (plan D-4) and restructure `README.md` (D-1, D-2, D-3), add the "Public demo" section (up, reset, status, cron, "never `down`, use `restart`"), and update the roadmap (010 done; 011–015 named). T019 passes.
 - [ ] T021 [US1] After the VM is up (team action, outside the repo), replace the demo address placeholder with the real one and update the Open Exchange demo link (team action; confirm with the user before any outward-facing change).
 
 ---
@@ -97,7 +97,7 @@ against an isolated compose project (quickstart A).
 ## Phase 8: Polish
 
 - [ ] T022 Full regression: backend, unit, e2e (with `iris-target` up), `acceptance.sh`. Restore any spec 002/007 evidence the e2e run rewrote. Record the counts in `evidence/README.md`.
-- [ ] T023 [P] `docs/limitations.md`: add a stable anchor to the cancel-alert item (used by the notice link) and a "Public demo" note (the demo account sees verbatim refusals by design; categories are not restored by the reset).
+- [X] T023 [P] `docs/limitations.md`: add a stable anchor to the cancel-alert item (used by the notice link) and a "Public demo" note (the demo account sees verbatim refusals by design; categories are not restored by the reset).
 - [ ] T025 Fix the two product defects found by T001 (evidence D1, D2), each with its failing test first: (D1) a platform SQL refusal while reading a flow's steps/edges/joins in `FlowValidator.Validate`, `WaveDispatcher.CreateRun`/`CheckConfirmations` and the run loop is returned as a problem with the platform's text (validation error `PLATFORM_REFUSED` with the SQL message; dispatch 403 verbatim; the loop fails the run instead of dying); (D2) `PollInFlightSteps` records `result.FailureReason` verbatim when the job ends `Failed`/`Error` (falling back to `status.summary`, then the generic text).
 - [ ] T024 Deploy on the VM (team), run `status.sh` there, and record SC-002 (time to up) and SC-004 (visitor to showcase finished) in `evidence/README.md`.
 

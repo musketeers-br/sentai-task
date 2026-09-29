@@ -7,14 +7,45 @@
 [![IPM](https://img.shields.io/badge/IPM-sentai--task-00b2a9.svg)](#ipm)
 
 <p align="center">
-  <img src="./assets/sentai-task.png" alt="SentaiTask 戦隊 — red ranger holding a wrench and an IRIS crystal" width="420">
+  <img src="./assets/sentai-task.png" alt="SentaiTask 戦隊 — red ranger holding a wrench and an IRIS crystal" width="320">
 </p>
 
 # 🦸 SentaiTask 戦隊
 
-**Visual orchestration for InterSystems IRIS maintenance tasks**
+**Visual orchestration for InterSystems IRIS maintenance tasks**: compose checks, purges and
+journal switches as a flow, run them in parallel waves that converge at join points, on this
+instance and on other IRIS servers, and watch every step live.
 
-> *Every task a squad member. Every flow a coordinated attack.*
+<p align="center">
+  <img src="./assets/sentai-run.png" alt="A finished SentaiTask run: three integrity checks, one of them on a second IRIS server, converge on a join before the final step" width="880">
+</p>
+
+## 🚀 Try it
+
+- **Public demo**: a stable address is being set up for the voting week; it will be listed here.
+  Sign in as **`sentai-demo`** / **`sentai-demo-2026`**, open **Showcase: nightly checks across
+  servers** from *Open flow…* and choose *Run now*. The demo is reset every day.
+- **On your machine, in three commands** (Docker only):
+
+  ```sh
+  git clone https://github.com/musketeers-br/sentai-task.git && cd sentai-task
+  docker compose up -d --build
+  # then open http://localhost:52773/csp/sentai/ and sign in as _SYSTEM / SYS
+  ```
+
+  The local quickstart works even when the public demo is down. *Open example flow* on the empty
+  canvas runs a ready-made, read-only flow in about a second.
+
+### Contest areas covered
+
+| Management Portal area | What SentaiTask offers | Proof |
+|---|---|---|
+| **Task management** | Flows of tasks with dependencies and fan-in joins; dispatch, live tracking, cancel and rerun per step; native Task Manager catalog with filters, suspend and resume; flow scheduling through the platform | [How to use](#-how-to-use), [spec 006](specs/006-task-catalog-api/) |
+| **Operating system** | `storage-headroom-check` (free disk per database and journal directory, Embedded Python) and `db-size-report` (size and free space of every database) as flow steps | [Declared step types](#declared-step-types) |
+| **Work Queue Manager** | Read and edit WQM categories, the worker pools every step runs on | [API at a glance](#api-at-a-glance) |
+| **Logs** | Each step's state, elapsed time and the platform's failure reason verbatim, streamed over SSE and kept per run | [Known limitations](#%EF%B8%8F-known-limitations-v1) |
+| **Permissions** | Every call runs with the operator's own IRIS credential; the platform's refusal is shown verbatim, never reinterpreted | [How it works](#%EF%B8%8F-how-it-works) |
+| **Distributed work** | A flow step can run on another IRIS instance (a *target server*), tracked and with its result collected on the primary | [DPI-I-588](#-implements-dpi-i-588-distributed-work-manager) |
 
 ---
 
@@ -37,17 +68,6 @@ knowledge into a declared, validated, observable flow:
   [Known limitations](#%EF%B8%8F-known-limitations-v1)).
 
 Like a *sentai* squad, each step has its own role, and the flow decides when they move together.
-
-### Contest areas covered
-
-| Management Portal area | What SentaiTask offers |
-|---|---|
-| **Task management** | Flows of tasks with dependencies and fan-in joins; dispatch, live tracking, cancel and rerun per step; native Task Manager catalog with filters, suspend and resume; flow scheduling through the platform |
-| **Operating system** | `storage-headroom-check` (free disk per database and journal directory, Embedded Python) and `db-size-report` (size and free space of every database) as flow steps |
-| **Work Queue Manager** | Read and edit WQM categories, the worker pools every step runs on |
-| **Logs** | Each step's state, elapsed time and the platform's failure reason verbatim, streamed over SSE and kept per run |
-| **Permissions** | Every call runs with the operator's own IRIS credential; the platform's refusal is shown verbatim, never reinterpreted |
-| **Distributed work** | A flow step can run on another IRIS instance (a *target server*), tracked and with its result collected on the primary — see [DPI-I-588](#-implements-dpi-i-588-distributed-work-manager) |
 
 ---
 
@@ -135,8 +155,8 @@ The build compiles the canvas, loads the `sentai-task` module and registers the 
 **http://localhost:52773/csp/sentai/**
 
 Sign in to the canvas with your IRIS user (`_SYSTEM` / `SYS` on this dev image). That sign-in
-exchanges the password for short-lived API tokens, which stay in memory only; the password is
-never stored.
+exchanges the password for short-lived API tokens; only the renewal token is kept, for the
+current browser tab (spec 010), and the password is never stored.
 
 > **What is public and what is not:** the page itself (HTML, JS, CSS) is served without
 > authentication by `sentai.web.StaticFiles`, which only reads the canvas build and holds no
@@ -151,6 +171,41 @@ In an IRIS instance with the IPM client:
 ```objectscript
 USER>zpm "install sentai-task"
 ```
+
+### Public demo (hosts)
+
+A public machine runs the same compose stack behind a proxy that forwards only the canvas and
+the management API calls the canvas makes; the management portal and every other web
+application answer 404, and IRIS publishes no port of its own (spec 011).
+
+```sh
+git clone https://github.com/musketeers-br/sentai-task.git /opt/sentai-task && cd /opt/sentai-task
+printf 'SENTAI_DEMO_SECRET=%s
+DEMO_HOST=%s
+' "<long random secret>" "demo.example.org" > .env
+scripts/demo/up.sh
+```
+
+- `up.sh` refuses to start without `SENTAI_DEMO_SECRET`. It gives that secret to every privileged
+  account on both instances, creates the demo account `sentai-demo` / `sentai-demo-2026` with
+  least privilege ([what it may do](specs/011-demo-readiness/evidence/t001-demo-role.md)), seeds
+  the example and showcase flows, and only then opens the proxy. With `DEMO_HOST` set the proxy
+  obtains an HTTPS certificate for it; without it, the demo answers on plain HTTP.
+- The demo account holds no security administration. The platform still lets it purge task
+  history, because the privileges an integrity check needs allow that too; on a disposable demo
+  this is accepted.
+- Keep it clean and watch it (cron on the host):
+
+  ```cron
+  0 6 * * *    cd /opt/sentai-task && scripts/demo/reset.sh  >> /var/log/sentai-demo.log 2>&1
+  0 */12 * * * cd /opt/sentai-task && scripts/demo/status.sh >> /var/log/sentai-demo.log 2>&1
+  ```
+
+  `reset.sh` removes visitor flows and runs, restores the showcase and the demo password, and
+  clears the IRIS alert state on both instances; `status.sh` exits non-zero when an instance is
+  unhealthy.
+- Never `docker compose down` the demo (it removes the containers and their data): use
+  `restart`, or run `up.sh` again to rebuild, re-secure and re-seed.
 
 ---
 
@@ -569,11 +624,16 @@ sentai-task/
 * [x] **007 (part B)**: declared custom steps in the canvas: a *Custom* palette group and an inspector form generated from the API schema, with errors on their field
 * [x] **008**: Distributed targets — implements [DPI-I-588](https://ideas.intersystems.com/ideas/DPI-I-588) (API)
 * [x] **009**: Target servers in the canvas: Targets screen, *Run on*, target passwords at *Run now*, where each step runs
+* [x] **010**: Onboarding: *Open flow…*, *Save as…*, sign-in kept across reloads, a ready-made example flow and a getting-started guide
+* [x] **011**: Demo readiness: a public demo that stays up (proxy, secured accounts, least-privilege demo account, daily reset), this README's first screen, and a warning before a cancel that makes IRIS raise an alert
 
 ### 🚧 Next
 
-* [ ] WQM category screen and run history in the canvas (the API already has them)
-* [ ] A credential for scheduled runs (unblocks scheduling)
+* [ ] **012**: Run log and run history: every run tells its own story, and past runs are one click away
+* [ ] **013**: Area report steps: security posture, web applications, system alerts and secrets as flow steps, on any server
+* [ ] **014**: Demo media and community article (English and Portuguese)
+* [ ] **015**: Scheduled runs that execute, with the run-as credential kept in the IRIS Wallet
+* [ ] WQM category screen in the canvas (the API already has it)
 * [ ] Prove and enable the remaining step types, one at a time
 
 ---

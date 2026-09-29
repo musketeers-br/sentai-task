@@ -31,12 +31,14 @@ SentaiTask v1 only promises what was proven on IRIS 2026.2 (spec `004-backend-ha
   the one available destructive type: dispatch refuses it (428) until the operator types its
   database directory or namespace, which the canvas asks for at *Run now* (spec 007 T009). No
   v1-available type is pausable, so pause is implemented but cannot be reached over HTTP.
-- **Cancelling a running platform job raises an IRIS alert.** Cancel is forwarded to the platform
+- <a id="cancel-alert"></a>**Cancelling a running platform job raises an IRIS alert.** Cancel is forwarded to the platform
   (`POST /api/admin/v2/async-result/cancel?id=`), which ends the job's Work Queue Manager worker;
   IRIS 2026.2 logs that as `ERROR #7802: Worker job/s '…' unexpectedly shut down` at severity 2,
   so the instance enters the *alert* state and the container's healthcheck reports `unhealthy`.
   The run and the platform are fine. Reproduced on a plain IRIS without SentaiTask (spec 008 T001,
   `iris-target`, 2026-09-27 09:57:50). Clear it with `do $SYSTEM.Monitor.Clear()` in `%SYS`.
+  Since spec 011, the canvas says so before such a cancel (*Cancel wave* and a running
+  management-API step's *Cancel* ask first); in-process and queued steps cancel without it.
 - **Remote steps (spec 008, DPI-I-588).**
   - Only types executed through the management API can run on a target in v1 (`integrity-check`);
     declared in-process types are refused with `STEP_TYPE_NOT_REMOTE_CAPABLE` (they would need
@@ -92,5 +94,15 @@ SentaiTask v1 only promises what was proven on IRIS 2026.2 (spec `004-backend-ha
   database or journal directory has less than 10% free; that run is a real finding, not a defect.
   The example is identified by its name: renaming it and choosing *Open example flow* again creates
   a new one under the well-known name.
+- **Public demo (spec 011).** The demo account `sentai-demo` holds no security administration,
+  so security reads are refused verbatim by design. The privileges an integrity check needs
+  (`%Admin_Manage`, write on IRISSYS) also let the platform run the task-history purge and change
+  platform settings reachable through the management API, such as WQM categories; on a
+  disposable demo this is accepted, and the daily reset does not restore platform settings
+  (it resets the product's flows and runs, the demo password and the alert state).
+- **Found by the spec 011 spike, being fixed (spec 011 T025).** A platform SQL refusal while
+  reading a flow's steps is treated as "no steps" (validation passes, dispatch creates a run that
+  never ends), and a platform job that ends `Failed` shows "Administrative job reported Failed"
+  instead of the platform's own reason.
 
 ---
