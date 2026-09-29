@@ -54,6 +54,21 @@ XData Catalog [ MimeType = application/json ]
     ] },
   { "type": "secrets-inventory",      "label": "Secrets inventory",      "class": "sentai.steps.reports.SecretsInventory", "category": "security", "executor": "platform-read", "destructive": false, "pausable": false, "available": true,
     "parameters": [] },
+  { "type": "certificate-expiry-check", "label": "Certificate expiry check", "class": "sentai.steps.reports.CertificateExpiry", "category": "security", "executor": "platform-read", "destructive": false, "pausable": false, "available": true,
+    "parameters": [
+      { "name": "warnDays", "property": "WarnDays", "type": "integer", "required": false, "default": 30, "min": 1, "max": 365,
+        "description": "Fail when a certificate expires within this many days (or has expired)" }
+    ] },
+  { "type": "permissions-inventory",  "label": "Permissions inventory",  "class": "sentai.steps.reports.PermissionsInventory", "category": "security", "executor": "platform-read", "destructive": false, "pausable": false, "available": true,
+    "parameters": [
+      { "name": "failOnFindings", "property": "FailOnFindings", "type": "boolean", "required": false, "default": false,
+        "description": "Fail the step when any high finding exists" }
+    ] },
+  { "type": "oauth-inventory",        "label": "OAuth inventory",        "class": "sentai.steps.reports.OAuthInventory", "category": "security", "executor": "platform-read", "destructive": false, "pausable": false, "available": true,
+    "parameters": [
+      { "name": "failOnFindings", "property": "FailOnFindings", "type": "boolean", "required": false, "default": false,
+        "description": "Fail the step when any high finding exists" }
+    ] },
   { "type": "custom",                 "label": "Custom (legacy)",        "class": "",                                  "category": "custom",       "executor": "platform-api", "destructive": false, "pausable": false, "available": false }
 ]
 }
