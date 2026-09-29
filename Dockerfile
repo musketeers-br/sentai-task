@@ -70,9 +70,14 @@ RUN chown -R irisowner:irisowner /opt/sentai-web
 USER ${ISC_PACKAGE_MGRUSER}
 
 
+# The semantic-search provider row is installed in its own session, after the module load:
+# the row's validating trigger needs the provider class to exist, and the zpm shell inside
+# iris.script consumes the rest of that script's stdin (anything after `zpm "load"` there
+# never runs).
 RUN --mount=type=bind,src=.,dst=. \
     iris start IRIS && \
     iris merge iris ./merge.cpf && \
 	iris session IRIS < iris.script && \
+    iris session IRIS -U $NAMESPACE < iris-provider.script && \
     ([ $TESTS -eq 0 ] || iris session iris -U $NAMESPACE "##class(%ZPM.PackageManager).Shell(\"test $MODULE -v -only\",1,1)") && \
     iris stop IRIS quietly

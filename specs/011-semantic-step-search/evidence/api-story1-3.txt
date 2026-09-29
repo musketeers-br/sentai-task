@@ -1,0 +1,16 @@
+## step 5 — q=check my globals are sound
+{"available":true,"matches":[{"type":"integrity-check","score":0.4735073745250701904},{"type":"defragment-globals","score":0.2023927569389343262}]}
+## step 6 — q=order me a pizza
+{"available":true,"matches":[]}
+## step 13 — q=send an email to my manager
+{"available":true,"matches":[]}
+## step 17 — every entry has a non-empty description
+integrity-check	Check that the database's internal structures are sound and report anything broken
+compact-globals	Merge each global's data blocks to reclaim unused space inside the database
+defragment-globals	Move globals' blocks so that the space they occupy sits together, for faster reads
+switch-journal	Roll the journal over to a new file so a long-running maintenance window does not outgrow the current one
+purge-audit-records	Delete audit log entries older than the retention period, reclaiming space in a database that records every login and change
+purge-task-history	Delete the history of finished maintenance tasks, keeping the most recent days and dropping the rest
+storage-headroom-check	Warn when disk space is running low, so a purge or compaction can be planned before the database fills up
+db-size-report	Report how much space each database and journal file occupies, to show where the growth is going
+custom	Placeholder from an earlier version for an operator-declared class; kept only so saved flows still load, and never runnable

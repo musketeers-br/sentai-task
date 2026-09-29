@@ -21,3 +21,7 @@ ui/dist/
 ui/.svelte-kit/
 scripts/sanitation/backup-*.zwr
 
+
+# Local agent/tunnel session state, regenerated per machine — never product
+.opencode/
+.tunnel/
