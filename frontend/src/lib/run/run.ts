@@ -21,6 +21,8 @@ export interface StepRunView {
 	/** Spec 008: "local" or the target server's name, as the run read says. */
 	executedOn: string;
 	executedAs: string;
+	/** Spec 005/012: the report the step stored (`{}` on the wire → null). Shown and exported as is. */
+	result: unknown;
 }
 
 export interface LogEntry {
@@ -59,6 +61,12 @@ export function parseServerTime(value: string | null | undefined): number | null
 	return Number.isNaN(ms) ? null : ms;
 }
 
+function resultOf(v: unknown): unknown {
+	if (v === null || v === undefined || v === '') return null;
+	if (typeof v === 'object' && !Array.isArray(v) && Object.keys(v as object).length === 0) return null;
+	return v;
+}
+
 export function fromWireRun(w: Wire): RunView {
 	const all = ((w.steps as Wire[]) ?? []).map(
 		(s): StepRunView => ({
@@ -72,7 +80,8 @@ export function fromWireRun(w: Wire): RunView {
 			progressCurrent: num(s.progressCurrent),
 			progressTotal: num(s.progressTotal),
 			executedOn: text(s.executedOn) ?? 'local',
-			executedAs: text(s.executedAs) ?? ''
+			executedAs: text(s.executedAs) ?? '',
+			result: resultOf(s.result)
 		})
 	);
 	const latest = new Map<string, StepRunView>();

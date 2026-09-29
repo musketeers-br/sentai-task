@@ -1,3 +1,5 @@
+/// <reference types="node" />
+import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 import type { ApiError, ApiResult } from '$lib/api/client';
 import type { FlowDefinition, FlowDocument, StepTypeInfo } from '$lib/flow/document';
@@ -63,6 +65,15 @@ describe('exampleDefinition (FR-015)', () => {
 				if (p.max !== undefined) expect(value as number).toBeLessThanOrEqual(p.max);
 			}
 		}
+	});
+});
+
+describe('exampleDefinition matches the shared fixture (spec 011 R-6)', () => {
+	// The demo seed (sentai.demo.Demo, ObjectScript) creates the same flow from its own copy; both
+	// are compared with tests/fixtures/example-flow.json, so neither can drift alone.
+	it('equals tests/fixtures/example-flow.json', () => {
+		const fixture = JSON.parse(readFileSync(new URL('../../../../tests/fixtures/example-flow.json', import.meta.url), 'utf8'));
+		expect(exampleDefinition()).toEqual(fixture);
 	});
 });
 

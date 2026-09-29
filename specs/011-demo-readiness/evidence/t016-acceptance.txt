@@ -1,0 +1,29 @@
+# spec 011 T016 — acceptance of the public demo stack (isolated project sentai-demo-check, 2026-09-29)
+# COMPOSE_PROJECT_NAME=sentai-demo-check DEMO_HTTP_PORT=8080 python scripts/demo/acceptance.py --base http://localhost:8080 --env-file .env.demo-check
+# The secret is not in this file (checked with grep before writing).
+PASS up.sh without SENTAI_DEMO_SECRET refuses and starts nothing — exit 2
+PASS / redirects to the canvas — HTTP 302
+PASS canvas answers — HTTP 200
+PASS /csp/sys/UtilHome.csp is not reachable — HTTP 404
+PASS /api/atelier/ is not reachable — HTTP 404
+PASS /api/mgmnt/ is not reachable — HTTP 404
+PASS /_vscode/ is not reachable — HTTP 404
+PASS /csp/user/ is not reachable — HTTP 404
+PASS _SYSTEM:SYS refused on the primary
+PASS the secret signs _SYSTEM in on the primary
+PASS _SYSTEM:SYS refused on iris-target
+PASS demo account signs in — HTTP 200
+PASS demo account cannot read platform users (no security administration) — HTTP 403
+PASS showcase flow exists — HTTP 200
+PASS showcase validates with 0 errors as the demo account — {"errors": [], "warnings": [{"stepId": "03", "target": "iris-target", "code": "TARGET_NOT_VERIFIED", "message": "Target 'iris-target' was not checked: validate with a credential for it (dispatch always checks)"}]}
+PASS demo account signs in to iris-target through the primary — HTTP 200
+PASS showcase dispatched — HTTP 202 
+PASS showcase completes; step 03 ran on iris-target — completed in 62 s {'01': ('completed', 'local'), '02': ('completed', 'local'), '03': ('completed', 'iris-target'), '04': ('completed', 'local')}
+PASS demo.json is served with the demo account and showcase — HTTP 200
+PASS status reports the visitor flow and its run — demo: {"flows":3,"runs":3,"visitorFlows":1,"visitorRuns":1,"lastReset":{"at":"2026-09-29 03:04:40","outcome":"ok","detail":"removed 2 flows / 2 runs"},"demo":true}
+PASS reset succeeds — == reset ok
+PASS after reset: 0 visitor flows and runs, no alert, all healthy (exit 0) — iris: healthy | iris-target: healthy | caddy: running | iris alert state: 0 (0 normal, 1 warning, 2 alert) | iris-target alert state: 0 (0 normal, 1 warning, 2 alert) | demo: {"flows":2,"runs":3,"visitorFlows":0,"visitorRuns":0,"lastReset":{"at":"2026-09-29 03:06:22","outcome":"ok","detail":"removed 1 flow / 1 run"},"demo":true}
+PASS after reset: _SYSTEM:SYS still refused, demo account still signs in
+PASS after restart: _SYSTEM:SYS refused, demo account signs in
+
+24/24 checks passed

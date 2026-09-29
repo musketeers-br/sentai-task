@@ -11,6 +11,7 @@ export type UnavailableReason =
 	| 'unreachable'
 	| 'slow'
 	| 'incompatible'
+	| 'warming'
 	| 'error';
 
 export type StepSearchOutcome =

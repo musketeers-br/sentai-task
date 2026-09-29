@@ -4,7 +4,9 @@
 
 **Created**: 2026-09-28
 
-**Status**: Draft
+**Status**: In Progress
+
+**Status note**: Code merged in PR #18. Still open: T002 (baseline counts in evidence/README.md). T021 and T024 need the team's VM and are marked [external]; record SC-002 and SC-004 in evidence/README.md when done.
 
 **Input**: Competitor analysis of the contest (2026-09-28, "Analise_concorrentes.pdf", 37 approved
 apps, voting 2026-09-28 → 2026-10-04). Its top risk: the application's demo link is a free
@@ -130,8 +132,10 @@ both instances.
    Task catalog and the Targets screen, and see the platform's verbatim refusal for anything their
    account may not do.
 5. **Given** the demo account, **Then** it cannot create, change or delete platform users, roles,
-   services or web applications, cannot run destructive steps, and cannot change the privileged
-   accounts. The platform refuses, and the refusal is shown verbatim.
+   services or web applications, and cannot change the privileged accounts. The platform refuses,
+   and the refusal is shown verbatim. Destructive steps still need their typed confirmation; the
+   platform may allow the task-history purge to the demo account (the privileges the integrity
+   check needs also allow it, T001), which is accepted on a disposable demo and documented.
 6. **Given** the demo command is run without a privileged secret, **Then** it stops before starting
    anything and says which secret is missing.
 7. **Given** the machine reboots, **Then** the demo comes back on its own with the same settings.
@@ -279,7 +283,9 @@ job is asked to stop on the instance running it.
 - **FR-007**: The demo MUST create a demo operator account, with the same name on both instances,
   with a published password and only the privileges needed to sign in, read and save flows,
   validate and run non-destructive steps, read the Task catalog and the WQM categories, and sign
-  in to the target server. It MUST NOT hold security administration privileges.
+  in to the target server. It MUST NOT hold security administration privileges. Whatever else
+  the platform allows with those privileges (T001: the task-history purge) MUST be documented in
+  the demo section of the README.
 - **FR-008**: The demo MUST contain the spec 010 example flow and a showcase flow composed only of
   non-destructive, available step types, with at least three parallel steps (one on the target
   server) converging on an "all must succeed" join before a final step.

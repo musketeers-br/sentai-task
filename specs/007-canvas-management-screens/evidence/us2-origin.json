@@ -1,25 +1,24 @@
 {
   "evidence_id": "us2-origin",
-  "captured_at": "2026-09-27T04:48:32.569Z",
+  "captured_at": "2026-09-29T10:11:52.539Z",
   "request": {
     "method": "GET",
-    "path": "/csp/sentai/api/v1/catalog/tasks/1051"
+    "path": "/csp/sentai/api/v1/catalog/tasks/2652"
   },
   "response": {
     "status": 200,
     "body": {
-      "taskId": 1051,
-      "name": "SentaiTask: 203#01",
+      "taskId": 2652,
+      "name": "SentaiTask: 7453 us8 origin 1790676709896",
       "namespace": "IRISAPP",
       "origin": {
-        "flowId": "203",
-        "stepId": "01",
+        "flowId": "7453",
         "flowExists": true
       },
       "class": "sentai.dispatch.ScheduledFlowTask",
       "runAsUser": "_SYSTEM",
-      "timePeriod": "Daily",
-      "nextRun": "2026-09-28 00:00:00",
+      "timePeriod": "Weekly",
+      "nextRun": "2026-10-03 03:00:00",
       "lastStarted": "",
       "lastFinished": "",
       "status": "1",
@@ -33,9 +32,9 @@
     }
   },
   "notes": [
-    "Flow 203 (3 integrity checks) scheduled; the catalog search \"SentaiTask: 203#\" showed exactly 3 rows marked flow 203 · step 01/02/03.",
-    "Detail shown for task 1051, field by field: {\"name\":\"SentaiTask: 203#01\",\"taskId\":\"1051\",\"namespace\":\"IRISAPP\",\"className\":\"sentai.dispatch.ScheduledFlowTask\",\"runAsUser\":\"_SYSTEM\",\"timePeriod\":\"Daily\",\"nextRun\":\"2026-09-28 00:00:00\",\"lastStarted\":\"—\",\"lastFinished\":\"—\",\"status\":\"OK (1)\",\"lastError\":\"—\",\"suspended\":\"no\",\"destructive\":\"not destructive\",\"origin\":\"flow 203 · step 01\"}",
+    "Flow 7453 (3 integrity checks) scheduled; the catalog search \"SentaiTask: 7453 \" showed exactly 1 row marked flow 7453 (spec 015: one task per flow).",
+    "Detail shown for task 2652, field by field: {\"name\":\"SentaiTask: 7453 us8 origin 1790676709896\",\"taskId\":\"2652\",\"namespace\":\"IRISAPP\",\"className\":\"sentai.dispatch.ScheduledFlowTask\",\"runAsUser\":\"_SYSTEM\",\"timePeriod\":\"Weekly\",\"nextRun\":\"2026-10-03 03:00:00\",\"lastStarted\":\"—\",\"lastFinished\":\"—\",\"status\":\"OK (1)\",\"lastError\":\"—\",\"suspended\":\"no\",\"destructive\":\"not destructive\",\"origin\":\"flow 7453\"}",
     "Row click, then the origin link, opened the flow on the canvas (SC-002: 2 clicks).",
-    "After the flow was deleted, all 3 rows read \"flow not found\" with no link. The 3 native tasks and the flow were deleted afterwards."
+    "After the flow was deleted, the row read \"flow not found\" with no link. The task, its stored credential and the flow were deleted afterwards."
   ]
 }

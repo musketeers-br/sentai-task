@@ -160,7 +160,8 @@ Method TestPurgeTaskHistoryNeedsConfirmationAndIsNotSchedulable()
         Set codes = codes_","_e.code
     }
     Do $$$AssertTrue(codes [ ",DESTRUCTIVE_NOT_SCHEDULABLE", codes)
-    Do $$$AssertTrue(codes [ ",IN_PROCESS_NOT_SCHEDULABLE", codes)
+    // Spec 015 D-6: in-process steps are schedulable now; the destructive rule remains.
+    Do $$$AssertNotTrue(codes [ ",IN_PROCESS_NOT_SCHEDULABLE", codes)
 }
 
 /// T013: the schema is applied to the native class — KeepDays gets the step's value or 30.

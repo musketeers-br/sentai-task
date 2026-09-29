@@ -3,13 +3,17 @@
   <Document name="sentai-task.ZPM">
     <Module>
       <Name>sentai-task</Name>
-      <Version>0.0.29</Version>
+      <Version>0.0.36</Version>
       <Description>Basic InterSystems IRIS Development Template</Description>
       <Packaging>module</Packaging>
       <SourcesRoot>src</SourcesRoot>
 
       <Resource Name="sentai.PKG"/>
       <UnitTest Name="/tests" Package="sentai.unittest" Phase="test"/>
+
+      <!-- Spec 015: the resource SentaiSchedule and the wallet collection SentaiTask that holds
+           the scheduled runs' credentials (sentai.schedule.Install, idempotent). -->
+      <Invoke Class="sentai.schedule.Install" Method="Run" Phase="Activate" When="After" CheckStatus="true"/>
 
       <!-- REST surface (research.md R-002): password + JWT authentication, never
            Unauthenticated; same 60 s access-token mechanism as /api/admin. No MatchRoles:

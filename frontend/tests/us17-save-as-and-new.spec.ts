@@ -212,7 +212,8 @@ test('us17 top bar — every control fits at 1440 px', async ({ page }) => {
 	await expect(page.getByRole('banner').getByRole('button', { name: 'Save flow', exact: true })).toBeVisible();
 	await page.getByRole('banner').getByRole('button', { name: 'More' }).click();
 	await expect(page.getByRole('menu')).toBeVisible();
-	await expect(page.getByRole('menuitem')).toHaveText(['New flow', 'Save as…']);
+	// Spec 012 FR-010 adds Run history to the same menu.
+	await expect(page.getByRole('menuitem')).toHaveText(['New flow', 'Save as…', 'Run history']);
 	await page.keyboard.press('Escape');
 	await expect(page.getByRole('menu')).toHaveCount(0);
 	await expect(page.getByRole('banner').getByRole('button', { name: 'More' })).toBeFocused();

@@ -42,6 +42,13 @@ Property corpusVersion As %String(MAXLEN = 64);
 /// a timestamp comparison.
 Property embeddedAt As %TimeStamp;
 
+/// Spec 017: the identity of the provider that embedded this row —
+/// `<config name>|<provider class>|<model>|<vector length>` (data-model §2). A vector means something
+/// only for the model that produced it, so a row whose identity is not the current provider's is
+/// stale even when its width still matches (FR-007). Never holds any other configuration key, so a
+/// secret such as `apiKey` is never copied here (Constitution III).
+Property providerIdentity As %String(MAXLEN = 512);
+
 Storage Default
 {
 <Data name="StepCorpusDefaultData">
@@ -62,6 +69,9 @@ Storage Default
 </Value>
 <Value name="6">
 <Value>embeddedAt</Value>
+</Value>
+<Value name="7">
+<Value>providerIdentity</Value>
 </Value>
 </Data>
 <DataLocation>^sentai.search.StepCorpusD</DataLocation>

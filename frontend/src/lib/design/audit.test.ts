@@ -19,9 +19,10 @@ describe('UI-007 step 5 — no light token is the inverse of its dark token', ()
 	const rows = auditTokens(tokens);
 
 	it('audits every themed colour pair in tokens.json', () => {
-		// 16 theme + 6 state + 6 stateText + 7 category + 5 destructive + 5 warning + 4 edge +
-		// 3 timeline. A new themed token must show up here, or the audit has a blind spot.
-		expect(rows.length).toBe(52);
+		// 16 theme + 6 state + 6 stateText + 9 category (spec 013: security, monitoring; spec 012: suggested) +
+		// 5 destructive + 5 warning + 4 edge + 3 timeline. A new themed token must show up here, or
+		// the audit has a blind spot.
+		expect(rows.length).toBe(54);
 	});
 
 	it('finds no derived light value', () => {

@@ -1,20 +1,7 @@
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/011-semantic-step-search/plan.md
-
-Current feature: semantic step-type search over the closed catalog. The design decisions, with the
-measurements behind them, are in `specs/011-semantic-step-search/research.md`; the shapes are in
-`data-model.md` and `contracts/`. Three things a coding agent must not re-derive:
-
-- `src/sentai` is **flat** — 26 classes, no nested package. New classes are `sentai.<domain>.<Class>`
-  and new tests sit flat under `tests/sentai/unittest/<domain>/`.
-- The step-type catalog (`src/sentai/registry/StepType.cls`) is the **only** place a capability is
-  declared. Search reads its `type`, `label` and `description` through `GetCatalog()` and never a
-  class name. New prose goes in the catalog's XData entry, reviewed in a pull request.
-- An embedding provider is a row in the platform's `%Embedding.Config` naming
-  `sentai.search.EmbeddingService`; the endpoint, model and key live in that row's `Configuration`
-  JSON, never in code. The dev stack serves `all-minilm` on the `ollama` compose service.
+at specs/017-in-process-embeddings/plan.md
 <!-- SPECKIT END -->
 
 # SentaiTask — notes for coding agents
@@ -28,7 +15,8 @@ lists what v1 deliberately does not do.
 
 - `docker compose up -d` brings `iris` (primary, `127.0.0.1:52773`) and `iris-target` (compose
   network only — remote-step behaviour and its e2e tests need it up).
-- `docker-compose.override.yml` applies automatically: it rebinds 1972/52773/53773 to loopback and
+- `docker-compose.override.yml` applies automatically: it rebinds 1972/52773 to loopback, publishes
+  the container's 53773 as `127.0.0.1:55773` (Windows often reserves the range around 53773), and
   mounts the repo **read-only** at `/home/irisowner/dev`. LAN access needs the base file spelled out:
   `docker compose -f docker-compose.yml up -d`.
 - Dev credentials `_SYSTEM` / `SYS`. The module's globals live in `IRISAPP`.
@@ -93,6 +81,25 @@ npx playwright test             # e2e: needs the stack up, ~6 min, real runs
   outside them.
 - Tasks are sliced by user-observable behaviour with the test written first (Principle V), never by
   technical layer. Each feature's `evidence/` gets a README table; no credentials in it.
+
+## Spec status
+
+`**Status**:` in each `spec.md` (line 7) is one of `Draft | Planned | In Progress | Implemented | Merged |
+Superseded by NNN`; dates and follow-ups go in `**Status note**:`, never in the value.
+
+| Value | When | Set by |
+|---|---|---|
+| `Draft` | after `/speckit.specify`, until clarify closes | `/speckit.specify` |
+| `Planned` | plan, analyze and tasks exist, nothing checked | `/speckit.tasks` |
+| `In Progress` | first task checked, others open | `/speckit.implement` |
+| `Implemented` | every task checked, or open ones marked `[external]`; suite green | `/speckit.implement`, last step |
+| `Merged` | the PR is on `master` — a branch never declares it | whoever merges |
+
+- `[external]` on a task = needs an action outside the repo or a human session (a VM, a publication, a
+  manual usability run). It never blocks `Implemented`; the `Status note` says who owns it.
+- `scripts/check-spec-status.sh` fails when a Status contradicts its `tasks.md` (Implemented with open
+  tasks, Draft with checked ones, a value outside the list). Run it before opening a PR.
+- Spec numbers are unique: `ls specs/` and take the next free one before `/speckit.specify`.
 
 ## Constitution rules that change what you may write
 

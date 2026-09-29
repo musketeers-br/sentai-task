@@ -48,6 +48,22 @@ ENV IRISNAMESPACE $NAMESPACE
 ENV PYTHON_PATH=/usr/irissys/bin/
 ENV PATH "/usr/irissys/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/home/irisowner/bin"
 
+## Spec 017: in-process semantic search (research R-3). Placed before any project file is copied so
+## these layers stay cached across code changes.
+##
+## ONE pip command, CPU index first and PyPI as the extra index: installing torch and
+## sentence-transformers separately, or from PyPI alone, pulls the CUDA build of torch (5.4 GB
+## measured, against 1.3 GB here). The target is the directory Embedded Python imports from.
+RUN pip3 install --no-cache-dir --no-warn-script-location --target /usr/irissys/mgr/python         --index-url https://download.pytorch.org/whl/cpu --extra-index-url https://pypi.org/simple         torch sentence-transformers &&     irispython -c "import sentence_transformers, torch; assert torch.version.cuda is None, torch.version.cuda"
+
+## The model is part of the image: bringing the stack up and searching need no network. It lives
+## outside /home/irisowner/dev, which the dev stack mounts read-only.
+RUN irispython -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2', cache_folder='/usr/irissys/mgr/sentai-models', device='cpu')"
+
+## Offline at run time. In the image, not in compose: the public demo's override resets the
+## service's `environment`. Without these, a first load with no route to the model hub took 146 s.
+ENV HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1
+
 COPY .iris_init /home/irisowner/.iris_init
 RUN wget https://pm.community.intersystems.com/packages/zpm/latest/installer -O /tmp/zpm.xml
 
@@ -82,3 +98,8 @@ RUN --mount=type=bind,src=.,dst=. \
     iris session IRIS -U $NAMESPACE < iris-demo.script && \
     ([ $TESTS -eq 0 ] || iris session iris -U $NAMESPACE "##class(%ZPM.PackageManager).Shell(\"test $MODULE -v -only\",1,1)") && \
     iris stop IRIS quietly
+
+## Spec 017 (research R-2): start the search worker right after IRIS starts, so the model is warm
+## before the first operator search. `iris-main --after` runs a shell command after `iris start`;
+## Start() returns at once and is idempotent, and any first search starts the worker too.
+CMD ["--after", "iris session iris -U IRISAPP '##class(sentai.search.EmbeddingWorker).Start()'"]

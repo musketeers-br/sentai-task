@@ -63,7 +63,8 @@ export function deleteOperator(operator: Operator): void {
 export function deleteFlow(flowId: string): void {
 	const id = Number(flowId);
 	// Children first (steps, edges and joins reference the flow); test flows never have runs.
-	const children = ['sentai_model.Edge', 'sentai_model.Join', 'sentai_model.Step']
+	// "Join" is an SQL reserved word: quoted, and doubled inside the ObjectScript string.
+	const children = ['sentai_model.Edge', 'sentai_model.""Join""', 'sentai_model.Step']
 		.map((table) => `do ##class(%SQL.Statement).%ExecDirect(,"DELETE FROM ${table} WHERE flow = ?",${id})`)
 		.join('\n');
 	const out = irisSys(
@@ -80,7 +81,7 @@ export function deleteFlow(flowId: string): void {
 const DEV_CONTAINER = 'sentai-task-iris-1';
 export const EXAMPLE_FLOW_NAME = 'Example: storage health check';
 /** Names this feature's tests and quickstart create; nothing else may be deleted. */
-const TEST_FLOW_PREFIXES = ['us17-', 'us18-', 'us19-', 'us20-', 'us21-', 'perf-', 'QS ', 'plan010-probe-'];
+const TEST_FLOW_PREFIXES = ['us17-', 'us18-', 'us19-', 'us20-', 'us21-', 'perf-', 'QS ', 'plan010-probe-', 'us28-'];
 
 /**
  * Throws `refused: …` unless this is the local dev instance and `expectedName` is a flow this
@@ -112,7 +113,7 @@ export function deleteFlowWithRuns(flowId: string, expectedName: string): void {
 		sql('DELETE FROM sentai_model.StepRun WHERE run IN (SELECT ID FROM sentai_model.Run WHERE flow = ?)'),
 		sql('DELETE FROM sentai_model.Run WHERE flow = ?'),
 		sql('DELETE FROM sentai_model.Edge WHERE flow = ?'),
-		sql('DELETE FROM sentai_model.Join WHERE flow = ?'),
+		sql('DELETE FROM sentai_model.""Join"" WHERE flow = ?'),
 		sql('DELETE FROM sentai_model.Step WHERE flow = ?'),
 		`set sc=##class(sentai.model.Flow).%DeleteId(${id})`,
 		`write "RESULT:",$select(sc=1:"OK",1:$system.Status.GetErrorText(sc)),!`
@@ -126,4 +127,22 @@ export function deleteFlowWithRuns(flowId: string, expectedName: string): void {
 		`else { kill f ${deletes} } }`;
 	const result = /RESULT:(.*)/.exec(irisSys(script, 'IRISAPP'))?.[1]?.trim();
 	if (result !== 'OK') throw new Error(result?.startsWith('REFUSED') ? `refused: ${result}` : `could not delete flow ${flowId}: ${result ?? 'no answer'}`);
+}
+
+/**
+ * Spec 015: a scheduled run that could not start, recorded exactly as a firing records it
+ * (ScheduledStart.StartFailed), so the history marker can be checked without waiting for the
+ * Task Manager. Guarded like deleteFlowWithRuns.
+ */
+export function recordScheduledStartFailure(flowId: string, expectedName: string, runAs: string, reason: string): void {
+	assertDevInstance(expectedName);
+	const id = Number(flowId);
+	if (!Number.isInteger(id) || id <= 0) throw new Error(`refused: flow id ${flowId} is not a number`);
+	const q = (v: string) => v.replaceAll('"', '""');
+	const out = irisSys(
+		`set sc=##class(sentai.schedule.ScheduledStart).StartFailed(${id},"${q(runAs)}","${q(reason)}") write "RESULT:",$select('sc:"OK",1:"UNEXPECTED"),!`,
+		'IRISAPP'
+	);
+	const result = /RESULT:(.*)/.exec(out)?.[1]?.trim();
+	if (result !== 'OK') throw new Error(`could not record the start failure: ${result ?? 'no answer'}`);
 }

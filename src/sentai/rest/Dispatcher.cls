@@ -30,6 +30,8 @@ XData UrlMap [ XMLNamespace = "http://www.intersystems.com/urlmap" ]
     <Route Url="/flows/:flowId" Method="PUT" Call="SaveFlow"/>
     <Route Url="/flows/:flowId/validate" Method="POST" Call="ValidateFlow"/>
     <Route Url="/flows/:flowId/schedule" Method="POST" Call="ScheduleFlow"/>
+    <Route Url="/flows/:flowId/schedule" Method="GET" Call="ReadSchedule"/>
+    <Route Url="/flows/:flowId/schedule" Method="DELETE" Call="UnscheduleFlow"/>
     <Route Url="/flows/:flowId/dispatch" Method="POST" Call="DispatchFlow"/>
     <Route Url="/runs" Method="GET" Call="ListRuns"/>
     <Route Url="/runs/:runGuid" Method="GET" Call="ReadRun"/>
@@ -166,7 +168,7 @@ ClassMethod ListFlows() As %Status
 {
     Set out = []
     Set rs = ##class(%SQL.Statement).%New()
-    Do rs.%Prepare("SELECT %ID AS rowId, name, revision, savedAt, savedBy, scheduleSpec FROM sentai_model.Flow ORDER BY name")
+    Do rs.%Prepare("SELECT f.%ID AS rowId, f.name, f.revision, f.savedAt, f.savedBy, s.nextRun FROM sentai_model.Flow f LEFT JOIN sentai_model.Schedule s ON s.flow = f.%ID ORDER BY f.name")
     Set result = rs.%Execute()
     While result.%Next() {
         Set item = {}
@@ -175,7 +177,8 @@ ClassMethod ListFlows() As %Status
         Do item.%Set("revision", result.%Get("revision"))
         Do item.%Set("savedAt", result.%Get("savedAt"))
         Do item.%Set("savedBy", result.%Get("savedBy"))
-        Do item.%Set("nextRun", $S(result.%Get("scheduleSpec") '= "":result.%Get("scheduleSpec"), 1:$$$NULLOREF))
+        // Spec 015 D-8: the platform's next run as of the last schedule read or change.
+        Do item.%Set("nextRun", $S(result.%Get("nextRun") '= "":result.%Get("nextRun"), 1:$$$NULLOREF))
         Do out.%Push(item)
     }
     Quit ..WriteJSON(200, out)
@@ -378,23 +381,71 @@ ClassMethod DispatchFlow(flowId As %String) As %Status
 }
 
 /// --- /runs (FR-024, User Story 3/4) ---
+/// Spec 012 D-6: a page of run summaries, newest first, with a stable cursor (`seq`, the run's
+/// row id): `?flowId=&state=&limit=1..200&before=<seq>`. A refused read is the platform's 403.
 ClassMethod ListRuns() As %Status
 {
-    Set flowId = %request.Get("flowId")
-    Set out = []
+    Set flowId = %request.Get("flowId"), state = %request.Get("state"), trigger = %request.Get("trigger")
+    Set limit = %request.Get("limit", 50), before = %request.Get("before")
+    If (limit '? 1.3N) || (limit < 1) || (limit > 200) Quit ..WriteProblem(400, "Bad Request", "LIMIT_OUT_OF_RANGE: limit must be an integer from 1 to 200")
+    If (state '= "") && '$LISTFIND($LB("running", "completed", "failed", "cancelled"), state) Quit ..WriteProblem(400, "Bad Request", "STATE_UNKNOWN: state must be one of running, completed, failed, cancelled")
+    If (before '= "") && ((before '? 1.18N) || (+before < 1)) Quit ..WriteProblem(400, "Bad Request", "CURSOR_INVALID: before must be a positive integer (a run's seq)")
+    If (trigger '= "") && '$LISTFIND($LB("manual", "scheduled"), trigger) Quit ..WriteProblem(400, "Bad Request", "TRIGGER_UNKNOWN: trigger must be manual or scheduled")
+    Quit ..WriteOutcome(..RunPage(flowId, state, +limit, before, trigger))
+}
+
+/// The page as an outcome value ({httpStatus, body} or {httpStatus, problem}), so tests call it
+/// without HTTP.
+ClassMethod RunPage(flowId As %String, state As %String, limit As %Integer, before As %String, trigger As %String = "") As %DynamicObject
+{
+    Set where = "", args = 0
+    // Spec 015: runs recorded before the trigger existed are manual.
+    If (trigger = "scheduled") Set where = where_" AND r.""trigger"" = 'scheduled'"
+    If (trigger = "manual") Set where = where_" AND (r.""trigger"" IS NULL OR r.""trigger"" <> 'scheduled')"
+    If (flowId '= "") Set where = where_" AND r.flow = ?", args = args + 1, args(args) = flowId
+    If (state '= "") Set where = where_" AND r.state = ?", args = args + 1, args(args) = state
+    If (before '= "") Set where = where_" AND r.ID < ?", args = args + 1, args(args) = +before
+    Set sql = "SELECT TOP "_limit_" r.ID AS seq, f.name AS flowName FROM sentai_model.Run r LEFT JOIN sentai_model.Flow f ON f.ID = r.flow WHERE 1 = 1"_where_" ORDER BY r.ID DESC"
     Set rs = ##class(%SQL.Statement).%New()
-    If (flowId '= "") {
-        Do rs.%Prepare("SELECT %ID AS rowId FROM sentai_model.Run WHERE flow = ? ORDER BY startedAt DESC")
-        Set result = rs.%Execute(flowId)
-    } Else {
-        Do rs.%Prepare("SELECT %ID AS rowId FROM sentai_model.Run ORDER BY startedAt DESC")
-        Set result = rs.%Execute()
+    Set sc = rs.%Prepare(sql)
+    If $$$ISERR(sc) {
+        Set text = $SYSTEM.Status.GetErrorText(sc)
+        Quit {"httpStatus": ($S(text [ "-99":403, 1:500)), "problem": {"status": ($S(text [ "-99":403, 1:500)), "title": ($S(text [ "-99":"Forbidden", 1:"Internal Error")), "detail": (text)}}
     }
+    Set result = rs.%Execute(args...)
+    If (result.%SQLCODE < 0) {
+        Set status = $S(result.%SQLCODE = -99:403, 1:500)
+        Quit {"httpStatus": (status), "problem": {"status": (status), "title": ($S(status = 403:"Forbidden", 1:"Internal Error")), "detail": ("SQLCODE "_result.%SQLCODE_": "_result.%Message)}}
+    }
+    Set out = [], ids = ""
     While result.%Next() {
-        Set run = ##class(sentai.model.Run).%OpenId(result.%Get("rowId"), 0)
-        Do out.%Push(..ShapeRun(run, 0))
+        Set run = ##class(sentai.model.Run).%OpenId(result.%Get("seq"), 0)
+        Continue:'$IsObject(run)
+        Set item = ..ShapeRun(run, 0)
+        Do item.%Set("seq", +result.%Get("seq"))
+        Do item.%Set("flowName", result.%Get("flowName"))
+        Do item.%Set("totalDurationMs", run.TotalDurationMs())
+        Do item.%Set("stepCounts", {"queued": 0, "running": 0, "paused": 0, "completed": 0, "failed": 0, "cancelled": 0})
+        Do out.%Push(item)
+        Set ids = ids_$LB(+result.%Get("seq"))
     }
-    Quit ..WriteJSON(200, out)
+    // Step counts over the latest attempt of each step (a re-run adds step runs), for the page.
+    If (ids '= "") {
+        Set counts = ##class(%SQL.Statement).%ExecDirect(, "SELECT run, state, COUNT(*) AS n FROM sentai_model.StepRun WHERE ID IN (SELECT MAX(ID) FROM sentai_model.StepRun WHERE run %INLIST ? GROUP BY run, stepId) GROUP BY run, state", ids)
+        Kill byRun
+        // GROUP BY returns the collated (upper-case) value: normalise it to the API spelling.
+        While counts.%Next() { Set byRun(counts.%Get("run"), $ZCVT(counts.%Get("state"), "L")) = counts.%Get("n") }
+        Set it = out.%GetIterator()
+        While it.%GetNext(.k, .item) {
+            Set st = ""
+            For {
+                Set st = $O(byRun(item.seq, st))
+                Quit:(st = "")
+                Do:item.stepCounts.%IsDefined(st) item.stepCounts.%Set(st, +byRun(item.seq, st))
+            }
+        }
+    }
+    Quit {"httpStatus": 200, "body": (out)}
 }
 
 ClassMethod ReadRun(runGuid As %String) As %Status
@@ -414,6 +465,7 @@ ClassMethod ShapeRun(run As sentai.model.Run, detail As %Boolean) As %DynamicObj
     Do out.%Set("startedAt", run.startedAt)
     Do out.%Set("finishedAt", run.finishedAt)
     Do out.%Set("dispatchedBy", run.dispatchedBy)
+    Do out.%Set("trigger", $S(run.trigger = "scheduled":"scheduled", 1:"manual"))
     Quit:'detail out
 
     Do out.%Set("totalDurationMs", run.TotalDurationMs())
@@ -435,7 +487,9 @@ ClassMethod ShapeRun(run As sentai.model.Run, detail As %Boolean) As %DynamicObj
 
     Set log = []
     Set rs2 = ##class(%SQL.Statement).%New()
-    Do rs2.%Prepare("SELECT at, stepId, severity, message FROM sentai_model.LogEntry WHERE run = ? ORDER BY at DESC")
+    // Newest first (spec 003 FR-025); entries of the same instant keep their order (spec 012 R-2).
+    // "at" is an SQL reserved word; unquoted, this read failed and the log always read empty.
+    Do rs2.%Prepare("SELECT ""at"", stepId, severity, message FROM sentai_model.LogEntry WHERE run = ? ORDER BY ""at"" DESC, ID DESC")
     Set result2 = rs2.%Execute(run.%Id())
     While result2.%Next() {
         Do log.%Push({"at": (result2.%Get("at")), "stepId": (result2.%Get("stepId")), "severity": (result2.%Get("severity")), "message": (result2.%Get("message"))})
@@ -561,36 +615,52 @@ ClassMethod EmitRunStateEvents(run As sentai.model.Run, ByRef lastVersion As %In
 /// --- Run/step control (FR-027–FR-030, User Story 4) ---
 ClassMethod CancelRun(runGuid As %String) As %Status
 {
+    // Spec 012 D-4: the request is logged before the cancel, so it precedes the transitions.
+    Do ##class(sentai.dispatch.RunNarrator).Requested(runGuid, "", ..CurrentUser(), "cancel")
     Do ##class(sentai.dispatch.WaveDispatcher).CancelRun(runGuid)
     Quit ..WriteJSON(202, {})
 }
 
 ClassMethod PauseRun(runGuid As %String) As %Status
 {
+    Do ##class(sentai.dispatch.RunNarrator).Requested(runGuid, "", ..CurrentUser(), "pause")
     Do ##class(sentai.dispatch.WaveDispatcher).PauseRun(runGuid)
     Quit ..WriteJSON(202, {})
 }
 
+/// The step id of a step run, for the run log ("" when unknown).
+ClassMethod StepIdOf(stepGuid As %String) As %String
+{
+    Set sr = ##class(sentai.model.StepRun).GuidIndexOpen(stepGuid, 0)
+    Quit $S($IsObject(sr):sr.stepId, 1:"")
+}
+
 ClassMethod CancelStep(runGuid As %String, stepGuid As %String) As %Status
 {
+    Set stepId = ..StepIdOf(stepGuid)
     Set sc = ##class(sentai.dispatch.WaveDispatcher).CancelStep(runGuid, stepGuid)
     If $$$ISERR(sc) {
         Set text = $SYSTEM.Status.GetErrorText(sc)
+        Do ##class(sentai.dispatch.RunNarrator).Requested(runGuid, stepId, ..CurrentUser(), "cancel", text)
         If (text [ "CONTROL_REFUSED") Quit ..WriteProblem(502, "Bad Gateway", text)
         Quit ..WriteProblem(404, "Not Found", text)
     }
+    Do ##class(sentai.dispatch.RunNarrator).Requested(runGuid, stepId, ..CurrentUser(), "cancel")
     Quit ..WriteJSON(202, {})
 }
 
 ClassMethod PauseStep(runGuid As %String, stepGuid As %String) As %Status
 {
+    Set stepId = ..StepIdOf(stepGuid)
     Set sc = ##class(sentai.dispatch.WaveDispatcher).PauseStep(runGuid, stepGuid)
     If $$$ISERR(sc) {
         Set text = $SYSTEM.Status.GetErrorText(sc)
+        Do ##class(sentai.dispatch.RunNarrator).Requested(runGuid, stepId, ..CurrentUser(), "pause", text)
         If (text [ "SentaiNotPausable") Quit ..WriteProblem(409, "Conflict", text)
         If (text [ "CONTROL_REFUSED") Quit ..WriteProblem(502, "Bad Gateway", text)
         Quit ..WriteProblem(404, "Not Found", text)
     }
+    Do ##class(sentai.dispatch.RunNarrator).Requested(runGuid, stepId, ..CurrentUser(), "pause")
     Quit ..WriteJSON(202, {})
 }
 
@@ -599,11 +669,19 @@ ClassMethod RerunStep(runGuid As %String, stepGuid As %String) As %Status
     // Spec 005 ID-2: a re-run executes under the dispatcher's identity and credential, so only
     // the dispatcher may ask for one.
     Set run = ##class(sentai.model.Run).GuidIndexOpen(runGuid, 0)
+    Set stepId = ..StepIdOf(stepGuid)
     If $IsObject(run) && ($ZCVT(..CurrentUser(), "U") '= $ZCVT(run.dispatchedBy, "U")) {
-        Quit ..WriteProblem(403, "Forbidden", "RERUN_NOT_BY_DISPATCHER: only '"_run.dispatchedBy_"', who dispatched this run, may re-run its steps")
+        Set text = "RERUN_NOT_BY_DISPATCHER: only '"_run.dispatchedBy_"', who dispatched this run, may re-run its steps"
+        Do ##class(sentai.dispatch.RunNarrator).Requested(runGuid, stepId, ..CurrentUser(), "re-run", text)
+        Quit ..WriteProblem(403, "Forbidden", text)
     }
     Set sc = ##class(sentai.dispatch.WaveDispatcher).RerunStep(runGuid, stepGuid, .newGuid)
-    If $$$ISERR(sc) Quit ..WriteProblem(409, "Conflict", $SYSTEM.Status.GetErrorText(sc))
+    If $$$ISERR(sc) {
+        Set text = $SYSTEM.Status.GetErrorText(sc)
+        Do ##class(sentai.dispatch.RunNarrator).Requested(runGuid, stepId, ..CurrentUser(), "re-run", text)
+        Quit ..WriteProblem(409, "Conflict", text)
+    }
+    Do ##class(sentai.dispatch.RunNarrator).Requested(runGuid, stepId, ..CurrentUser(), "re-run")
 
     Set stepRun = ##class(sentai.model.StepRun).GuidIndexOpen(newGuid, 0)
     Quit ..WriteJSON(202, ..ShapeStepRun(stepRun))
@@ -683,48 +761,33 @@ ClassMethod WriteWqmCategory(name As %String) As %Status
     Quit ..WriteJSON(200, {})
 }
 
-/// --- /flows/{id}/schedule (FR-031, FR-032, User Story 5) ---
+/// --- /flows/{id}/schedule (spec 015, contracts/api-delta.md) ---
+/// The request body carries passwords: it is never logged or echoed.
 ClassMethod ScheduleFlow(flowId As %String) As %Status
 {
     Set payload = ..ReadJSONBody()
-    // Blocks before any %SYS.Task is created: validation errors (FR-032) and any destructive
-    // step (out of scope for scheduling in v1, TD-06).
-    Set report = ##class(sentai.validation.FlowValidator).ValidateForSchedule(flowId, ..CurrentToken())
-    If '##class(sentai.validation.FlowValidator).HasNoErrors(report) {
-        Quit ..WriteJSON(422, report)
+    If '$IsObject(payload) || payload.%IsDefined("scheduleSpec") || '$IsObject(payload.schedule) {
+        Set problem = {"status": 400, "title": "Bad Request", "code": "SCHEDULE_FORMAT",
+                       "detail": "SCHEDULE_FORMAT: send {\"schedule\": {\"kind\": \"daily|weekly|monthly|hourly\", \"startTime\": \"HH:MM\", \"days\"|\"dayOfMonth\"|\"everyHours\": …}, \"runAs\", \"password\", \"targetPasswords\": [{\"target\", \"password\"}]}"}
+        Kill payload
+        Quit ..WriteJSON(400, problem)
     }
-
-    // Each task is created by the platform with the operator's token; its refusal is the answer.
-    Set outcome = ##class(sentai.dispatch.NativeScheduler).Schedule(flowId, ..CurrentToken())
-    If (outcome.httpStatus '= 200) Quit ..WriteOutcome(outcome)
-    Set taskIds = outcome.body.taskIds
-
-    Set flow = ##class(sentai.model.Flow).%OpenId(flowId, 4)
-    Set flow.scheduleSpec = payload.scheduleSpec
-    Do flow.%Save()
-
-    Set out = {}
-    Do out.%Set("taskIds", taskIds)
-    Do out.%Set("nextRun", ..NextRunFor(payload.scheduleSpec))
-    Quit ..WriteJSON(201, out)
+    Set outcome = ##class(sentai.schedule.ScheduleService).Schedule(flowId, payload, ..CurrentToken(), ..CurrentUser())
+    Kill payload
+    Quit ..WriteOutcome(outcome)
 }
 
-/// Root steps (no incoming edge) start a run when their native task fires — they call back into
-/// POST /flows/{id}/dispatch on OnTask(); tasks for downstream steps exist only to satisfy "one
-/// task id per scheduled step" (research.md R-007/OQ-1). Tasks are created by
-/// sentai.dispatch.NativeScheduler through the platform's management API.
-ClassMethod StepHasIncomingEdge(flowId As %String, stepId As %String) As %Boolean
+ClassMethod ReadSchedule(flowId As %String) As %Status
 {
-    Set rs = ##class(%SQL.Statement).%New()
-    Do rs.%Prepare("SELECT COUNT(*) AS c FROM sentai_model.Edge WHERE flow = ? AND target = ?")
-    Set result = rs.%Execute(flowId, stepId)
-    Do result.%Next()
-    Quit (result.%Get("c") > 0)
+    If '##class(sentai.model.Flow).%ExistsId(flowId) Quit ..WriteProblem(404, "Not Found", "Flow '"_flowId_"' does not exist")
+    Quit ..WriteOutcome(##class(sentai.schedule.ScheduleService).Read(flowId, ..CurrentToken()))
 }
 
-ClassMethod NextRunFor(scheduleSpec As %String) As %String
+/// Works for a flow that no longer exists too: it removes whatever tasks and secrets it left.
+ClassMethod UnscheduleFlow(flowId As %String) As %Status
 {
-    Quit $ZDATETIME($HOROLOG, 3)
+    If (flowId '? 1.N) Quit ..WriteProblem(404, "Not Found", "Flow '"_flowId_"' does not exist")
+    Quit ..WriteOutcome(##class(sentai.schedule.ScheduleService).Unschedule(flowId, ..CurrentToken()))
 }
 
 /// --- Body parsing ---

@@ -23,6 +23,15 @@ ClassMethod Validate(flowId As %String, bearerToken As %String = "", targetToken
         Quit ..Report(errors, warnings)
     }
 
+    // Spec 011 T025 (D1): if the platform refuses this operator the reads below (SQLCODE -99), say
+    // so with its words instead of judging an empty flow, which validated clean and dispatched a
+    // run with no steps that never ended.
+    Set refusal = ..ReadRefusal(flowId)
+    If (refusal '= "") {
+        Do errors.%Push({"stepId": "", "code": "PLATFORM_REFUSED", "message": (refusal)})
+        Quit ..Report(errors, warnings)
+    }
+
     // 1. Acyclicity (reuses the same algorithm as the mutation-time check).
     Set rs = ##class(%SQL.Statement).%New()
     Do rs.%Prepare("SELECT source, target FROM sentai_model.Edge WHERE flow = ?")
@@ -80,7 +89,8 @@ ClassMethod Validate(flowId As %String, bearerToken As %String = "", targetToken
             // Spec 005: in-process types — the step's parameters against the declared schema, and
             // the catalog's class installed. (purge-audit-records declares its schema for the
             // canvas only and keeps the rule above.)
-            If (##class(sentai.registry.StepType).GetExecutor(type) = "in-process") {
+            // Spec 013: report types (platform-read) declare parameters too.
+            If $LISTFIND($LB("in-process", "platform-read"), ##class(sentai.registry.StepType).GetExecutor(type)) {
                 Do ..DeclaredStepFindings(stepId, type, ##class(sentai.registry.StepType).GetParameterSchema(type), step.parameters, ##class(sentai.registry.StepType).GetTargetClass(type), errors)
             }
         }
@@ -170,7 +180,8 @@ ClassMethod DeclaredStepFindings(stepId As %String, type As %String, schema As %
         }
     }
 
-    If '##class(sentai.registry.StepType).ClassIsInstalled(className) {
+    // Each executor's notion of "installed" applies (spec 013: a Report subclass).
+    If '##class(sentai.registry.StepType).ClassIsInstalledFor(type, className) {
         Do errors.%Push({"stepId": (stepId), "code": "STEP_TYPE_NOT_SUPPORTED_ON_TARGET", "message": ("Step type '"_type_"' is not supported on the target platform: its declared class is not installed")})
     }
 }
@@ -180,6 +191,7 @@ ClassMethod DeclaredStepFindings(stepId As %String, type As %String, schema As %
 /// no approved mechanism supplies SC-006's typed confirmation at fire time (spec.md Change Log
 /// 2026-09-22). Scoped to scheduling only: /validate and /dispatch keep calling Validate(), so
 /// destructive steps stay valid for manual dispatch with typed confirmation (FR-017).
+/// Spec 015 D-6: in-process steps are schedulable — a scheduled run acts as its run-as account.
 ClassMethod ValidateForSchedule(flowId As %String, bearerToken As %String = "") As %DynamicObject
 {
     Set report = ..Validate(flowId, bearerToken)
@@ -191,11 +203,6 @@ ClassMethod ValidateForSchedule(flowId As %String, bearerToken As %String = "") 
         Set stepId = stepResult.%Get("id"), type = stepResult.%Get("type")
         If ##class(sentai.registry.StepType).IsDestructive(type) {
             Do report."errors".%Push({"stepId": (stepId), "code": "DESTRUCTIVE_NOT_SCHEDULABLE", "message": ("Step type '"_type_"' is destructive; flows with destructive steps are not schedulable in v1 and must be dispatched manually with typed confirmation")})
-        }
-        // Spec 005 ID-3: an in-process step runs as the dispatching operator; a scheduled run has
-        // none (it would run as the Task Manager's run-as user), so it is not schedulable.
-        If (##class(sentai.registry.StepType).GetExecutor(type) = "in-process") {
-            Do report."errors".%Push({"stepId": (stepId), "code": "IN_PROCESS_NOT_SCHEDULABLE", "message": ("Step '"_stepId_"' ("_type_") runs inside the platform as the dispatching operator and cannot run in a scheduled run")})
         }
     }
     Quit report
@@ -276,6 +283,21 @@ ClassMethod IsMountedReadOnly(databaseDirectory As %String) As %Boolean
         Set result = 1
     }
     Quit result
+}
+
+/// "" when this operator may read the flow's steps and edges; otherwise the platform's refusal,
+/// verbatim ("SQLCODE <n>: <message>").
+ClassMethod ReadRefusal(flowId As %String) As %String
+{
+    // "Join" is an SQL reserved word, so that table name is quoted.
+    For table = "sentai_model.Step", "sentai_model.Edge", "sentai_model.""Join""" {
+        Set rs = ##class(%SQL.Statement).%New()
+        Set sc = rs.%Prepare("SELECT COUNT(*) AS n FROM "_table_" WHERE flow = ?")
+        If $$$ISERR(sc) Return $SYSTEM.Status.GetErrorText(sc)
+        Set result = rs.%Execute(flowId)
+        If (result.%SQLCODE < 0) Return "SQLCODE "_result.%SQLCODE_": "_result.%Message
+    }
+    Quit ""
 }
 
 ClassMethod Report(errors As %DynamicArray, warnings As %DynamicArray) As %DynamicObject

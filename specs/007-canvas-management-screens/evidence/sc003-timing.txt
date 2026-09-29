@@ -1,7 +1,7 @@
-SC-003 timing — 2026-09-27T04:50:32.544Z
-Tasks on the instance: 151 (16 before seeding; 3 flows x 45 integrity-check steps scheduled).
+SC-003 timing — 2026-09-29T10:12:07.186Z
+Tasks on the instance: 151 (16 before seeding; 3 x 45 tasks created through the management API).
 Measured in the browser at 1440x900 against the dev container, from the click/keystroke to the rendered answer.
-run 1: first rows 1394 ms (limit 3000) · filter update 1364 ms incl. 300 ms debounce (limit 2000)
-run 2: first rows 1415 ms (limit 3000) · filter update 1381 ms incl. 300 ms debounce (limit 2000)
-run 3: first rows 1419 ms (limit 3000) · filter update 1352 ms incl. 300 ms debounce (limit 2000)
+run 1: first rows 1005 ms (limit 3000) · filter update 1403 ms incl. 300 ms debounce (limit 2000)
+run 2: first rows 940 ms (limit 3000) · filter update 1383 ms incl. 300 ms debounce (limit 2000)
+run 3: first rows 925 ms (limit 3000) · filter update 1388 ms incl. 300 ms debounce (limit 2000)
 Seeded tasks and flows were deleted afterwards; the task count returned to its value before the run.
