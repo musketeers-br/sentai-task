@@ -4,9 +4,9 @@
 
 **Created**: 2026-09-28
 
-**Status**: Implemented
+**Status**: Merged
 
-**Status note**: 25/25 tasks; regression record in evidence/.
+**Status note**: PR #22. 25/25 tasks; regression record in evidence/.
 
 **Input**: Competitor analysis (2026-09-28), risk 3: `/schedule` registers native tasks, but a
 scheduled run cannot authenticate to the platform, so scheduling "is not a supported execution

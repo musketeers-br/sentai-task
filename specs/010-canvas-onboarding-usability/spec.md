@@ -4,7 +4,9 @@
 
 **Created**: 2026-09-27
 
-**Status**: Draft
+**Status**: Implemented
+
+**Status note**: US1–US5 and T064 merged in PR #15. T057–T060 are manual sessions with real operators and browsers, marked [external]; record their results in evidence/ when done.
 
 **Input**: Operator feedback (2026-09-27) after updating and restarting the product: "Every F5
 sends me back to the login page, even though I am signed in." / "I don't understand how to get

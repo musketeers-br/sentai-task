@@ -4,7 +4,9 @@
 
 **Created**: 2026-09-27
 
-**Status**: Draft
+**Status**: Merged
+
+**Status note**: PR #17, 2026-09-28. 34/34 tasks; evidence in evidence/.
 
 **Input**: User description: "Semantic step-type search over the closed catalog. In the palette's
 existing search box, an operator should be able to type what they mean — *free up disk space*,

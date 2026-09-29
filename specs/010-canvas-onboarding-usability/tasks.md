@@ -467,8 +467,8 @@ again*, close, then sign out and in: it doesn't appear. *Help → Getting starte
   - capture dark and light 1440×900 screenshots of *Open flow…*, *Save as…*, the unsaved-changes dialog, the invitation and the guide with `tests/theming.ts`, into `evidence/theming-*.png`.
 - [X] T055 [P] **English text audit (FR-026)**: grep the new files in `src/lib/flows`, `src/lib/guide`, `src/lib/shell/TopBar.svelte`, `src/lib/shell/SignIn.svelte` and `src/routes/+page.svelte` for user-facing strings. Confirm they are English and match the spec's wording: "Renames this flow — use Save as… to keep a copy", "Your session ended — sign in again.", "Don't show this again", "Getting started", "Example: storage health check". Record the list in `evidence/README.md`.
 - [X] T056 Full regression: `npm test`, `npm run check`, `npm run build`, `bash scripts/publish-canvas.sh`, then `npx playwright test` (all specs). Record the counts in `evidence/README.md` (expected about 130 unit and about 45 e2e, all green).
-- [ ] T057 **Manual quickstart §1–§2 (SC-001, SC-002)**: follow `specs/010-canvas-onboarding-usability/quickstart.md` §1 and §2 in a real browser. Run the SC-001 usability session with at least 5 operators and write `evidence/sc001-usability.md` (the count of operators ending with two flows, and any report of a lost flow).
-- [ ] T058 **Manual quickstart §3 (SC-003, SC-007, FR-013)** in a real Chrome with DevTools:
+- [ ] T057 [external] **Manual quickstart §1–§2 (SC-001, SC-002)**: follow `specs/010-canvas-onboarding-usability/quickstart.md` §1 and §2 in a real browser. Run the SC-001 usability session with at least 5 operators and write `evidence/sc001-usability.md` (the count of operators ending with two flows, and any report of a lost flow).
+- [ ] T058 [external] **Manual quickstart §3 (SC-003, SC-007, FR-013)** in a real Chrome with DevTools:
   - F5 ×10;
   - **close the real tab** and reopen the URL: the sign-in form;
   - **duplicate the real tab** (right-click → Duplicate): the copy asks to sign in; after signing in, both tabs survive more than 60 s;
@@ -476,14 +476,14 @@ again*, close, then sign out and in: it doesn't appear. *Help → Getting starte
   - simulate a crash by killing the renderer from `chrome://crashes` / Task Manager → *End process*, then reload: a sign-in is required, as documented in T035.
 
   Record the results in `evidence/sc003-sc007-manual.md`.
-- [ ] T059 **Manual quickstart §4 (SC-004, SC-005)** on a **fresh default installation**:
+- [ ] T059 [external] **Manual quickstart §4 (SC-004, SC-005)** on a **fresh default installation**:
   - `docker-compose down -v && docker-compose up -d --build`, then publish;
   - record the free space (T042);
   - a first-time operator goes from sign-in to the example run finishing, timed. SC-004 requires under 2 minutes;
   - validate: 0 errors; every step completed; 0 destructive confirmations.
 
   Write `evidence/sc004-sc005.json`.
-- [ ] T060 **Manual quickstart §5 (SC-006, FR-024, FR-025)**: 5 sign-ins after ticking, *Help* each time, the storage-blocked window, and keyboard-only operation with a screen reader (VoiceOver: "Getting started, dialog"). Record the results in `evidence/sc006-manual.md`.
+- [ ] T060 [external] **Manual quickstart §5 (SC-006, FR-024, FR-025)**: 5 sign-ins after ticking, *Help* each time, the storage-blocked window, and keyboard-only operation with a screen reader (VoiceOver: "Getting started, dialog"). Record the results in `evidence/sc006-manual.md`.
 - [X] T061 **Clean up the dev instance's test flows**. Scope: only flows created by this feature. That means names starting with `us17-`, `us18-`, `us19-`, `us20-`, `us21-`, `perf-`, `QS A` and `QS B` from the quickstart, the e2e `Example: storage health check` if the quickstart doesn't need it, and **`plan010-probe-1790544431` (id 5126)**. Do not touch the other pre-existing e2e residue (~4,960 flows). Steps:
   - list the targets with `iris-agentic-dev query -n IRISAPP "SELECT ID, name FROM sentai_model.Flow WHERE name %STARTSWITH 'us17-' OR …"`;
   - **show the list and get confirmation before deleting**;

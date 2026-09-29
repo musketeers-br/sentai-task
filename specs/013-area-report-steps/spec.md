@@ -4,9 +4,9 @@
 
 **Created**: 2026-09-28
 
-**Status**: Implemented
+**Status**: Merged
 
-**Status note**: 21/21 tasks; full regression record in evidence/.
+**Status note**: PR #20. 21/21 tasks; full regression record in evidence/. The four report-step catalog descriptions were written during the master merge and should be reviewed by the step authors.
 
 **Input**: Competitor analysis (2026-09-28): the contest asks for coverage of six management areas.
 SentaiTask covers task management and the Work Queue Manager in depth, but touches *security*,

@@ -16,6 +16,9 @@ description: "Task list template for feature implementation"
 ## Format: `[ID] [P?] [Story] Description`
 
 - **[P]**: Can run in parallel (different files, no dependencies)
+- **[external]**: needs an action outside the repository or a human session (a VM, a publication, a
+  measurement, a manual usability run). It never blocks `Implemented`; say who owns it and by when
+  in the spec's `**Status note**`.
 - **[Story]**: Which user story this task belongs to (e.g., US1, US2, US3)
 - Include exact file paths in descriptions
 
