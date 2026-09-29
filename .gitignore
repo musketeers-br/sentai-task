@@ -24,3 +24,8 @@ scripts/sanitation/backup-*.zwr
 
 # Spec 011: env files of demo stacks (they hold SENTAI_DEMO_SECRET)
 .env.*
+
+# Spec 014: the video goes to the video platform, not git; recorder scratch output
+assets/media/*.mp4
+assets/media/review-*.png
+frontend/media-results/
