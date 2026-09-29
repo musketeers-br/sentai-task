@@ -1,0 +1,11 @@
+{
+  "name": "Example: storage health check",
+  "defaultCategory": "Default",
+  "steps": [
+    { "id": "01", "type": "storage-headroom-check", "taskName": "Storage headroom check", "namespace": "%SYS", "wqmCategory": "Default", "parameters": { "minFreePercent": 10 } },
+    { "id": "02", "type": "db-size-report", "taskName": "Database size report", "namespace": "%SYS", "wqmCategory": "Default", "parameters": {} }
+  ],
+  "edges": [],
+  "joins": [],
+  "canvasGeometry": { "nodes": { "01": { "x": 40, "y": 160 }, "02": { "x": 360, "y": 160 } } }
+}

@@ -75,6 +75,8 @@ test('Q6/Q7 — live states per step; cancelling one step leaves its siblings ru
 	// Scenario 3 / FR-030: cancel #04 only; siblings keep running.
 	const cancelAt = Date.now();
 	await page.locator('.svelte-flow__node[data-id="04"]').getByRole('button', { name: 'Cancel' }).click();
+	// Spec 011 US5: a running integrity check asks first (IRIS records the ended job as an alert).
+	await page.getByRole('dialog', { name: 'Cancel step #04?' }).getByRole('button', { name: 'Cancel step' }).click();
 	await expect(chip(page, '04')).toHaveText('CANCELLED');
 	record('step #04 cancel → cancelled', { elapsedMs: Date.now() - cancelAt });
 	expect(Date.now() - cancelAt, 'NFR-001: visible within 2 s').toBeLessThan(2000);

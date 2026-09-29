@@ -19,6 +19,8 @@
 	import Mark from '$lib/shell/Mark.svelte';
 	import { RunMonitor, setRunContext } from './monitor.svelte';
 	import RunNode from './RunNode.svelte';
+	import CancelAlertNotice from './CancelAlertNotice.svelte';
+	import { cancelRaisesAlert } from './cancel-alert';
 	import {
 		STEP_STATES,
 		countLine,
@@ -69,6 +71,8 @@
 		return (parseServerTime(run?.finishedAt) ?? monitor.now) - start;
 	});
 	const shortGuid = $derived(guid.split('-').slice(0, 4).join('-'));
+	// Spec 011 US5: whether cancelling now ends a running platform job (IRIS then raises an alert).
+	const alertOnCancel = $derived(cancelRaisesAlert(steps, flow.steps, registry));
 	const stepName = (stepId: string) => flow.steps.find((s) => s.id === stepId)?.taskName ?? `#${stepId}`;
 
 	let confirmDialog: HTMLDialogElement;
@@ -205,6 +209,7 @@
 			Cancel run <strong class="mono">{shortGuid}</strong> of <strong>{flow.name}</strong>. Steps not yet started will
 			not be dispatched, and cancellation is requested for running ones.
 		</p>
+		{#if alertOnCancel}<CancelAlertNotice />{/if}
 		<div class="actions">
 			<button value="keep" class="quiet">Keep running</button>
 			<button value="cancel" class="cancel" onclick={() => monitor.cancelRun()}>Cancel wave</button>

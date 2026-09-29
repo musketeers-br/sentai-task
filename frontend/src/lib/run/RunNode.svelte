@@ -10,6 +10,8 @@
 	import StateShape from '$lib/design/StateShape.svelte';
 	import { getRunContext } from './monitor.svelte';
 	import { formatDuration, isTerminal, stepDurationMs, timeOfDay } from './run';
+	import CancelAlertNotice from './CancelAlertNotice.svelte';
+	import { stepCancelRaisesAlert } from './cancel-alert';
 
 	let { id, data }: NodeProps<RunFlowNode> = $props();
 
@@ -35,6 +37,18 @@
 	const shortGuid = $derived(sr ? `${sr.guid.split('-')[0]}…` : '');
 	// The backend only picks a re-run up while the run's loop is alive (HANDOFF 003, 2026-09-25).
 	const runLive = $derived(!!monitor.run && !isTerminal(monitor.run.state));
+	// Spec 011 US5: ending a running platform job makes IRIS raise an alert, so ask first.
+	const alertOnCancel = $derived(
+		stepCancelRaisesAlert(sr, [{ id, type: step.type }], data.info ? [data.info] : [])
+	);
+	const CANCEL_TITLE = 'Asks the instance running this step to stop its job, and marks the step cancelled.';
+	let confirmDialog: HTMLDialogElement;
+
+	function cancel(): void {
+		if (!sr) return;
+		if (alertOnCancel) confirmDialog.showModal();
+		else void monitor.cancelStep(sr.guid);
+	}
 </script>
 
 <article
@@ -96,8 +110,7 @@
 				<span>{waitingFor.length ? `waits for ${waitingFor.map((s) => `#${s}`).join(' ')}` : `queued since ${timeOfDay(sr?.timeQueued ?? null)}`}</span>
 			{:else if state === 'running'}
 				<span class="mono" title={sr?.guid}>GUID {shortGuid}</span>
-				<button type="button" class="action danger" disabled={monitor.busy} onclick={() => sr && monitor.cancelStep(sr.guid)}
-					title="Stops SentaiTask tracking this step; in v1 the platform job is not cancelled">Cancel</button>
+				<button type="button" class="action danger" disabled={monitor.busy} onclick={cancel} title={CANCEL_TITLE}>Cancel</button>
 			{:else if state === 'failed'}
 				<span class="mono">failed at {duration === null ? '—' : formatDuration(duration)}</span>
 				{#if runLive}
@@ -110,10 +123,74 @@
 		</footer>
 	</div>
 	<Handle type="target" position={Position.Left} isConnectable={false} class="handle" />
+	<dialog bind:this={confirmDialog} aria-labelledby={`cancel-step-${id}`} class="nodrag">
+		<form method="dialog">
+			<h2 id={`cancel-step-${id}`}>Cancel step #{id}?</h2>
+			<p>{step.taskName}: the job is asked to stop on the instance running it, and the step is marked cancelled.</p>
+			<CancelAlertNotice />
+			<div class="dialog-actions">
+				<button value="keep" class="quiet">Keep running</button>
+				<button value="cancel" class="danger" onclick={() => sr && monitor.cancelStep(sr.guid)}>Cancel step</button>
+			</div>
+		</form>
+	</dialog>
 	<Handle type="source" position={Position.Right} isConnectable={false} class="handle" />
 </article>
 
 <style>
+	dialog {
+		width: 420px;
+		padding: 22px;
+		color: var(--color-text);
+		background: var(--color-card);
+		border: 1px solid var(--destructive-border);
+		border-radius: var(--radius-panel);
+		cursor: default;
+	}
+
+	dialog::backdrop {
+		background: color-mix(in srgb, var(--color-ground) 70%, transparent);
+	}
+
+	dialog h2 {
+		margin: 0 0 8px;
+		font-size: var(--size-sectionTitle);
+	}
+
+	dialog p {
+		margin: 0 0 16px;
+		font-size: var(--size-body);
+		line-height: 1.5;
+		color: var(--color-text-muted);
+	}
+
+	.dialog-actions {
+		display: flex;
+		justify-content: flex-end;
+		gap: 8px;
+	}
+
+	.dialog-actions button {
+		font: inherit;
+		font-size: var(--size-body);
+		border-radius: var(--radius-control);
+		padding: 7px 12px;
+		cursor: pointer;
+	}
+
+	.dialog-actions .quiet {
+		color: var(--color-text-muted);
+		background: transparent;
+		border: 1px solid var(--color-border);
+	}
+
+	.dialog-actions .danger {
+		font-weight: 600;
+		color: var(--destructive-text);
+		background: var(--destructive-surface);
+		border: 1px solid var(--destructive-border);
+	}
+
 	.node {
 		position: relative;
 		box-sizing: border-box;

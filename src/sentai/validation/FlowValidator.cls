@@ -23,6 +23,15 @@ ClassMethod Validate(flowId As %String, bearerToken As %String = "", targetToken
         Quit ..Report(errors, warnings)
     }
 
+    // Spec 011 T025 (D1): if the platform refuses this operator the reads below (SQLCODE -99), say
+    // so with its words instead of judging an empty flow, which validated clean and dispatched a
+    // run with no steps that never ended.
+    Set refusal = ..ReadRefusal(flowId)
+    If (refusal '= "") {
+        Do errors.%Push({"stepId": "", "code": "PLATFORM_REFUSED", "message": (refusal)})
+        Quit ..Report(errors, warnings)
+    }
+
     // 1. Acyclicity (reuses the same algorithm as the mutation-time check).
     Set rs = ##class(%SQL.Statement).%New()
     Do rs.%Prepare("SELECT source, target FROM sentai_model.Edge WHERE flow = ?")
@@ -276,6 +285,21 @@ ClassMethod IsMountedReadOnly(databaseDirectory As %String) As %Boolean
         Set result = 1
     }
     Quit result
+}
+
+/// "" when this operator may read the flow's steps and edges; otherwise the platform's refusal,
+/// verbatim ("SQLCODE <n>: <message>").
+ClassMethod ReadRefusal(flowId As %String) As %String
+{
+    // "Join" is an SQL reserved word, so that table name is quoted.
+    For table = "sentai_model.Step", "sentai_model.Edge", "sentai_model.""Join""" {
+        Set rs = ##class(%SQL.Statement).%New()
+        Set sc = rs.%Prepare("SELECT COUNT(*) AS n FROM "_table_" WHERE flow = ?")
+        If $$$ISERR(sc) Return $SYSTEM.Status.GetErrorText(sc)
+        Set result = rs.%Execute(flowId)
+        If (result.%SQLCODE < 0) Return "SQLCODE "_result.%SQLCODE_": "_result.%Message
+    }
+    Quit ""
 }
 
 ClassMethod Report(errors As %DynamicArray, warnings As %DynamicArray) As %DynamicObject
