@@ -10,15 +10,17 @@ REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 FFMPEG_IMAGE="jrottenberg/ffmpeg:7-alpine"
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/sentai-media.XXXXXX")"
 trap 'rm -rf "$WORK"' EXIT
+# Node and Docker on Windows need the native path of the work directory (Git Bash's /tmp is not C:	mp).
+HOSTWORK="$(cygpath -m "$WORK" 2>/dev/null || echo "$WORK")"
 
-ff()      { docker run --rm -v "$WORK:/w" "$FFMPEG_IMAGE" -hide_banner -loglevel error -y "$@"; }
-seconds() { docker run --rm -v "$WORK:/w" --entrypoint ffprobe "$FFMPEG_IMAGE" -v error -show_entries format=duration -of csv=p=0 "/w/$1"; }
+ff()      { docker run --rm -v "$HOSTWORK:/w" "$FFMPEG_IMAGE" -hide_banner -loglevel error -y "$@"; }
+seconds() { docker run --rm -v "$HOSTWORK:/w" --entrypoint ffprobe "$FFMPEG_IMAGE" -v error -show_entries format=duration -of csv=p=0 "/w/$1"; }
 bytes()   { wc -c < "$WORK/$1" | tr -d ' '; }
 
 record() {
 	local timelapse="$1"
 	rm -rf "$WORK/rec"
-	(cd "$REPO/frontend" && SENTAI_MEDIA_OUT="$WORK/rec" SENTAI_MEDIA_TIMELAPSE="$timelapse" \
+	(cd "$REPO/frontend" && SENTAI_MEDIA_OUT="$HOSTWORK/rec" SENTAI_MEDIA_TIMELAPSE="$timelapse" \
 		npx playwright test -c playwright.media.config.ts -g "the recording")
 	local video
 	video="$(find "$WORK/rec" -name '*.webm' | head -n 1)"
@@ -39,14 +41,24 @@ if awk -v f="$factor" 'BEGIN { exit !(f > 1.5) }'; then
 fi
 
 echo "== converting"
-ff -i /w/run.webm -vf "scale=1280:720:flags=lanczos,format=yuv420p" -c:v libx264 -preset slow -crf 22 -movflags +faststart /w/sentai-run.mp4
+# The video keeps real time unless it would exceed 90 s (FR-002).
+vfactor="$(awk -v d="$dur" 'BEGIN { f = d / 85; if (f < 1) f = 1; printf "%.2f", f }')"
+ff -i /w/run.webm -vf "setpts=PTS/${vfactor},scale=1280:720:flags=lanczos,format=yuv420p" -c:v libx264 -preset slow -crf 22 -movflags +faststart /w/sentai-run.mp4
 gif() { # $1 name, $2 width, $3 fps
 	ff -i /w/run.webm -vf "setpts=PTS/${factor},fps=$3,scale=$2:-1:flags=lanczos,palettegen=stats_mode=diff" /w/palette.png
 	ff -i /w/run.webm -i /w/palette.png -lavfi "setpts=PTS/${factor},fps=$3,scale=$2:-1:flags=lanczos[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=5" "/w/$1"
 }
-gif sentai-run.gif 960 12
-if [ "$(bytes sentai-run.gif)" -gt 8000000 ]; then echo "   over 8 MB at 12 fps; trying 10 fps"; gif sentai-run.gif 960 10; fi
-gif sentai-run-small.gif 640 8
+# Largest first; step down width and frame rate until each variant fits its budget (R-2).
+fit() { # $1 name, $2 byte budget, then "width fps" pairs
+	local name="$1" budget="$2"; shift 2
+	for wf in "$@"; do
+		gif "$name" ${wf% *} ${wf#* }
+		[ "$(bytes "$name")" -le "$budget" ] && { echo "   $name: ${wf% *} px, ${wf#* } fps, $(bytes "$name") bytes"; return 0; }
+	done
+	echo "   $name: still over budget at the smallest setting"
+}
+fit sentai-run.gif 8000000 "960 12" "960 10" "800 8" "720 8" "640 8"
+fit sentai-run-small.gif 3000000 "640 8" "560 6" "480 6" "400 5"
 
 echo "== checking (FR-002)"
 ok=1
@@ -59,7 +71,7 @@ check "video ≤ 90 s (${m}s)" "awk -v x=$m 'BEGIN{exit !(x<=90.5)}'"
 [ "$ok" = 1 ] || { echo "media checks failed; assets/media left unchanged" >&2; exit 1; }
 
 echo "== stills"
-(cd "$REPO/frontend" && SENTAI_MEDIA_OUT="$WORK/stills-run" SENTAI_MEDIA_STILLS="$WORK/stills" \
+(cd "$REPO/frontend" && SENTAI_MEDIA_OUT="$HOSTWORK/stills-run" SENTAI_MEDIA_STILLS="$HOSTWORK/stills" \
 	npx playwright test -c playwright.media.config.ts -g "stills")
 [ "$(ls "$WORK/stills" | wc -l)" -ge 12 ] || { echo "expected 12 stills" >&2; exit 1; }
 
@@ -67,7 +79,7 @@ echo "== publishing into assets/media"
 mkdir -p "$REPO/assets/media/stills"
 cp "$WORK/sentai-run.gif" "$WORK/sentai-run-small.gif" "$WORK/sentai-run.mp4" "$REPO/assets/media/"
 cp "$WORK/stills/"*.png "$REPO/assets/media/stills/"
-commit="$(git -C "$REPO" rev-parse --short HEAD)"
+commit="$(cd "$REPO" && git rev-parse --short HEAD)"
 version="$(grep -o '<Version>[^<]*' "$REPO/module.xml" | head -n 1 | cut -d'>' -f2)"
 cat > "$REPO/assets/media/manifest.json" <<JSON
 { "recordedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)", "commit": "$commit", "moduleVersion": "$version", "timelapse": $factor,

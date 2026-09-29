@@ -96,7 +96,8 @@ test('showcase run — the recording (data-model §1)', async ({ page, request }
 	mark('validate');
 	await caption(page, 'validate');
 	await page.getByRole('button', { name: 'Validate flow' }).click();
-	await expect(page.getByTestId('status-errors')).toContainText('0 errors', { timeout: 30_000 }).catch(() => undefined);
+	// The button reads "Validating…" while the platform answers; the scene holds 2 s after that.
+	await expect(page.getByRole('button', { name: 'Validate flow' })).toBeEnabled({ timeout: 30_000 });
 	await page.waitForTimeout(2000);
 
 	mark('run');
@@ -113,7 +114,8 @@ test('showcase run — the recording (data-model §1)', async ({ page, request }
 	mark('join');
 	await caption(page, 'join');
 	await expect(page.getByTestId('run-state')).toContainText('RUN COMPLETED', { timeout: 120_000 });
-	await page.waitForTimeout(2500);
+	// Real time after the time-lapse part: long enough to read the caption at the GIF's speed.
+	await page.waitForTimeout(2500 * Math.max(1, TIMELAPSE));
 	await assertNothingSecret(page);
 
 	mark('result');

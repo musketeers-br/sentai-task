@@ -5,6 +5,7 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
 	testDir: 'media',
+	testMatch: '**/*.media.ts',
 	workers: 1,
 	timeout: 300_000,
 	outputDir: process.env.SENTAI_MEDIA_OUT ?? 'media-results',

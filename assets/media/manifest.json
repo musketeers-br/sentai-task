@@ -1,0 +1,5 @@
+{ "recordedAt": "2026-09-29T09:26:13Z", "commit": "d416881", "moduleVersion": "0.0.27", "timelapse": 3.08,
+  "files": { "gif": {"path": "sentai-run.gif", "bytes": 5879212, "seconds": 28.010000},
+             "gifSmall": {"path": "sentai-run-small.gif", "bytes": 2075578, "seconds": 28.000000},
+             "video": {"path": "sentai-run.mp4", "seconds": 85.227000, "committed": false},
+             "stills": ["stills/catalog-dark.png","stills/catalog-light.png","stills/palette-dark.png","stills/palette-light.png","stills/report-result-dark.png","stills/report-result-light.png","stills/run-history-dark.png","stills/run-history-light.png","stills/showcase-run-dark.png","stills/showcase-run-light.png","stills/targets-dark.png","stills/targets-light.png"] } }
