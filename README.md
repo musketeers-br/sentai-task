@@ -43,7 +43,7 @@ instance and on other IRIS servers, and watch every step live.
 | **Task management** | Flows of tasks with dependencies and fan-in joins; dispatch, live tracking, cancel and rerun per step; native Task Manager catalog with filters, suspend and resume; flow scheduling through the platform | [How to use](#-how-to-use), [spec 006](specs/006-task-catalog-api/) |
 | **Operating system** | `storage-headroom-check` (free disk per database and journal directory, Embedded Python) and `db-size-report` (size and free space of every database) as flow steps | [Declared step types](#declared-step-types) |
 | **Work Queue Manager** | Read and edit WQM categories, the worker pools every step runs on | [API at a glance](#api-at-a-glance) |
-| **Logs** | Each step's state, elapsed time and the platform's failure reason verbatim, streamed over SSE and kept per run | [Known limitations](#%EF%B8%8F-known-limitations-v1) |
+| **Logs** | Every run writes its own log (dispatch, each step start and end with its duration, the platform's failure reason verbatim, joins that stopped a step, who asked to cancel, targets that stopped answering, the outcome); a *Runs* screen finds any past run by flow and outcome, and *Export* saves one as a file | [Runs and run log](#runs-and-run-log), [spec 012](specs/012-run-log-history/) |
 | **Permissions** | Every call runs with the operator's own IRIS credential; the platform's refusal is shown verbatim, never reinterpreted | [How it works](#%EF%B8%8F-how-it-works) |
 | **Distributed work** | A flow step can run on another IRIS instance (a *target server*), tracked and with its result collected on the primary | [DPI-I-588](#-implements-dpi-i-588-distributed-work-manager) |
 
@@ -235,6 +235,20 @@ scripts/demo/up.sh
    for the whole run.
 
 The **Dark / Light** switch in the top bar changes theme on every screen.
+
+### Runs and run log
+
+- **RUN LOG** in the run view tells the run's story, oldest first: who dispatched it, each step
+  starting and finishing (with its duration), the platform's failure reason in quotes, a join
+  that kept a step from starting (naming the input), cancel/pause/re-run requests and their
+  answer, a target that stopped or started answering again, and the outcome.
+- The **Runs** tab lists runs newest first, 50 at a time (*Load more*), with flow, outcome, start,
+  duration, who dispatched it and step counts. Filter by flow and outcome; the filters live in the
+  address. *More → Run history* on a flow opens the list filtered to it. A finished run opens
+  read-only, with *Back to runs*.
+- *Export* in any run view saves `<flow>-<run>.json`: the run, every step with its result and
+  failure reason, and the log. Nothing from the session is in it.
+- API: `GET /csp/sentai/api/v1/runs?flowId=&state=&limit=&before=` (spec 012 contract).
 
 ### The Task catalog screen
 
@@ -626,10 +640,10 @@ sentai-task/
 * [x] **009**: Target servers in the canvas: Targets screen, *Run on*, target passwords at *Run now*, where each step runs
 * [x] **010**: Onboarding: *Open flow…*, *Save as…*, sign-in kept across reloads, a ready-made example flow and a getting-started guide
 * [x] **011**: Demo readiness: a public demo that stays up (proxy, secured accounts, least-privilege demo account, daily reset), this README's first screen, and a warning before a cancel that makes IRIS raise an alert
+* [x] **012**: Run log and run history: every run tells its own story, past runs are one click away, and any run exports as a file
 
 ### 🚧 Next
 
-* [ ] **012**: Run log and run history: every run tells its own story, and past runs are one click away
 * [ ] **013**: Area report steps: security posture, web applications, system alerts and secrets as flow steps, on any server
 * [ ] **014**: Demo media and community article (English and Portuguese)
 * [ ] **015**: Scheduled runs that execute, with the run-as credential kept in the IRIS Wallet

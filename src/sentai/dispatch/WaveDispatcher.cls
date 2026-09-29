@@ -151,7 +151,9 @@ ClassMethod CreateRun(flowId As %String, confirmationsArray As %DynamicArray, di
         Set stepRs2 = ##class(%SQL.Statement).%New()
         Do stepRs2.%Prepare("SELECT id, target FROM sentai_model.Step WHERE flow = ?")
         Set stepResult2 = stepRs2.%Execute(flowId)
+        Set stepCount = 0
         While stepResult2.%Next() {
+            Set stepCount = stepCount + 1
             Set stepId = stepResult2.%Get("id")
             Set stepRun = ##class(sentai.model.StepRun).%New()
             Set stepRun.guid = $SYSTEM.Util.CreateGUID()
@@ -169,6 +171,8 @@ ClassMethod CreateRun(flowId As %String, confirmationsArray As %DynamicArray, di
 
             Do ..IndexStepRun(run.guid, stepId, stepRun.guid)
         }
+        // Spec 012: the run log starts with the dispatch.
+        Do ##class(sentai.dispatch.RunNarrator).Dispatched(run.%Id(), dispatchedBy, flow.revision, stepCount)
 
         TCOMMIT
         Set result = run
@@ -221,7 +225,10 @@ ClassMethod RenewRunCredentialIfDue(runGuid As %String) As %String
 
     Set httpStatus = 0, location = ""
     Set body = ##class(sentai.dispatch.AdminApiClient).Post("/api/admin/refresh", token, {"refresh_token": (refresh)}, .httpStatus, .location)
-    If (httpStatus '= 200) || '$IsObject(body) || (body."access_token" = "") Quit token
+    If (httpStatus '= 200) || '$IsObject(body) || (body."access_token" = "") {
+        Do ##class(sentai.dispatch.RunNarrator).RenewalRefused(runGuid, httpStatus, $S($IsObject(body) && $IsObject(body."status"):body."status"."summary", 1:""))
+        Quit token
+    }
     Do ..StoreRunCredential(runGuid, body."access_token", body."refresh_token")
     Quit body."access_token"
 }
@@ -229,9 +236,22 @@ ClassMethod RenewRunCredentialIfDue(runGuid As %String) As %String
 /// Seconds a target is left alone after it failed to answer (research R-12; quickstart (e)).
 Parameter TARGETBACKOFFSECONDS = 30;
 
-ClassMethod MarkTargetFailed(runGuid As %String, target As %String)
+ClassMethod MarkTargetFailed(runGuid As %String, target As %String, transportError As %String = "")
 {
     Set ^IRIS.Temp.sentaiTargetCred(runGuid, "%failAt", target) = ..NowSeconds()
+    // Spec 012 D-3: one log entry per outage, not one per attempt.
+    If '$D(^IRIS.Temp.sentaiTargetCred(runGuid, "%down", target)) {
+        Set ^IRIS.Temp.sentaiTargetCred(runGuid, "%down", target) = 1
+        Do ##class(sentai.dispatch.RunNarrator).TargetDown(runGuid, target, transportError)
+    }
+}
+
+/// Spec 012 D-3: a target answered; closes its outage in the log, if one was open.
+ClassMethod MarkTargetAnswered(runGuid As %String, target As %String)
+{
+    Quit:'$D(^IRIS.Temp.sentaiTargetCred(runGuid, "%down", target))
+    Kill ^IRIS.Temp.sentaiTargetCred(runGuid, "%down", target)
+    Do ##class(sentai.dispatch.RunNarrator).TargetUp(runGuid, target)
 }
 
 ClassMethod TargetBackingOff(runGuid As %String, target As %String) As %Boolean
@@ -299,7 +319,8 @@ ClassMethod RenewTargetCredentialsIfDue(runGuid As %String)
         Set entry = ^IRIS.Temp.sentaiTargetCred(runGuid, name)
         Continue:((..NowSeconds() - $LG(entry, 3)) < ..#RENEWAFTERSECONDS)
         Set body = ##class(sentai.dispatch.AdminApiClient).Post("/api/admin/refresh", "", {"refresh_token": ($LG(entry, 2))}, .httpStatus, .location, $LG(entry, 5), .transportError)
-        Do:(transportError '= "") ..MarkTargetFailed(runGuid, name)
+        Do:(transportError '= "") ..MarkTargetFailed(runGuid, name, transportError)
+        Do:(transportError = "") ..MarkTargetAnswered(runGuid, name)
         Continue:((transportError '= "") || (httpStatus '= 200) || '$IsObject(body) || (body."access_token" = ""))
         Set ^IRIS.Temp.sentaiTargetCred(runGuid, name) = $LB(body."access_token", body."refresh_token", ..NowSeconds(), $LG(entry, 4), $LG(entry, 5))
     }
@@ -385,19 +406,25 @@ ClassMethod ComputeEligibleSteps(runGuid As %String, ByRef anyFailed As %Boolean
         Set edgeRs = ##class(%SQL.Statement).%New()
         Do edgeRs.%Prepare("SELECT source FROM sentai_model.Edge WHERE flow = ? AND target = ?")
         Set edgeResult = edgeRs.%Execute(flowId, stepId)
-        Set allSourcesTerminal = 1, anySourceFailed = 0, sourceCount = 0
+        Set allSourcesTerminal = 1, anySourceFailed = 0, sourceCount = 0, failedInput = "", failedState = ""
         While edgeResult.%Next() {
             Set sourceCount = sourceCount + 1
             Set srcRun = ##class(sentai.model.StepRun).OpenForRunStep(run.%Id(), edgeResult.%Get("source"), 0)
             If '$IsObject(srcRun) { Set allSourcesTerminal = 0 Continue }
             If '$LISTFIND($LB("completed", "failed", "cancelled"), srcRun.state) Set allSourcesTerminal = 0
-            If $LISTFIND($LB("failed", "cancelled"), srcRun.state) Set anySourceFailed = 1
+            If $LISTFIND($LB("failed", "cancelled"), srcRun.state) {
+                Set anySourceFailed = 1
+                // The lowest failed input id, so the entry does not depend on edge order.
+                Set:((failedInput = "") || (failedInput ]] srcRun.stepId)) failedInput = srcRun.stepId, failedState = srcRun.state
+            }
         }
 
         If (sourceCount > 0) && 'allSourcesTerminal Continue
 
         If (sourceCount > 0) && anySourceFailed {
             // ALL_MUST_SUCCEED: any required input failing fails the target directly (FR-021).
+            // Spec 012 D-5: the log names the input; the step's reason stays the contracted text.
+            Do ##class(sentai.dispatch.RunNarrator).JoinBlocked(run.%Id(), stepId, failedInput, failedState)
             Do stepRun.TransitionTo("failed", "One or more required inputs failed")
             Set anyFailed = 1
             Continue
@@ -523,9 +550,10 @@ ClassMethod ExecuteStepAsync(stepRunGuid As %String) As %Status
     Do ##class(sentai.dispatch.AdminApiClient).Post(endpoint, token, {}, .httpStatus, .location, base, .transportError)
 
     If (transportError '= "") {
-        Do:(base '= "") ..MarkTargetFailed(run.guid, target)
+        Do:(base '= "") ..MarkTargetFailed(run.guid, target, transportError)
         Do stepRun.TransitionTo("failed", $S(base '= "":"Target '"_target_"' did not answer: ", 1:"")_transportError)
     } ElseIf (httpStatus = 202) && (location '= "") {
+        Do:(base '= "") ..MarkTargetAnswered(run.guid, target)
         Set stepRun.adminJobId = location
         Set:(base '= "") stepRun.executedAs = ..TargetSub(run.guid, target)
         Do stepRun.%Save()
@@ -565,10 +593,11 @@ ClassMethod PollInFlightSteps(run As sentai.model.Run, bearerToken As %String) A
         // timeout and reports this text (spec 008 FR-016, research R-12).
         If (transportError '= "") {
             Set ^IRIS.Temp.sentaiTargetCred(run.guid, "%lastError", stepRun.guid) = transportError
-            Do:(base '= "") ..MarkTargetFailed(run.guid, stepRun.executedOn)
+            Do:(base '= "") ..MarkTargetFailed(run.guid, stepRun.executedOn, transportError)
             Continue
         }
         Kill ^IRIS.Temp.sentaiTargetCred(run.guid, "%lastError", stepRun.guid)
+        Do:(base '= "") ..MarkTargetAnswered(run.guid, stepRun.executedOn)
         // A 4xx is permanent for this run (e.g. 401 once the 60 s credential expired, E-1):
         // fail the step with the status recorded instead of polling a job we can no longer
         // read, which left the step — and the run — "running" forever. 5xx/network: retry.
@@ -620,6 +649,8 @@ ClassMethod FinalizeRun(run As sentai.model.Run) As %Status
     Set run.finishedAt = $ZDATETIME($HOROLOG, 3)
     Set sc = run.%Save()
     If $$$ISERR(sc) Return sc
+    // Spec 012: the log ends with the outcome.
+    Do ##class(sentai.dispatch.RunNarrator).Finished(run)
     // Credentials never outlive the run they were issued for.
     Do ..EraseRunCredential(run.guid)
     Return ##class(sentai.model.Run).BumpEventVersionFor(run.%Id())
@@ -736,6 +767,9 @@ ClassMethod RerunStep(runGuid As %String, stepGuid As %String, ByRef newStepRunG
     If $$$ISERR(sc) Quit sc
 
     Do ..IndexStepRun(runGuid, oldStepRun.stepId, newStepRun.guid)
+    Set runId = oldStepRun.runGetObjectId(), sid = oldStepRun.stepId, attempts = 0
+    &sql(SELECT COUNT(*) INTO :attempts FROM sentai_model.StepRun WHERE run = :runId AND stepId = :sid)
+    Do ##class(sentai.dispatch.RunNarrator).RerunQueued(runId, sid, attempts)
     Set newStepRunGuid = newStepRun.guid
     Quit $$$OK
 }

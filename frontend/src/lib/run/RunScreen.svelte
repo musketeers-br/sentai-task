@@ -21,6 +21,8 @@
 	import RunNode from './RunNode.svelte';
 	import CancelAlertNotice from './CancelAlertNotice.svelte';
 	import { cancelRaisesAlert } from './cancel-alert';
+	import { chronological, EMPTY_LOG_TEXT, severityLabel } from './log';
+	import { buildRunExport, exportFileName } from './export';
 	import {
 		STEP_STATES,
 		countLine,
@@ -36,8 +38,16 @@
 		guid,
 		flow,
 		registry,
-		onback
-	}: { guid: string; flow: FlowDocument; registry: StepTypeInfo[]; onback: () => void } = $props();
+		onback,
+		backLabel = 'Back to flow'
+	}: {
+		guid: string;
+		flow: FlowDocument;
+		registry: StepTypeInfo[];
+		onback: () => void;
+		/** Spec 012 D-7: "Back to runs" when the run was opened from the Runs screen. */
+		backLabel?: string;
+	} = $props();
 
 	// svelte-ignore state_referenced_locally
 	const monitor = setRunContext(new RunMonitor(guid));
@@ -76,6 +86,31 @@
 	const stepName = (stepId: string) => flow.steps.find((s) => s.id === stepId)?.taskName ?? `#${stepId}`;
 
 	let confirmDialog: HTMLDialogElement;
+
+	// Spec 012 D-9: oldest first; while live, the newest line stays in view unless the operator
+	// scrolled up to read.
+	const logLines = $derived(chronological(run?.log ?? []));
+	let logBox = $state<HTMLDivElement>();
+	let followLog = true;
+	function onLogScroll() {
+		if (logBox) followLog = logBox.scrollTop + logBox.clientHeight >= logBox.scrollHeight - 8;
+	}
+	$effect(() => {
+		void logLines.length;
+		if (live && followLog && logBox) logBox.scrollTop = logBox.scrollHeight;
+	});
+
+	// Spec 012 US3: the run as a file, exactly what this view shows (FR-013, FR-014).
+	function exportRun() {
+		if (!run) return;
+		const data = JSON.stringify(buildRunExport(run, flow.name, new Date()), null, 2);
+		const url = URL.createObjectURL(new Blob([data], { type: 'application/json' }));
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = exportFileName(flow.name, run.guid);
+		a.click();
+		setTimeout(() => URL.revokeObjectURL(url), 1000);
+	}
 </script>
 
 <div class="run-screen">
@@ -89,7 +124,8 @@
 		<span class="flow-name">{flow.name}</span>
 		<span class="faint mono">run {shortGuid}</span>
 		<span class="spacer"></span>
-		<button type="button" class="quiet" onclick={onback}>Back to flow</button>
+		<button type="button" class="quiet" onclick={onback}>{backLabel}</button>
+		<button type="button" class="quiet" disabled={!run} onclick={exportRun} data-testid="export-run">Export</button>
 		<button type="button" class="pause" disabled={!live || monitor.busy} onclick={() => monitor.pauseRun()}>
 			<StateShape state="paused" size={10} /> Pause wave
 		</button>
@@ -186,11 +222,14 @@
 
 			<section class="log-section">
 				<h2 class="label">RUN LOG</h2>
-				<div class="log">
-					{#each run?.log ?? [] as entry, i (i)}
-						<div class={`log-line ${entry.severity}`}>{timeOfDay(entry.at)} · {entry.stepId ? `#${entry.stepId} ` : ''}{entry.message}</div>
+				<div class="log" bind:this={logBox} onscroll={onLogScroll} data-testid="run-log">
+					{#each logLines as entry, i (i)}
+						<div class={`log-line ${entry.severity}`} data-testid="log-line">
+							<span class="sev">{severityLabel(entry.severity)}</span>
+							{timeOfDay(entry.at)} · {entry.message}
+						</div>
 					{:else}
-						<div class="faint">No log entries recorded for this run.</div>
+						<div class="faint">{run ? EMPTY_LOG_TEXT : ''}</div>
 					{/each}
 				</div>
 			</section>
@@ -529,6 +568,26 @@
 		background: var(--color-card);
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius-control);
+	}
+
+	.log {
+		max-height: 320px;
+		overflow: auto;
+	}
+
+	.log-line {
+		white-space: pre-wrap;
+		overflow-wrap: anywhere;
+	}
+
+	.sev {
+		display: inline-block;
+		min-width: 5ch;
+		font-weight: 700;
+	}
+
+	.log-line.warning {
+		color: var(--state-text-paused);
 	}
 
 	.log-line.error {

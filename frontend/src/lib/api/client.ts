@@ -1,5 +1,6 @@
 // Typed calls to SENTAI.REST.Dispatcher (contracts/openapi.yaml). Every predictable failure
 // comes back as a value, and the platform's own words are kept verbatim (Constitution III, IV).
+import { fromWireRunSummary, pageParams, type RunSummaryView, type RunsQuery } from '$lib/runs/runs';
 import {
 	catalogQuery,
 	fromWireCatalogPage,
@@ -205,6 +206,13 @@ export const api = {
 				run.authorization
 			),
 			(r) => ({ guid: String(r.guid) })
+		);
+	},
+
+	/** Spec 012 US2: one page of runs, newest first; `before` is the last seq already shown. */
+	async listRuns(query: RunsQuery, before: number | null): Promise<ApiResult<RunSummaryView[]>> {
+		return map(await request<Record<string, unknown>[]>('GET', `/runs?${pageParams(query, before)}`), (list) =>
+			list.map(fromWireRunSummary)
 		);
 	},
 

@@ -94,6 +94,10 @@ SentaiTask v1 only promises what was proven on IRIS 2026.2 (spec `004-backend-ha
   database or journal directory has less than 10% free; that run is a real finding, not a defect.
   The example is identified by its name: renaming it and choosing *Open example flow* again creates
   a new one under the well-known name.
+- **Run log (spec 012).** Runs dispatched before this version have no log; the run view says so.
+  The SSE stream still emits only `step-state-changed` and `run-terminal`: the `log-entry` event of
+  spec 003's protocol was never implemented, and the canvas reads the log by polling the run.
+  Log times are the primary's, when the product observed the fact.
 - **Public demo (spec 011).** The demo account `sentai-demo` holds no security administration,
   so security reads are refused verbatim by design. The privileges an integrity check needs
   (`%Admin_Manage`, write on IRISSYS) also let the platform run the task-history purge and change

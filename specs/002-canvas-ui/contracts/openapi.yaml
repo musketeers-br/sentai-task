@@ -167,16 +167,25 @@ paths:
   /runs:
     get:
       tags: [runs]
-      summary: List runs
+      summary: List runs, newest first, a page at a time (spec 012)
       parameters:
         - { name: flowId, in: query, schema: { type: string } }
-        - { name: limit, in: query, schema: { type: integer, default: 50 } }
+        - { name: state, in: query, schema: { type: string, enum: [running, completed, failed, cancelled] } }
+        - { name: limit, in: query, schema: { type: integer, default: 50, minimum: 1, maximum: 200 } }
+        - name: before
+          in: query
+          description: Stable cursor — the `seq` of the last run already shown.
+          schema: { type: integer, minimum: 1 }
       responses:
         "200":
-          description: OK
+          description: OK (fewer than `limit` items means there is no next page)
           content:
             application/json:
-              schema: { type: array, items: { $ref: "#/components/schemas/Run" } }
+              schema: { type: array, items: { $ref: "#/components/schemas/RunSummary" } }
+        "400":
+          description: LIMIT_OUT_OF_RANGE, STATE_UNKNOWN or CURSOR_INVALID
+        "403":
+          description: The platform refused the read (SQLCODE -99), its message verbatim in `detail`
 
   /runs/{runGuid}:
     parameters: [ { $ref: "#/components/parameters/RunGuid" } ]
@@ -460,6 +469,25 @@ components:
         startedAt: { type: string, format: date-time }
         finishedAt: { type: string, format: date-time, nullable: true }
         dispatchedBy: { type: string }
+
+    RunSummary:
+      allOf:
+        - $ref: "#/components/schemas/Run"
+        - type: object
+          properties:
+            seq: { type: integer, description: "Stable cursor; pass as `before` for the next page." }
+            flowName: { type: string, description: "The flow's current name." }
+            totalDurationMs: { type: integer }
+            stepCounts:
+              type: object
+              description: Over the latest attempt of each step.
+              properties:
+                queued: { type: integer }
+                running: { type: integer }
+                paused: { type: integer }
+                completed: { type: integer }
+                failed: { type: integer }
+                cancelled: { type: integer }
 
     RunDetail:
       allOf:
