@@ -52,8 +52,8 @@ count); articles claim only merged work; publishing and Open Exchange edits are 
 
 - [X] T011 [US4] README: replace `assets/sentai-run.png` (spec 011) with `assets/media/sentai-run.gif` in place, with an `alt` text describing the flow; run spec 011's `acceptance.sh --readme` (links and order still pass).
 - [X] T012 [US4] `docs/articles/publish-checklist.md` (quickstart 3), including "confirm the contest rules allow it" and "confirm with the user before any outward-facing action".
-- [ ] T013 [US4] Team actions, each confirmed with the user first: upload the video; publish EN (target 2026-09-30) and PT (target 2026-10-01); paste the URLs into the README "Try it" block, both front matters and the Open Exchange description. Record the URLs and dates in the evidence README (SC-005).
-- [ ] T014 On 2026-10-04 the team records the Open Exchange page views (SC-004) in the evidence README.
+- [ ] T013 [external] [US4] Team actions, each confirmed with the user first: upload the video; publish EN (target 2026-09-30) and PT (target 2026-10-01); paste the URLs into the README "Try it" block, both front matters and the Open Exchange description. Record the URLs and dates in the evidence README (SC-005).
+- [ ] T014 [external] On 2026-10-04 the team records the Open Exchange page views (SC-004) in the evidence README.
 
 ## Dependencies
 
