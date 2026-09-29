@@ -16,14 +16,17 @@ test('us23 — a demo instance shows the demo account and the showcase hint', as
 	await expect(hint).toContainText('Open flow');
 });
 
-test('us23 — a normal installation (no demo.json) shows no hint', async ({ page }) => {
-	let asked = false;
-	await page.route('**/csp/sentai/demo.json', (route) => {
-		asked = true;
-		return route.fulfill({ status: 404, body: 'Not found' });
+test('us23 — a normal installation (the shipped demo.json says demo: false) shows no hint and logs no error', async ({ page }) => {
+	// A 404 would be logged as a console error on every sign-in screen; the build ships a neutral
+	// file instead, which the public demo's up.sh overwrites.
+	const errors: string[] = [];
+	page.on('console', (m) => {
+		if (m.type() === 'error') errors.push(m.text());
 	});
+	const answered = page.waitForResponse('**/csp/sentai/demo.json');
 	await page.goto(entry());
+	expect((await answered).status()).toBe(200);
 	await expect(page.getByLabel('User')).toBeVisible();
-	await expect.poll(() => asked).toBe(true);
 	await expect(page.getByTestId('demo-hint')).toHaveCount(0);
+	expect(errors).toEqual([]);
 });

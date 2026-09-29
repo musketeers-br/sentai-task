@@ -1,7 +1,8 @@
 // Spec 011 US3 (plan D-13, data-model §2): the public demo writes `demo.json` beside the page with
-// the published demo account and the showcase flow's name. A normal installation has no such
-// file (404), and anything malformed counts as "not a demo" — the sign-in screen then shows
-// nothing extra. Data only: nothing in it is evaluated or trusted beyond being displayed.
+// the published demo account and the showcase flow's name. A normal installation ships a neutral
+// `{"demo": false}` (static/demo.json; a 404 would log a console error on every sign-in screen),
+// and anything malformed counts as "not a demo" — the sign-in screen then shows nothing extra.
+// Data only: nothing in it is evaluated or trusted beyond being displayed.
 export interface DemoInfo {
 	account: string;
 	password: string;
