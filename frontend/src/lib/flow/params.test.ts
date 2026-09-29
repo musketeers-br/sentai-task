@@ -43,6 +43,17 @@ describe('step types from the API (spec 007 T007)', () => {
 		expect(groups.find((g) => g.id === 'verification')!.types.map((t) => t.type)).toEqual(['integrity-check']);
 	});
 
+	it('spec 013: report types go by their category (Security, Monitoring), never under Custom', () => {
+		const withReports = fromWireStepTypes([
+			...wireCatalog,
+			{ type: 'security-posture-report', label: 'Security posture report', class: 'sentai.steps.reports.SecurityPosture', category: 'security', executor: 'platform-read', destructive: false, pausable: false, available: true, remoteCapable: true, parameters: [] },
+			{ type: 'system-alerts-check', label: 'System alerts check', class: 'sentai.steps.reports.SystemAlerts', category: 'monitoring', executor: 'platform-read', destructive: false, pausable: false, available: true, remoteCapable: true, parameters: [] }
+		]);
+		const groups = paletteGroups(withReports);
+		expect(groups.map((g) => g.id)).toEqual(['verification', 'security', 'monitoring', 'custom']);
+		expect(groups.find((g) => g.id === 'security')!.types.map((t) => t.executor)).toEqual(['platform-read']);
+	});
+
 	it('names a new step after the API label and copies no default for a declared schema (R-7)', () => {
 		const step = createStep(info('storage-headroom-check'), '01', 'Default');
 		expect(step.taskName).toBe('Storage headroom check');

@@ -456,6 +456,10 @@ ClassMethod StartStep(run As sentai.model.Run, stepId As %String) As %Status
     If (##class(sentai.registry.StepType).GetExecutor(step.type) = "in-process") {
         Quit ..StartInProcessStep(stepRun.guid, category)
     }
+    // Spec 013: a report step reads the platform on a worker, with the in-process lifecycle.
+    If (##class(sentai.registry.StepType).GetExecutor(step.type) = "platform-read") {
+        Quit ..StartInProcessStep(stepRun.guid, category, "##class(sentai.dispatch.ReadExecutor).Run")
+    }
     // The Work Queue Manager API is %SYSTEM.WorkMgr; the category must already exist on the
     // platform. A refusal fails this step with the platform's own message (FR-023) instead of
     // killing the background loop.
@@ -480,7 +484,7 @@ ClassMethod StartStep(run As sentai.model.Run, stepId As %String) As %Status
 /// pass never re-enqueues it and its timeout counts the wait for a worker. The work is queued on
 /// a new WorkMgr group of the step's category — its ceilings apply as for integrity checks — and
 /// detached, never Sync'd: InProcessExecutor.Run writes the terminal state from the worker.
-ClassMethod StartInProcessStep(stepRunGuid As %String, category As %String) As %Status
+ClassMethod StartInProcessStep(stepRunGuid As %String, category As %String, entry As %String = "##class(sentai.dispatch.InProcessExecutor).Run") As %Status
 {
     Set sc = ##class(sentai.model.StepRun).TransitionLocked(stepRunGuid, "running")
     Quit:$$$ISERR(sc) sc
@@ -488,7 +492,8 @@ ClassMethod StartInProcessStep(stepRunGuid As %String, category As %String) As %
     If '$IsObject(queueMgr) {
         Quit ##class(sentai.model.StepRun).TransitionLocked(stepRunGuid, "failed", $SYSTEM.Status.GetErrorText($GET(%objlasterror)))
     }
-    Set sc = queueMgr.Queue("##class(sentai.dispatch.InProcessExecutor).Run", stepRunGuid)
+    // `entry` is one of the two fixed worker entry points above, never a name from input.
+    Set sc = queueMgr.Queue(entry, stepRunGuid)
     If $$$ISOK(sc) Set sc = queueMgr.Detach(.token, 86400)
     If $$$ISERR(sc) {
         Quit ##class(sentai.model.StepRun).TransitionLocked(stepRunGuid, "failed", $SYSTEM.Status.GetErrorText(sc))
@@ -514,7 +519,8 @@ ClassMethod SweepTimeouts(run As sentai.model.Run) As %Status
         // In-process steps (spec 005) and remote steps (spec 008 FR-016): a local platform job
         // keeps today's behaviour, followed until the platform ends it.
         Set remote = (result.%Get("targetBaseUrl") '= "")
-        Continue:('remote && (##class(sentai.registry.StepType).GetExecutor(result.%Get("type")) '= "in-process"))
+        // Spec 013: report steps (platform-read) are worker-run too, so they time out the same way.
+        Continue:('remote && (##class(sentai.registry.StepType).GetExecutor(result.%Get("type")) = "platform-api"))
         Set started = result.%Get("timeStarted")
         Continue:(started = "")
         Set minutes = +result.%Get("timeoutMinutes")

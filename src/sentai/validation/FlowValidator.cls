@@ -89,7 +89,8 @@ ClassMethod Validate(flowId As %String, bearerToken As %String = "", targetToken
             // Spec 005: in-process types — the step's parameters against the declared schema, and
             // the catalog's class installed. (purge-audit-records declares its schema for the
             // canvas only and keeps the rule above.)
-            If (##class(sentai.registry.StepType).GetExecutor(type) = "in-process") {
+            // Spec 013: report types (platform-read) declare parameters too.
+            If $LISTFIND($LB("in-process", "platform-read"), ##class(sentai.registry.StepType).GetExecutor(type)) {
                 Do ..DeclaredStepFindings(stepId, type, ##class(sentai.registry.StepType).GetParameterSchema(type), step.parameters, ##class(sentai.registry.StepType).GetTargetClass(type), errors)
             }
         }
@@ -179,7 +180,8 @@ ClassMethod DeclaredStepFindings(stepId As %String, type As %String, schema As %
         }
     }
 
-    If '##class(sentai.registry.StepType).ClassIsInstalled(className) {
+    // Each executor's notion of "installed" applies (spec 013: a Report subclass).
+    If '##class(sentai.registry.StepType).ClassIsInstalledFor(type, className) {
         Do errors.%Push({"stepId": (stepId), "code": "STEP_TYPE_NOT_SUPPORTED_ON_TARGET", "message": ("Step type '"_type_"' is not supported on the target platform: its declared class is not installed")})
     }
 }

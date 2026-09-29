@@ -33,6 +33,27 @@ XData Catalog [ MimeType = application/json ]
     ] },
   { "type": "db-size-report",         "label": "Database size report",   "class": "sentai.steps.DatabaseSizeReport",   "category": "verification", "executor": "in-process",   "destructive": false, "pausable": false, "available": true ,
     "parameters": [] },
+  { "type": "security-posture-report", "label": "Security posture report", "class": "sentai.steps.reports.SecurityPosture", "category": "security", "executor": "platform-read", "destructive": false, "pausable": false, "available": true,
+    "parameters": [
+      { "name": "failOnFindings", "property": "FailOnFindings", "type": "boolean", "required": false, "default": false,
+        "description": "Fail the step when any high finding exists" }
+    ] },
+  { "type": "web-app-inventory",      "label": "Web application inventory", "class": "sentai.steps.reports.WebAppInventory", "category": "security", "executor": "platform-read", "destructive": false, "pausable": false, "available": true,
+    "parameters": [
+      { "name": "failOnFindings", "property": "FailOnFindings", "type": "boolean", "required": false, "default": false,
+        "description": "Fail the step when any high finding exists" }
+    ] },
+  { "type": "system-alerts-check",    "label": "System alerts check",    "class": "sentai.steps.reports.SystemAlerts",  "category": "monitoring",   "executor": "platform-read", "destructive": false, "pausable": false, "available": true,
+    "parameters": [
+      { "name": "maxSeriousAlerts", "property": "MaxSeriousAlerts", "type": "integer", "required": false, "default": 0, "min": 0,
+        "description": "Fail when the platform reports more serious alerts than this" },
+      { "name": "maxApplicationErrors", "property": "MaxApplicationErrors", "type": "integer", "required": false, "default": 0, "min": 0,
+        "description": "Fail when the platform reports more application errors than this" },
+      { "name": "requireNormalStatus", "property": "RequireNormalStatus", "type": "boolean", "required": false, "default": true,
+        "description": "Fail when any system resource status is not Normal" }
+    ] },
+  { "type": "secrets-inventory",      "label": "Secrets inventory",      "class": "sentai.steps.reports.SecretsInventory", "category": "security", "executor": "platform-read", "destructive": false, "pausable": false, "available": true,
+    "parameters": [] },
   { "type": "custom",                 "label": "Custom (legacy)",        "class": "",                                  "category": "custom",       "executor": "platform-api", "destructive": false, "pausable": false, "available": false }
 ]
 }
@@ -48,7 +69,8 @@ ClassMethod GetCatalog() As %DynamicArray
     // `custom`, which names no endpoint.
     Set iter = catalog.%GetIterator()
     While iter.%GetNext(.key, .entry) {
-        Do entry.%Set("remoteCapable", (entry.executor = "platform-api") && (entry.type '= "custom"), "boolean")
+        // Spec 013: report steps read the management API too, so they run on targets as well.
+        Do entry.%Set("remoteCapable", ((entry.executor = "platform-api") || (entry.executor = "platform-read")) && (entry.type '= "custom"), "boolean")
     }
     Quit catalog
 }
@@ -184,7 +206,19 @@ ClassMethod DeclaresParameters(type As %String) As %Boolean
 /// Only the catalog's `class` is ever checked — never a name taken from a step.
 ClassMethod IsInstalled(type As %String) As %Boolean
 {
-    Quit ..ClassIsInstalled(..GetTargetClass(type))
+    Quit ..ClassIsInstalledFor(type, ..GetTargetClass(type))
+}
+
+/// Whether `className` is installed as a class of `type`'s executor: spec 013 report types need a
+/// sentai.steps.reports.Report subclass; the others a %SYS.Task.Definition subclass.
+ClassMethod ClassIsInstalledFor(type As %String, className As %String) As %Boolean
+{
+    If (..GetExecutor(type) = "platform-read") {
+        Quit:(className = "") 0
+        Quit:'##class(%Dictionary.CompiledClass).%ExistsId(className) 0
+        Quit ''$CLASSMETHOD(className, "%Extends", "sentai.steps.reports.Report")
+    }
+    Quit ..ClassIsInstalled(className)
 }
 
 /// A class counts as installed when it is compiled and extends %SYS.Task.Definition.

@@ -20,6 +20,7 @@
 	import { RunMonitor, setRunContext } from './monitor.svelte';
 	import RunNode from './RunNode.svelte';
 	import CancelAlertNotice from './CancelAlertNotice.svelte';
+	import ResultPanel from './ResultPanel.svelte';
 	import { cancelRaisesAlert } from './cancel-alert';
 	import { chronological, EMPTY_LOG_TEXT, severityLabel } from './log';
 	import { buildRunExport, exportFileName } from './export';
@@ -210,6 +211,16 @@
 					{/each}
 				</ul>
 			</section>
+
+			{#if monitor.resultFor && monitor.stepFor(monitor.resultFor)}
+				{@const shown = monitor.stepFor(monitor.resultFor)!}
+				<ResultPanel
+					stepId={shown.stepId}
+					name={stepName(shown.stepId)}
+					result={shown.result}
+					onclose={() => (monitor.resultFor = null)}
+				/>
+			{/if}
 
 			<section>
 				<h2 class="label">STATES — SHAPE BEFORE COLOUR</h2>

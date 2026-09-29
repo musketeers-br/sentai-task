@@ -12,6 +12,7 @@
 	import { formatDuration, isTerminal, stepDurationMs, timeOfDay } from './run';
 	import CancelAlertNotice from './CancelAlertNotice.svelte';
 	import { stepCancelRaisesAlert } from './cancel-alert';
+	import { hasResult } from './result';
 
 	let { id, data }: NodeProps<RunFlowNode> = $props();
 
@@ -113,12 +114,20 @@
 				<button type="button" class="action danger" disabled={monitor.busy} onclick={cancel} title={CANCEL_TITLE}>Cancel</button>
 			{:else if state === 'failed'}
 				<span class="mono">failed at {duration === null ? '—' : formatDuration(duration)}</span>
+				{#if sr && hasResult(state, sr.result)}
+					<button type="button" class="action" onclick={() => (monitor.resultFor = id)}>Result</button>
+				{/if}
 				{#if runLive}
 					<button type="button" class="action" disabled={monitor.busy} onclick={() => sr && monitor.rerunStep(sr.guid)}>Re-run step</button>
 				{/if}
 			{:else}
 				<span class="mono">{duration === null ? '—' : formatDuration(duration)}</span>
-				<span class="mono" title={sr?.guid}>GUID {shortGuid}</span>
+				{#if sr && hasResult(state, sr.result)}
+					<!-- Spec 013 FR-012: every stored result is reachable from the run view. -->
+					<button type="button" class="action" onclick={() => (monitor.resultFor = id)}>Result</button>
+				{:else}
+					<span class="mono" title={sr?.guid}>GUID {shortGuid}</span>
+				{/if}
 			{/if}
 		</footer>
 	</div>

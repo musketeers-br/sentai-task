@@ -1,6 +1,6 @@
 import { joinTargets, type EdgeRef } from './graph';
 
-export type StepCategory = 'verification' | 'storage' | 'journal' | 'purge' | 'backup' | 'custom';
+export type StepCategory = 'verification' | 'security' | 'monitoring' | 'storage' | 'journal' | 'purge' | 'backup' | 'custom';
 
 /** One entry of the backend's closed step-type registry (GET /catalog/step-types). */
 export interface StepTypeInfo {
@@ -15,8 +15,11 @@ export interface StepTypeInfo {
 	remoteCapable?: boolean;
 	/** Spec 005: the API's name for the type (absent in a pre-005 catalog). */
 	label?: string;
-	/** Spec 005: how it executes; `in-process` types form the palette's *Custom* group. */
-	executor?: 'platform-api' | 'in-process';
+	/**
+	 * Spec 005: how it executes; `in-process` types form the palette's *Custom* group. Spec 013:
+	 * `platform-read` types read the management API of the instance the step runs on and report.
+	 */
+	executor?: 'platform-api' | 'in-process' | 'platform-read';
 	/** Spec 005: the declared parameter schema; `[]` = takes no parameters; absent = none declared. */
 	parameters?: ParameterSpec[];
 }
@@ -100,7 +103,7 @@ export interface PaletteGroup {
 	types: StepTypeInfo[];
 }
 
-const GROUP_ORDER: StepCategory[] = ['verification', 'storage', 'journal', 'purge', 'backup', 'custom'];
+const GROUP_ORDER: StepCategory[] = ['verification', 'security', 'monitoring', 'storage', 'journal', 'purge', 'backup', 'custom'];
 
 /**
  * Palette groups (spec 007 D-6, Clarifications Q1): every in-process type and the legacy `custom`

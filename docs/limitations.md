@@ -94,6 +94,12 @@ SentaiTask v1 only promises what was proven on IRIS 2026.2 (spec `004-backend-ha
   database or journal directory has less than 10% free; that run is a real finding, not a defect.
   The example is identified by its name: renaming it and choosing *Open example flow* again creates
   a new one under the well-known name.
+- **Report steps (spec 013).** Reads are instance-wide: the step's namespace is not used. The
+  security report reads the roles of at most 200 enabled accounts (an *info* finding says how
+  many were left out). The platform's `SeriousAlerts` counter is what the dashboard reports; on
+  IRIS 2026.2 it keeps counting severe `messages.log` entries after `$SYSTEM.Monitor.Clear()`, so an
+  instance that raised alerts since it started fails `system-alerts-check` at the default
+  threshold 0 until it restarts or the threshold is raised. Reports never correct anything.
 - **Run log (spec 012).** Runs dispatched before this version have no log; the run view says so.
   The SSE stream still emits only `step-state-changed` and `run-terminal`: the `log-entry` event of
   spec 003's protocol was never implemented, and the canvas reads the log by polling the run.

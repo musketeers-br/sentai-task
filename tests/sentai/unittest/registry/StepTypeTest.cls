@@ -8,7 +8,8 @@ Method TestAllSevenTypesPresent()
     For type = "integrity-check", "compact-globals", "defragment-globals", "switch-journal", "purge-audit-records", "purge-task-history", "custom" {
         Do $$$AssertTrue(##class(sentai.registry.StepType).IsKnownType(type), type)
     }
-    Do $$$AssertEquals(catalog.%Size(), 9)
+    // Spec 013 adds the four report types.
+    Do $$$AssertEquals(catalog.%Size(), 13)
 }
 
 /// Spec 004 D-1 (amended): integrity-check was the only type proven end to end on IRIS 2026.2.
@@ -103,7 +104,7 @@ Method TestEveryEntryHasLabelAndExecutor()
     Set iter = ##class(sentai.registry.StepType).GetCatalog().%GetIterator()
     While iter.%GetNext(.k, .entry) {
         Do $$$AssertTrue(entry.label '= "", entry.type_" has a label")
-        Do $$$AssertTrue($LISTFIND($LB("platform-api", "in-process"), entry.executor), entry.type_" executor = "_entry.executor)
+        Do $$$AssertTrue($LISTFIND($LB("platform-api", "in-process", "platform-read"), entry.executor), entry.type_" executor = "_entry.executor)
     }
     Do $$$AssertEquals(##class(sentai.registry.StepType).GetExecutor("integrity-check"), "platform-api")
     Do $$$AssertEquals(##class(sentai.registry.StepType).GetExecutor("db-size-report"), "in-process")
@@ -199,6 +200,30 @@ Method TestNativeTypesRunInProcess()
     Do $$$AssertEquals(def.min, 0)
     Do $$$AssertTrue(def.description '= "")
     Do $$$AssertEquals(##class(sentai.registry.StepType).IsInstalled("purge-task-history"), 1)
+}
+
+/// Spec 013 FR-001: the four report types are available, non-destructive, not pausable, run
+/// through the platform-read executor, and may run on target servers.
+Method TestReportTypesAreDeclared()
+{
+    For type = "security-posture-report", "web-app-inventory", "system-alerts-check", "secrets-inventory" {
+        Do $$$AssertEquals(##class(sentai.registry.StepType).IsAvailable(type), 1, type)
+        Do $$$AssertEquals(##class(sentai.registry.StepType).IsDestructive(type), 0, type)
+        Do $$$AssertEquals(##class(sentai.registry.StepType).IsPausable(type), 0, type)
+        Do $$$AssertEquals(##class(sentai.registry.StepType).GetExecutor(type), "platform-read", type)
+        Do $$$AssertEquals(##class(sentai.registry.StepType).IsRemoteCapable(type), 1, type)
+        Do $$$AssertEquals(##class(sentai.registry.StepType).IsInstalled(type), 1, type_" class installed")
+    }
+    Do $$$AssertEquals(##class(sentai.registry.StepType).GetCategory("system-alerts-check"), "monitoring")
+    Do $$$AssertEquals(##class(sentai.registry.StepType).GetCategory("security-posture-report"), "security")
+}
+
+/// A report type's class must be a Report subclass; a task class is not accepted for it.
+Method TestReportInstallCheckIsByExecutor()
+{
+    Do $$$AssertEquals(##class(sentai.registry.StepType).ClassIsInstalledFor("system-alerts-check", "sentai.steps.reports.SystemAlerts"), 1)
+    Do $$$AssertEquals(##class(sentai.registry.StepType).ClassIsInstalledFor("system-alerts-check", "sentai.steps.DatabaseSizeReport"), 0)
+    Do $$$AssertEquals(##class(sentai.registry.StepType).ClassIsInstalledFor("db-size-report", "sentai.steps.DatabaseSizeReport"), 1)
 }
 
 }
