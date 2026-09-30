@@ -127,6 +127,14 @@
 		void goto(url, { keepFocus: true, noScroll: true });
 	}
 
+	/** Spec 016: the run view's step detail is addressable (`step=<id>`), so back closes it. */
+	function selectStep(stepId: string | null) {
+		const url = new URL(page.url);
+		if (stepId === null) url.searchParams.delete('step');
+		else url.searchParams.set('step', stepId);
+		void goto(url, { keepFocus: true, noScroll: true });
+	}
+
 	/** The canvas with only that flow open (FR-009). */
 	function flowHref(flowId: string): string {
 		const url = new URL(page.url);
@@ -447,6 +455,8 @@
 			registry={editor.registry}
 			onback={backToFlow}
 			backLabel={page.url.searchParams.get('from') === 'runs' ? 'Back to runs' : 'Back to flow'}
+			step={page.url.searchParams.get('step')}
+			onselectstep={selectStep}
 		/>
 	{/key}
 	{#if session.status === 'expired'}

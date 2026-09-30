@@ -21,6 +21,7 @@
 	import RunNode from './RunNode.svelte';
 	import CancelAlertNotice from './CancelAlertNotice.svelte';
 	import ResultPanel from './ResultPanel.svelte';
+	import StepDetail from './StepDetail.svelte';
 	import { cancelRaisesAlert } from './cancel-alert';
 	import { chronological, EMPTY_LOG_TEXT, severityLabel } from './log';
 	import { buildRunExport, exportFileName } from './export';
@@ -40,7 +41,9 @@
 		flow,
 		registry,
 		onback,
-		backLabel = 'Back to flow'
+		backLabel = 'Back to flow',
+		step = null,
+		onselectstep = () => {}
 	}: {
 		guid: string;
 		flow: FlowDocument;
@@ -48,6 +51,9 @@
 		onback: () => void;
 		/** Spec 012 D-7: "Back to runs" when the run was opened from the Runs screen. */
 		backLabel?: string;
+		/** Spec 016: the addressed step selection (?run=&step=), or null for none. */
+		step?: string | null;
+		onselectstep?: (stepId: string | null) => void;
 	} = $props();
 
 	// svelte-ignore state_referenced_locally
@@ -87,6 +93,19 @@
 	const stepName = (stepId: string) => flow.steps.find((s) => s.id === stepId)?.taskName ?? `#${stepId}`;
 
 	let confirmDialog: HTMLDialogElement;
+
+	// Spec 016 US2: the selection is addressed (?run=&step=); an id the flow does not have is
+	// silently unselected (data-model §5). Node body clicks toggle it; the detail closes it.
+	$effect(() => {
+		monitor.selectedStepId = step !== null && flow.steps.some((s) => s.id === step) ? step : null;
+	});
+	const selectFromCanvas = (nodeId: string, event: MouseEvent | TouchEvent) => {
+		if ((event.target as HTMLElement).closest('button')) return;
+		onselectstep(monitor.selectedStepId === nodeId ? null : nodeId);
+	};
+	const selected = $derived(
+		monitor.selectedStepId !== null ? monitor.stepFor(monitor.selectedStepId) : undefined
+	);
 
 	// Spec 012 D-9: oldest first; while live, the newest line stays in view unless the operator
 	// scrolled up to read.
@@ -170,6 +189,7 @@
 				bind:edges
 				{nodeTypes}
 				{edgeTypes}
+				onnodeclick={({ node, event }) => selectFromCanvas(String(node.id), event)}
 				nodesDraggable={false}
 				nodesConnectable={false}
 				elementsSelectable={false}
@@ -203,16 +223,38 @@
 				<ul class="step-list">
 					{#each steps as s (s.stepId)}
 						{@const d = stepDurationMs(s, monitor.now)}
+						<!-- Spec 016 US2: a row selects its step, like a node click does. -->
 						<li class:running={s.state === 'running'}>
-							<StateShape state={s.state} size={12} label={s.state} />
-							<span class="step-name">#{s.stepId} {stepName(s.stepId)}</span>
-							<span class="mono dur">{d === null ? '—' : formatDuration(d)}</span>
+							<button
+								type="button"
+								class="row"
+								class:selected={monitor.selectedStepId === s.stepId}
+								data-testid="step-row-{s.stepId}"
+								onclick={() => onselectstep(s.stepId)}
+							>
+								<StateShape state={s.state} size={12} label={s.state} />
+								<span class="step-name">#{s.stepId} {stepName(s.stepId)}</span>
+								<span class="mono dur">{d === null ? '—' : formatDuration(d)}</span>
+							</button>
 						</li>
 					{/each}
 				</ul>
 			</section>
 
-			{#if monitor.resultFor && monitor.stepFor(monitor.resultFor)}
+			{#if selected}
+				{@const selectedStep = selected}
+				{#key selectedStep.stepId}
+					<StepDetail
+						step={selectedStep}
+						taskName={stepName(selectedStep.stepId)}
+						log={run?.log ?? []}
+						nowMs={monitor.now}
+						onclose={() => onselectstep(null)}
+					/>
+				{/key}
+			{/if}
+
+			{#if monitor.resultFor && monitor.selectedStepId !== monitor.resultFor && monitor.stepFor(monitor.resultFor)}
 				{@const shown = monitor.stepFor(monitor.resultFor)!}
 				<ResultPanel
 					stepId={shown.stepId}
@@ -532,11 +574,27 @@
 	}
 
 	.step-list li {
+		font-size: var(--size-body);
+	}
+
+	.step-list .row {
 		display: flex;
 		align-items: center;
 		gap: 8px;
-		padding: 3px 0;
-		font-size: var(--size-body);
+		width: 100%;
+		padding: 3px 4px;
+		font: inherit;
+		color: inherit;
+		text-align: left;
+		background: transparent;
+		border: 0;
+		cursor: pointer;
+		border-radius: var(--radius-control);
+	}
+
+	.step-list .row:hover,
+	.step-list .row.selected {
+		background: var(--color-surface);
 	}
 
 	.step-list li.running {
