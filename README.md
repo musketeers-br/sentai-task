@@ -20,6 +20,10 @@ instance and on other IRIS servers, and watch every step live.
   <img src="./assets/media/sentai-run.gif" alt="SentaiTask running a flow: three integrity checks, one of them on a second IRIS server, and two security reports run in parallel, converge on a join, and the final report opens with its findings; then the run log and the run history" width="880">
 </p>
 
+<p align="center">
+  <img src="./assets/media/stills/overview.png" alt="The Overview screen: eleven cards — processes, locks, shared memory, activity, devices, licenses, web sessions, security posture, web applications, system alerts and secrets — each with its headline read now from the instance" width="880">
+</p>
+
 ## 🚀 Try it
 
 - **Public demo**: a stable address is being set up for the voting week; it will be listed here.
@@ -46,7 +50,7 @@ instance and on other IRIS servers, and watch every step live.
 | Management Portal area | What SentaiTask offers | Proof |
 |---|---|---|
 | **Task management** | Flows of tasks with dependencies and fan-in joins; dispatch, live tracking, cancel and rerun per step; native Task Manager catalog with filters, suspend and resume; schedules that run: one native task per flow, running as a run-as account whose password lives in the IRIS Wallet | [How to use](#-how-to-use), [spec 006](specs/006-task-catalog-api/) |
-| **Operating system** | Instance resources on demand: processes (with suspend, resume and terminate), locks, shared memory, activity counters, devices, license use and web sessions — the management API reports no host CPU or memory, so none is shown. Disk: `storage-headroom-check` (Embedded Python) and `db-size-report` as flow steps | [Instance overview](#instance-overview), [spec 018](specs/018-instance-overview-api/), [Declared step types](#declared-step-types) |
+| **Operating system** | Instance resources on demand: processes (with suspend, resume and terminate), locks, shared memory, activity counters, devices, license use and web sessions — the management API reports no host CPU or memory, so none is shown. Disk: `storage-headroom-check` (Embedded Python) and `db-size-report` as flow steps | the [Overview](#overview-the-landing-screen) screen, [spec 018](specs/018-instance-overview-api/), [spec 019](specs/019-canvas-instance-overview/), [Declared step types](#declared-step-types) |
 | **Work Queue Manager** | Read and edit WQM categories, the worker pools every step runs on | [API at a glance](#api-at-a-glance) |
 | **Logs** | Every run writes its own log (dispatch, each step start and end with its duration, the platform's failure reason verbatim, joins that stopped a step, who asked to cancel, targets that stopped answering, the outcome); a *Runs* screen finds any past run by flow and outcome, and *Export* saves one as a file | [Runs and run log](#runs-and-run-log), [spec 012](specs/012-run-log-history/) |
 | **Security and permissions** | `security-posture-report` as a flow step: enabled accounts and their roles, `%All` holders, services open to unauthenticated connections, auditing off, on any server. `permissions-inventory`: every role with the resources it grants, every resource with what the public may do, risky combinations flagged. Every call runs with the operator's own IRIS credential; the platform's refusal is shown verbatim | [Report steps](#report-steps-security-web-applications-alerts-secrets), [spec 013](specs/013-area-report-steps/), [spec 020](specs/020-security-inventory/) |
@@ -265,6 +269,23 @@ scripts/demo/up.sh
 ---
 
 ## 💡 How to Use
+
+### Overview (the landing screen)
+
+After sign-in the canvas opens on **Overview** (spec 019): eleven cards, one per management area,
+read now with your own credential through the [instance overview API](#instance-overview).
+
+- **Instance resources** — *Processes*, *Locks*, *Shared memory*, *Activity*, *Devices*,
+  *Licenses*, *Web sessions*. **Open** shows every row the platform returned as a table you can sort
+  and filter, with an optional *Auto-refresh every 10 s* that pauses while the tab is hidden. On
+  *Processes*, **Suspend**, **Resume** and **Terminate** go to the platform; terminate asks you to
+  type the process id.
+- **Security posture, Web applications, System alerts, Secrets** — the card shows a count; **Run
+  report** runs the spec 013 report on demand and opens it in the same viewer a run uses, and the card
+  keeps its counts until you reload. **Schedule this check** turns it into a one-step flow and opens
+  the schedule dialog.
+- A card the platform refused shows the platform's answer (`HTTP 403 — …`) and the others still load.
+  *Flows* is one click away; every older address (`?flow=`, `?run=`, `?view=…`) opens what it names.
 
 ### On the canvas
 

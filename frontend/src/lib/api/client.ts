@@ -24,6 +24,19 @@ import {
 	type WireTargetStatus
 } from '$lib/targets/targets';
 import type { ValidationReport } from '$lib/flow/report';
+import {
+	fromWireAreaFlow,
+	fromWireOnDemand,
+	fromWireReading,
+	fromWireSummary,
+	type AreaCardView,
+	type CardReport,
+	type ReadingView,
+	type WireAreaFlow,
+	type WireOnDemandReport,
+	type WireReading,
+	type WireSummary
+} from '$lib/overview/overview';
 import { fromWireRun, type RunView } from '$lib/run/run';
 import { session } from './session.svelte';
 import { fromWireScheduleRead, type ScheduleRead, type ScheduleRequest } from '$lib/shell/schedule';
@@ -152,6 +165,34 @@ function map<A, B>(result: ApiResult<A>, fn: (a: A) => B): ApiResult<B> {
 }
 
 export const api = {
+	/** Spec 019 / 018: the 11-area summary; each card carries its own outcome. */
+	async overviewSummary(): Promise<ApiResult<AreaCardView[]>> {
+		return map(await request<WireSummary>('GET', '/overview'), fromWireSummary);
+	},
+
+	/** Spec 019 / 018: one instance reading, read at request time. */
+	async overviewReading(area: string): Promise<ApiResult<ReadingView>> {
+		return map(await request<WireReading>('GET', `/overview/readings/${encodeURIComponent(area)}`), fromWireReading);
+	},
+
+	/** Spec 019 / 018: a report step run on demand (no run is created); 422 → `validation`. */
+	async overviewReport(stepType: string, parameters: Record<string, unknown>): Promise<ApiResult<CardReport>> {
+		return map(
+			await request<WireOnDemandReport>('POST', `/overview/reports/${encodeURIComponent(stepType)}`, { parameters }),
+			fromWireOnDemand
+		);
+	},
+
+	/** Spec 019 / 018: a report area as a validated one-step flow. */
+	async overviewFlow(area: string, parameters: Record<string, unknown>): Promise<ApiResult<{ flowId: string; hasErrors: boolean }>> {
+		return map(await request<WireAreaFlow>('POST', `/overview/areas/${encodeURIComponent(area)}/flow`, { parameters }), fromWireAreaFlow);
+	},
+
+	/** Spec 019 / 018 US5: the platform decides; terminate needs the pid typed as confirmation. */
+	async processAction(pid: number, action: 'suspend' | 'resume' | 'terminate', confirmation?: string): Promise<ApiResult<unknown>> {
+		return request<unknown>('POST', `/overview/processes/${pid}/${action}`, confirmation === undefined ? {} : { confirmation });
+	},
+
 	async stepTypes(): Promise<ApiResult<StepTypeInfo[]>> {
 		return map(await request<WireStepType[]>('GET', '/catalog/step-types'), fromWireStepTypes);
 	},
