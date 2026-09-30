@@ -8,8 +8,8 @@ Method TestAllSevenTypesPresent()
     For type = "integrity-check", "compact-globals", "defragment-globals", "switch-journal", "purge-audit-records", "purge-task-history", "custom" {
         Do $$$AssertTrue(##class(sentai.registry.StepType).IsKnownType(type), type)
     }
-    // Spec 013 adds the four report types.
-    Do $$$AssertEquals(catalog.%Size(), 13)
+    // Spec 013 adds the four report types; spec 020 three security inventories.
+    Do $$$AssertEquals(catalog.%Size(), 16)
 }
 
 /// Spec 004 D-1 (amended): integrity-check was the only type proven end to end on IRIS 2026.2.
@@ -240,6 +240,30 @@ Method TestReportInstallCheckIsByExecutor()
     Do $$$AssertEquals(##class(sentai.registry.StepType).ClassIsInstalledFor("system-alerts-check", "sentai.steps.reports.SystemAlerts"), 1)
     Do $$$AssertEquals(##class(sentai.registry.StepType).ClassIsInstalledFor("system-alerts-check", "sentai.steps.DatabaseSizeReport"), 0)
     Do $$$AssertEquals(##class(sentai.registry.StepType).ClassIsInstalledFor("db-size-report", "sentai.steps.DatabaseSizeReport"), 1)
+}
+
+/// Spec 020 (contracts/api-delta.md): the three security inventory types.
+Method TestSecurityInventoryEntries()
+{
+    For type = "certificate-expiry-check", "permissions-inventory", "oauth-inventory" {
+        Set e = ##class(sentai.registry.StepType).Lookup(type)
+        Do $$$AssertTrue($IsObject(e), type)
+        Continue:'$IsObject(e)
+        Do $$$AssertEquals(e.executor, "platform-read", type)
+        Do $$$AssertEquals(e.category, "security", type)
+        Do $$$AssertTrue(e.available, type)
+        Do $$$AssertNotTrue(##class(sentai.registry.StepType).IsDestructive(type), type)
+        Do $$$AssertTrue(##class(sentai.registry.StepType).IsRemoteCapable(type), type)
+        Do $$$AssertTrue(##class(sentai.registry.StepType).IsInstalled(type), type)
+    }
+    Set schema = ##class(sentai.registry.StepType).GetParameterSchema("certificate-expiry-check")
+    Do $$$AssertEquals(schema.%Size(), 1)
+    Set w = schema.%Get(0)
+    Do $$$AssertEquals(w.name, "warnDays")
+    Do $$$AssertEquals(w.type, "integer")
+    Do $$$AssertEquals(w.min, 1)
+    Do $$$AssertEquals(w.max, 365)
+    Do $$$AssertEquals(w.default, 30)
 }
 
 }

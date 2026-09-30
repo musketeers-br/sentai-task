@@ -179,3 +179,37 @@ export function recordScheduledStartFailure(flowId: string, expectedName: string
 	const result = /RESULT:(.*)/.exec(out)?.[1]?.trim();
 	if (result !== 'OK') throw new Error(`could not record the start failure: ${result ?? 'no answer'}`);
 }
+
+// --- spec 020: throw-away x509 credentials for the certificate expiry check -------------------
+
+const CERT_PREFIX = 'sentai-e2e-020-';
+
+function assertCertAlias(alias: string): void {
+	if (!alias.startsWith(CERT_PREFIX) || !/^[A-Za-z0-9-]+$/.test(alias)) throw new Error(`refused: "${alias}" is not a spec 020 test certificate`);
+	const container = process.env.SENTAI_CONTAINER ?? DEV_CONTAINER;
+	if (container !== DEV_CONTAINER) throw new Error(`refused: container ${container} is not ${DEV_CONTAINER}`);
+}
+
+/**
+ * An x509 credential `alias` on the dev primary whose self-signed certificate expires in `days`
+ * days. Only the public certificate is loaded: the key file is deleted as soon as openssl writes
+ * it, and the certificate file right after the load.
+ */
+export function createTestCertificate(alias: string, days: number): void {
+	assertCertAlias(alias);
+	const file = `/tmp/${alias}.crt`;
+	execFileSync('docker', ['exec', CONTAINER, 'sh', '-c',
+		`openssl req -x509 -newkey rsa:2048 -nodes -keyout /tmp/${alias}.key -out ${file} -days ${Math.max(1, Math.floor(days))} -subj "/CN=${alias}" 2>/dev/null; rm -f /tmp/${alias}.key`],
+		{ env: { ...process.env, MSYS_NO_PATHCONV: '1' } });
+	const out = irisSys(
+		`set x=##class(%SYS.X509Credentials).%New(),x.Alias="${alias}" set sc=x.LoadCertificate("${file}") set:sc sc=x.%Save() write "RESULT:",$select(sc=1:"OK",1:$system.Status.GetErrorText(sc)),!`
+	);
+	execFileSync('docker', ['exec', '-u', 'root', CONTAINER, 'rm', '-f', file], { env: { ...process.env, MSYS_NO_PATHCONV: '1' } });
+	const result = /RESULT:(.*)/.exec(out)?.[1]?.trim();
+	if (result !== 'OK') throw new Error(`could not create test certificate ${alias}: ${result ?? 'no answer'}`);
+}
+
+export function deleteTestCertificate(alias: string): void {
+	assertCertAlias(alias);
+	irisSys(`if ##class(%SYS.X509Credentials).%ExistsId("${alias}") { set sc=##class(%SYS.X509Credentials).%DeleteId("${alias}") }`);
+}

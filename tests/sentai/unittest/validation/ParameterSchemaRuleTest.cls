@@ -159,4 +159,20 @@ Method TestPurgeAuditMissingDaysToKeepHasOneFindingNamingIt()
     Do $$$AssertEquals(finding.parameter, "daysToKeep")
 }
 
+/// Spec 020 T008: warnDays is checked against its range; the check is schedulable (not destructive).
+Parameter CERTCLASS = "sentai.steps.reports.CertificateExpiry";
+
+Method TestCertificateExpiryWarnDays()
+{
+    Set e = ..Only(..Findings("certificate-expiry-check", {"warnDays": 0}, , ..#CERTCLASS), "PARAM_OUT_OF_RANGE")
+    Do $$$AssertTrue($IsObject(e))
+    Do $$$AssertEquals(e.parameter, "warnDays")
+    Do $$$AssertTrue($IsObject(..Only(..Findings("certificate-expiry-check", {"warnDays": 400}, , ..#CERTCLASS), "PARAM_OUT_OF_RANGE")))
+    Do $$$AssertEquals(..Findings("certificate-expiry-check", {"warnDays": 30}, , ..#CERTCLASS).%Size(), 0)
+    Do $$$AssertEquals(..Findings("certificate-expiry-check", {}, , ..#CERTCLASS).%Size(), 0, "optional, default 30")
+    Set id = ..CreateFlowOf("CertSchedule", [{"id": "01", "type": "certificate-expiry-check", "namespace": "%SYS", "parameters": {"warnDays": 30}}])
+    Set report = ##class(sentai.validation.FlowValidator).ValidateForSchedule(id)
+    Do $$$AssertEquals(report.errors.%Size(), 0, report.errors.%ToJSON())
+}
+
 }
