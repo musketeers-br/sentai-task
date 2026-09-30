@@ -380,6 +380,54 @@ paths:
       responses:
         "200": { description: Saved }
         "422": { $ref: "#/components/responses/ValidationError" }
+  /overview:
+    get:
+      summary: Spec 018 — one summary of the 11 overview areas
+      description: >
+        Always 11 entries; each carries its own outcome (ok, refused with the platform's status
+        verbatim, unreachable). 400 OVERVIEW_PRIMARY_ONLY when a target is named.
+      responses:
+        "200": { description: Summary, content: { application/json: { schema: { $ref: "#/components/schemas/OverviewSummary" } } } }
+  /overview/readings/{area}:
+    get:
+      summary: Spec 018 — one instance reading (processes, locks, memory, activity, devices, licenses, web-sessions)
+      parameters: [{ name: area, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: Reading, content: { application/json: { schema: { $ref: "#/components/schemas/OverviewReading" } } } }
+        "404": { description: UNKNOWN_READING, no platform call }
+  /overview/reports/{stepType}:
+    post:
+      summary: Spec 018 — run a platform-read report step on demand (no run is created)
+      parameters: [{ name: stepType, in: path, required: true, schema: { type: string } }]
+      requestBody: { content: { application/json: { schema: { type: object, properties: { parameters: { type: object } } } } } }
+      responses:
+        "200": { description: The report (also when it failed), content: { application/json: { schema: { $ref: "#/components/schemas/OnDemandReport" } } } }
+        "404": { description: UNKNOWN_STEP_TYPE }
+        "422": { description: STEP_TYPE_NOT_A_REPORT, or parameter findings }
+  /overview/areas/{area}/flow:
+    post:
+      summary: Spec 018 — turn a report area into a validated one-step flow
+      parameters: [{ name: area, in: path, required: true, schema: { type: string } }]
+      responses:
+        "201": { description: "{flow, validation}" }
+        "404": { description: UNKNOWN_AREA }
+        "409": { description: AREA_HAS_NO_STEP_TYPE }
+  /overview/processes/{pid}/{action}:
+    post:
+      summary: Spec 018 — suspend, resume or terminate a process (the platform decides)
+      parameters:
+        - { name: pid, in: path, required: true, schema: { type: integer } }
+        - { name: action, in: path, required: true, schema: { type: string, enum: [suspend, resume, terminate] } }
+      requestBody: { content: { application/json: { schema: { type: object, properties: { confirmation: { type: string, description: "terminate: the pid typed again" } } } } } }
+      responses:
+        "200": { description: "{pid, action, platform, process}" }
+        "428": { description: CONFIRMATION_REQUIRED, no platform call }
+  /overview/process-actions:
+    get:
+      summary: Spec 018 — process actions sent to the platform, newest first
+      parameters: [{ name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 200, default: 50 } }]
+      responses:
+        "200": { description: Records, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/ProcessAction" } } } } }
 
 components:
 
@@ -397,6 +445,49 @@ components:
       content: { application/json: { schema: { $ref: "#/components/schemas/ValidationReport" } } }
 
   schemas:
+    OverviewSummary:
+      type: object
+      properties:
+        readAt: { type: string }
+        areas: { type: array, items: { $ref: "#/components/schemas/OverviewAreaEntry" } }
+    OverviewAreaEntry:
+      type: object
+      properties:
+        area: { type: string }
+        group: { type: string, enum: [instance, report] }
+        outcome: { type: string, enum: [ok, refused, unreachable] }
+        readAt: { type: string }
+        headline: { type: object, nullable: true }
+        problem: { type: object, nullable: true, properties: { title: { type: string }, detail: { type: string }, httpStatus: { type: integer }, platformStatus: { type: object } } }
+        stepType: { type: string, nullable: true }
+    OverviewReading:
+      type: object
+      properties:
+        area: { type: string }
+        readAt: { type: string }
+        columns: { type: array, items: { type: string } }
+        rows: { type: array, items: { type: object } }
+        computed: { type: array, items: { type: string } }
+        parts: { type: object }
+    OnDemandReport:
+      type: object
+      properties:
+        stepType: { type: string }
+        state: { type: string, enum: [completed, failed] }
+        failureReason: { type: string }
+        report: { type: object, nullable: true }
+        ranAt: { type: string }
+    ProcessAction:
+      type: object
+      properties:
+        id: { type: integer }
+        at: { type: string }
+        operator: { type: string }
+        pid: { type: integer }
+        action: { type: string, enum: [suspend, resume, terminate] }
+        httpStatus: { type: integer }
+        accepted: { type: boolean }
+        platformStatus: { type: object, nullable: true }
     Schedule:
       type: object
       required: [kind, startTime]

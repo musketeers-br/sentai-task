@@ -97,6 +97,16 @@ SentaiTask v1 only promises what was proven on IRIS 2026.2 (spec `004-backend-ha
   database or journal directory has less than 10% free; that run is a real finding, not a defect.
   The example is identified by its name: renaming it and choosing *Open example flow* again creates
   a new one under the well-known name.
+- **Instance overview (spec 018).** Primary instance only: a `target` is refused with
+  `OVERVIEW_PRIMARY_ONLY`. The management API reports no host CPU, host memory or console log
+  (`messages.log`), so the overview shows instance resources only; a process's *CPU time* is the
+  platform's per-process value. The license headline uses `license-usage`'s summary, which disagrees
+  with the dashboard's `Licensing` counters at the same moment (measured 1 vs 13 units). Report areas
+  show counts in the summary; findings appear only when the report is run. Web session ids, lock
+  delete ids and a process's CSP session id are never returned. When the platform refuses with an
+  empty status (as it does for a 403 on these reads), the product says `HTTP 403: no reason given`.
+  Process actions record the operator, pid, action and the platform's answer; the record is history
+  only and never decides a later action.
 - **Report steps (spec 013).** Reads are instance-wide: the step's namespace is not used. The
   security report reads the roles of at most 200 enabled accounts (an *info* finding says how
   many were left out). The platform's `SeriousAlerts` counter is what the dashboard reports; on

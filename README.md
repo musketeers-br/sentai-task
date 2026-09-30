@@ -46,7 +46,7 @@ instance and on other IRIS servers, and watch every step live.
 | Management Portal area | What SentaiTask offers | Proof |
 |---|---|---|
 | **Task management** | Flows of tasks with dependencies and fan-in joins; dispatch, live tracking, cancel and rerun per step; native Task Manager catalog with filters, suspend and resume; schedules that run: one native task per flow, running as a run-as account whose password lives in the IRIS Wallet | [How to use](#-how-to-use), [spec 006](specs/006-task-catalog-api/) |
-| **Operating system** | `storage-headroom-check` (free disk per database and journal directory, Embedded Python) and `db-size-report` (size and free space of every database) as flow steps | [Declared step types](#declared-step-types) |
+| **Operating system** | Instance resources on demand: processes (with suspend, resume and terminate), locks, shared memory, activity counters, devices, license use and web sessions — the management API reports no host CPU or memory, so none is shown. Disk: `storage-headroom-check` (Embedded Python) and `db-size-report` as flow steps | [Instance overview](#instance-overview), [spec 018](specs/018-instance-overview-api/), [Declared step types](#declared-step-types) |
 | **Work Queue Manager** | Read and edit WQM categories, the worker pools every step runs on | [API at a glance](#api-at-a-glance) |
 | **Logs** | Every run writes its own log (dispatch, each step start and end with its duration, the platform's failure reason verbatim, joins that stopped a step, who asked to cancel, targets that stopped answering, the outcome); a *Runs* screen finds any past run by flow and outcome, and *Export* saves one as a file | [Runs and run log](#runs-and-run-log), [spec 012](specs/012-run-log-history/) |
 | **Security and permissions** | `security-posture-report` as a flow step: enabled accounts and their roles, `%All` holders, services open to unauthenticated connections, auditing off, on any server. `permissions-inventory`: every role with the resources it grants, every resource with what the public may do, risky combinations flagged. Every call runs with the operator's own IRIS credential; the platform's refusal is shown verbatim | [Report steps](#report-steps-security-web-applications-alerts-secrets), [spec 013](specs/013-area-report-steps/), [spec 020](specs/020-security-inventory/) |
@@ -446,6 +446,7 @@ run then renews its own credential and erases it when it ends. The canvas does t
 | Catalog | `GET /catalog/step-types` · `GET /catalog/step-types/search?q=…` · `GET /catalog/tasks` · `GET /catalog/tasks/{id}` · `POST /catalog/tasks/{id}/suspend` |
 | WQM | `GET /wqm/categories` · `GET/PUT /wqm/categories/{name}` |
 | Targets | `GET/POST /targets` · `GET/PUT/DELETE /targets/{name}` · `POST /targets/{name}/online` · `POST /targets/{name}/sign-in` · `GET /targets/{name}/status` |
+| Overview | `GET /overview` · `GET /overview/readings/{area}` · `POST /overview/reports/{stepType}` · `POST /overview/areas/{area}/flow` · `POST /overview/processes/{pid}/{suspend\|resume\|terminate}` · `GET /overview/process-actions` |
 
 Validation errors come back as `{"errors": [{"stepId", "code", "message"}], "warnings": [...]}`,
 with codes such as `CYCLE_DETECTED`, `STEP_TYPE_NOT_SUPPORTED_ON_TARGET`, `CATEGORY_NOT_FOUND`
@@ -486,6 +487,34 @@ too, and apply fixed rules. Each stores a report: `summary` (counts by severity)
   fit the stored result. Private keys, key passwords and client secrets are never read into a result.
 - The canvas's own page `/csp/sentai` is anonymous by design (it serves only static files) and the
   web application inventory reports it; that finding is expected.
+
+#### Instance overview
+
+Spec 018: every contest area readable on demand, on the primary instance, with the operator's own
+credential. The area list is compiled (`sentai.overview.Areas`); a request can only name one of its
+ids, never a platform path.
+
+| Area | `GET /overview` headline (from one read) | Detail |
+|---|---|---|
+| `processes` | count, busiest process by commands | `GET /overview/readings/processes` — pid, user, namespace, routine, state, commands, globals, *CPU time (process)*, what the platform allows (`CanBeSuspended`, `CanBeTerminated`) |
+| `locks` | count | `…/readings/locks` |
+| `memory` | shared memory used (%) of the platform's `Total` row, most used consumer | `…/readings/memory` (`SMHUsedPercent` computed from the same answer) |
+| `activity` | uptime, last backup, global refs/s, busy processes | `…/readings/activity` (system usage, dashboard, seize counters) |
+| `devices` · `web-sessions` | count | `…/readings/devices`, `…/readings/web-sessions` (never the session id) |
+| `licenses` | units in use and authorized (`license-usage` summary) | `…/readings/licenses` |
+| `security` · `web-apps` · `alerts` · `secrets` | enabled accounts · web applications · serious alerts and application errors · wallet collections | `POST /overview/reports/{stepType}` runs the spec 013 report on demand (same code, same findings, no run) |
+
+- Each area of the summary carries its own outcome — `ok`, `refused` (the platform's HTTP status
+  and `platformStatus` verbatim) or `unreachable` — so an operator without security administration
+  still sees every instance area. The summary makes 10 platform reads for 11 areas (≈0.25 s on the
+  dev stack) and never runs a report.
+- `POST /overview/areas/{area}/flow` turns a report area into an ordinary one-step flow
+  (`Check: <label>`) that passes the validation gate and can be scheduled with `/schedule`.
+- Process actions call `POST /api/admin/v2/process/<action>?id=<pid>` as the platform's contract
+  requires (proved in [spec 018 evidence](specs/018-instance-overview-api/evidence/)); terminate
+  answers `428` until the body carries `{"confirmation": "<pid>"}`. Every action that reached the
+  platform is recorded (`GET /overview/process-actions`), accepted or refused; the product never
+  refuses a pid on its own.
 
 #### Declared step types
 
