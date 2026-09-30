@@ -4,7 +4,9 @@
 
 **Created**: 2026-09-29
 
-**Status**: Draft
+**Status**: Merged
+
+**Status note**: PR #25. 30/30 tasks; evidence in evidence/.
 
 **Input**: User description: "Spec number 020 (short name: security-inventory). Security: roles, resources, SSL/x509 and OAuth, read-only, with an expiring-certificate finding as a schedulable step. The contest's Security/Permissions and Secrets areas are only partly covered today (security-posture-report and secrets-inventory from spec 013; nothing for x509 or OAuth). The platform's management API v2 has, tested live on the dev instance: roles (43), resources (136), SSL configurations (4), x509 credentials (0 on the instance), and 33 OAuth2 operations (server, clients, server definitions, resource servers) — the OAuth server answers ERROR #8864 'not configured' and client configurations require a server id. Scope: read-only inventory of roles and their resources, resources and their public permissions, SSL/TLS configurations, x509 credentials (with validity dates) and OAuth2 configuration, in the same mould as secrets-inventory (spec 013: findings first, runs locally or on a target server); a finding 'certificate expires in N days' (threshold as a step parameter) that fails the step when crossed, so a flow scheduled with spec 015 warns before a certificate expires. 'Not configured' and empty lists are legitimate empty states, and every refusal is the platform's own, passed through unchanged. Nothing is written to the platform; no secret or private key material is ever read or shown. Spec 016 is reserved for another person; 018 (Portal overview + OS resources) and 019 (platform logs) are separate specs."
 
