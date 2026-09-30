@@ -1,8 +1,7 @@
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
-shell commands, and other important information, read the current plan:
-`specs/016-run-log-details/plan.md` (Flow Execution Log Detail — MVP-first:
-increment 1, the step execution detail, ships alone)
+shell commands, and other important information, read the current plan
+at specs/017-in-process-embeddings/plan.md
 <!-- SPECKIT END -->
 
 # SentaiTask — notes for coding agents
@@ -16,7 +15,8 @@ lists what v1 deliberately does not do.
 
 - `docker compose up -d` brings `iris` (primary, `127.0.0.1:52773`) and `iris-target` (compose
   network only — remote-step behaviour and its e2e tests need it up).
-- `docker-compose.override.yml` applies automatically: it rebinds 1972/52773/53773 to loopback and
+- `docker-compose.override.yml` applies automatically: it rebinds 1972/52773 to loopback, publishes
+  the container's 53773 as `127.0.0.1:55773` (Windows often reserves the range around 53773), and
   mounts the repo **read-only** at `/home/irisowner/dev`. LAN access needs the base file spelled out:
   `docker compose -f docker-compose.yml up -d`.
 - Dev credentials `_SYSTEM` / `SYS`. The module's globals live in `IRISAPP`.

@@ -56,7 +56,7 @@ docker exec -it sentai-task-iris-1 iris session IRIS -U IRISAPP
 4. **Apply — destructive, guarded.**
 
    ```objectscript
-   Write $SYSTEM.Status.GetErrorText(##class(sentaiops.OrphanSanitation).Apply("<fingerprint>", "/home/irisowner/dev/scripts/sanitation/backup-<yyyymmdd>.zwr", "<operator>"))
+   Write $SYSTEM.Status.GetErrorText(##class(sentaiops.OrphanSanitation).Apply("<fingerprint>", "/home/irisowner/backup-<yyyymmdd>.zwr", "<operator>"))
    ```
 
    `Apply` refuses — changing nothing — when any argument is missing, when the backup file already
@@ -67,7 +67,9 @@ docker exec -it sentai-task-iris-1 iris session IRIS -U IRISAPP
    3. stores an audit entry in `^sentaiOps("sanitation", n)` (operator, time, backup path, before
       and after inventories) and prints it.
 
-   Writing the backup under `/home/irisowner/dev/...` puts it on the host checkout; do not commit it.
+   The checkout is mounted read-only by `docker-compose.override.yml`, so the backup goes to
+   `/home/irisowner`; copy it out with `docker cp sentai-task-iris-1:/home/irisowner/backup-<yyyymmdd>.zwr .`
+   and keep it out of git (`scripts/sanitation/backup-*.zwr` is ignored).
 
 5. **Verify.** Run `Report()` again: `total` must be `0`. Record the after JSON and the audit entry
    (`zw ^sentaiOps("sanitation")`) in the evidence note, then rerun the test suite.

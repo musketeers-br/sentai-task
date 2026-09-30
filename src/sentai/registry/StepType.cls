@@ -66,6 +66,24 @@ XData Catalog [ MimeType = application/json ]
   { "type": "secrets-inventory",      "label": "Secrets inventory",      "class": "sentai.steps.reports.SecretsInventory", "category": "security", "executor": "platform-read", "destructive": false, "pausable": false, "available": true,
     "description": "List where the platform holds stored credentials and secrets, without showing their values",
     "parameters": [] },
+  { "type": "certificate-expiry-check", "label": "Certificate expiry check", "class": "sentai.steps.reports.CertificateExpiry", "category": "security", "executor": "platform-read", "destructive": false, "pausable": false, "available": true,
+    "description": "Check x509 certificates for expiry and list SSL/TLS configurations; fail when a certificate has expired or expires within the warning window",
+    "parameters": [
+      { "name": "warnDays", "property": "WarnDays", "type": "integer", "required": false, "default": 30, "min": 1, "max": 365,
+        "description": "Fail when a certificate expires within this many days (or has expired)" }
+    ] },
+  { "type": "permissions-inventory",  "label": "Permissions inventory",  "class": "sentai.steps.reports.PermissionsInventory", "category": "security", "executor": "platform-read", "destructive": false, "pausable": false, "available": true,
+    "description": "List roles with the resources they grant and resources with their public permission, flagging risky public access and roles that grant %All",
+    "parameters": [
+      { "name": "failOnFindings", "property": "FailOnFindings", "type": "boolean", "required": false, "default": false,
+        "description": "Fail the step when any high finding exists" }
+    ] },
+  { "type": "oauth-inventory",        "label": "OAuth inventory",        "class": "sentai.steps.reports.OAuthInventory", "category": "security", "executor": "platform-read", "destructive": false, "pausable": false, "available": true,
+    "description": "List the OAuth 2.0 configuration: authorization server, clients, server definitions and resource servers, without secrets",
+    "parameters": [
+      { "name": "failOnFindings", "property": "FailOnFindings", "type": "boolean", "required": false, "default": false,
+        "description": "Fail the step when any high finding exists" }
+    ] },
   { "type": "custom",                 "label": "Custom (legacy)",        "class": "",                                  "category": "custom",       "executor": "platform-api", "destructive": false, "pausable": false, "available": false,
     "description": "Placeholder from an earlier version for an operator-declared class; kept only so saved flows still load, and never runnable" }
 ]

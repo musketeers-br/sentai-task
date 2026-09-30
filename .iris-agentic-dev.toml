@@ -16,7 +16,7 @@
 #   2. Enterprise + ISC Web Gateway container (intersystems/webgateway) — iris-agentic-dev auto-detects it
 #   3. Enterprise standalone (intersystems/iris) — NOT supported, no Atelier REST available
 #
-# container = "sentai-task-iris"
+container = "sentai-task-iris-1"
 
 # Default IRIS namespace
 namespace = "IRISAPP"

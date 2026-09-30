@@ -88,7 +88,11 @@ if ($null -eq $Options) {
 
     if ($pythonCmd) {
         try {
-            $jsonOut = & $pythonCmd -c @'
+            # The parser goes through a temporary file, not `python -c`: Windows PowerShell 5.1
+            # does not escape the double quotes inside a multi-line argument to a native program,
+            # so the code arrived without them and failed with a SyntaxError.
+            $pyScript = Join-Path ([System.IO.Path]::GetTempPath()) ("agent-context-" + [guid]::NewGuid() + ".py")
+            Set-Content -Path $pyScript -Encoding ASCII -Value @'
 import json
 import sys
 try:
@@ -114,7 +118,12 @@ if not isinstance(data, dict):
     data = {}
 
 print(json.dumps(data))
-'@ $ExtConfig
+'@
+            try {
+                $jsonOut = & $pythonCmd $pyScript $ExtConfig
+            } finally {
+                Remove-Item -LiteralPath $pyScript -ErrorAction SilentlyContinue
+            }
             if ($LASTEXITCODE -eq 0 -and $jsonOut) {
                 $Options = $jsonOut | ConvertFrom-Json -ErrorAction Stop
             }

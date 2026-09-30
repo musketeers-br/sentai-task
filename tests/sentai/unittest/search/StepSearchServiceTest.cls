@@ -30,6 +30,9 @@ Method OnBeforeOneTest() As %Status
 Method OnAfterOneTest() As %Status
 {
     Set sc = ##super()
+    // Spec 017: a test that installed the in-process provider leaves no worker behind.
+    Do ##class(sentai.unittest.search.FakeEmbeddingWorker).Stop()
+    Do ##class(sentai.unittest.search.FakeEmbeddingWorker).ResetKnobs()
     Do ##class(sentai.unittest.search.SearchFixtures).ClearCorpus()
     Set problem = ##class(sentai.unittest.search.SearchFixtures).RestorePlatformProvider(..SavedProvider)
     Do $$$AssertEquals(problem, "", "the platform's own provider row is put back")
@@ -189,16 +192,20 @@ Method TestSlowProviderIsUnavailableSlow()
 /// exactly the masquerade FR-023 forbids. Measured: VECTOR_COSINE across widths fails no
 /// statement at all, it simply yields no score, so a service that did not compare widths would
 /// answer `available` with nothing in it. The corpus is built by the standard 256-bucket
-/// double, then the row is re-pointed at the half-width double without touching the corpus —
-/// the provider swap the story describes.
+/// double, then the stored vectors are narrowed with the row left unchanged. (Before spec 017
+/// this re-pointed the row at a half-width double; a changed row now rebuilds the corpus, FR-007.)
 Method TestIncompatibleProviderIsUnavailableIncompatible()
 {
     // The standard double from OnBeforeOneTest builds a 256-wide corpus.
     Set outcome = ##class(sentai.search.StepSearchService).Search("journal")
-    Do $$$AssertTrue(##class(sentai.search.SearchOutcome).IsAvailable(outcome), "the corpus is built before the provider is swapped")
-    Do ##class(sentai.unittest.search.SearchFixtures).RemoveProvider()
-    Set problem = ##class(sentai.unittest.search.SearchFixtures).WriteProvider("sentai-steps", "sentai.unittest.search.NarrowEmbeddingService", ##class(sentai.unittest.search.SearchFixtures).DoubleConfiguration(), 128, "narrow probe")
-    Do $$$AssertEquals(problem, "", "the half-width double installs")
+    Do $$$AssertTrue(##class(sentai.search.SearchOutcome).IsAvailable(outcome), "the corpus is built before the widths diverge")
+    // Spec 017 FR-007: re-pointing the row at another provider now changes the provider identity,
+    // and the corpus is rebuilt by the new provider — that swap is `TestModelChangeRebuildsCorpus`.
+    // A width mismatch is still possible with the same row (a provider whose output changed under
+    // an unchanged configuration), so the stored vectors are narrowed in place and the row is left
+    // exactly as it was.
+    Set rs = ##class(%SQL.Statement).%ExecDirect(, "UPDATE sentai_search.StepCorpus SET vector = TO_VECTOR('[1,0,0,0]')")
+    Do $$$AssertTrue(rs.%SQLCODE >= 0, "the stored vectors are narrowed: "_rs.%Message)
     Set outcome = ##class(sentai.search.StepSearchService).Search("journal")
     Do $$$AssertNotTrue(##class(sentai.search.SearchOutcome).IsAvailable(outcome), "a width mismatch is never a ranking")
     Do $$$AssertEquals(outcome.reason, "incompatible")
@@ -269,6 +276,116 @@ Method TestUndeclaredCapabilityYieldsNoUndeclaredEntry()
             Do $$$AssertNotTrue(##class(sentai.registry.StepType).Lookup(matches.%Get(i).type) = "", "only declared capabilities are ever offered ("_query_")")
         }
     }
+}
+
+/// Spec 017 T011, FR-004a: with the in-process provider still loading its model, a search is the
+/// `warming` value — HTTP-level shape unchanged, no matches — and never waits for the load.
+Method TestWarmingProviderAnswersWarming()
+{
+    Do ..InstallLocalProvider()
+    Do ##class(sentai.unittest.search.FakeEmbeddingWorker).SetKnob("loadDelay", 2)
+    Set outcome = ##class(sentai.search.StepSearchService).Search("free up disk space")
+    Do $$$AssertNotTrue(##class(sentai.search.SearchOutcome).IsAvailable(outcome))
+    Do $$$AssertEquals(outcome.reason, "warming")
+    Do $$$AssertNotTrue(outcome.%IsDefined("matches"), "an unavailable outcome carries no matches key (FR-025)")
+}
+
+/// Spec 017 T011, US2: once the worker is ready, the same search ranks the catalog — the in-process
+/// provider is an ordinary row to the search service.
+Method TestReadyProviderRanks()
+{
+    Do ..InstallLocalProvider()
+    Set outcome = ##class(sentai.search.StepSearchService).Search("rotate the journal")
+    Do $$$AssertEquals(outcome.reason, "warming", "the first search starts the worker")
+    Do $$$AssertTrue(##class(sentai.unittest.search.FakeEmbeddingWorker).WaitUntil("ready", 10), "the worker becomes ready")
+    Set outcome = ##class(sentai.search.StepSearchService).Search("rotate the journal")
+    Do $$$AssertTrue(##class(sentai.search.SearchOutcome).IsAvailable(outcome), outcome.%ToJSON())
+    Do $$$AssertTrue(##class(sentai.search.SearchOutcome).Matches(outcome).%Size() > 0, "the catalog is ranked")
+}
+
+/// Points `sentai-steps` at the in-process provider with the test-only worker. The row is restored
+/// by `OnAfterOneTest`, like every other double here.
+Method InstallLocalProvider()
+{
+    Do ##class(sentai.unittest.search.SearchFixtures).RemoveProvider()
+    Set cfg = ##class(sentai.unittest.search.EmbeddingWorkerTest).Config()
+    Set problem = ##class(sentai.unittest.search.SearchFixtures).WriteProvider("sentai-steps", "sentai.unittest.search.FakeLocalEmbedding", cfg, 256, "in-process probe")
+    Do $$$AssertEquals(problem, "", "the in-process provider installs")
+}
+
+/// Spec 017 T020, FR-007: the row now names another model of the same width. The width check cannot
+/// see that, so the corpus itself must know which provider made it: the next search rebuilds every
+/// row with the new provider before ranking, and no ranking compares a new query to an old vector.
+Method TestModelChangeRebuildsCorpus()
+{
+    Do ..InstallFakeWithModel("a")
+    Set outcome = ##class(sentai.search.StepSearchService).Search("rotate the journal")
+    Do $$$AssertTrue(##class(sentai.search.SearchOutcome).IsAvailable(outcome), "model a builds the corpus")
+    Do $$$AssertEquals(..RowsWithIdentityEnding("|a|256"), ..CatalogSize(), "every row was embedded by model a")
+    Do ..InstallFakeWithModel("b")
+    Set outcome = ##class(sentai.search.StepSearchService).Search("rotate the journal")
+    Do $$$AssertTrue(##class(sentai.search.SearchOutcome).IsAvailable(outcome), "model b ranks")
+    Do $$$AssertEquals(..RowsWithIdentityEnding("|b|256"), ..CatalogSize(), "every row was embedded again, by model b")
+    Do $$$AssertEquals(..RowsWithIdentityEnding("|a|256"), 0, "no vector of model a is left to rank against")
+}
+
+/// Spec 017 T021: nothing changed, nothing is rebuilt — the rows are the same rows.
+Method TestUnchangedProviderDoesNotRebuild()
+{
+    Do ..InstallFakeWithModel("a")
+    Do ##class(sentai.search.StepSearchService).Search("rotate the journal")
+    Set before = ..FirstRowId()
+    Do ##class(sentai.search.StepSearchService).Search("free up disk space")
+    Do $$$AssertEquals(..FirstRowId(), before, "the second search reused the stored corpus")
+}
+
+/// Spec 017 T021, Constitution III: the identity names the provider, never its secrets — a key in
+/// the configuration is not copied into the product's own table.
+Method TestIdentityCarriesNoSecret()
+{
+    Do ##class(sentai.unittest.search.SearchFixtures).RemoveProvider()
+    Set cfg = ##class(%DynamicObject).%FromJSON(##class(sentai.unittest.search.SearchFixtures).DoubleConfiguration())
+    Do cfg.%Set("apiKey", "k-123")
+    Set problem = ##class(sentai.unittest.search.SearchFixtures).WriteProvider("sentai-steps", "sentai.unittest.search.FakeEmbeddingService", cfg.%ToJSON(), 256, "keyed probe")
+    Do $$$AssertEquals(problem, "", "the keyed double installs")
+    Do ##class(sentai.search.StepSearchService).Search("rotate the journal")
+    Do $$$AssertNotTrue(##class(sentai.search.StepSearchService).ProviderIdentity() [ "k-123", "the identity holds no key")
+    Set rs = ##class(%SQL.Statement).%ExecDirect(, "SELECT COUNT(*) AS n FROM sentai_search.StepCorpus WHERE providerIdentity [ 'k-123' OR corpusVersion [ 'k-123'")
+    Do rs.%Next()
+    Do $$$AssertEquals(+rs.%Get("n"), 0, "no stored row holds the key")
+}
+
+/// The standard double, under `sentai-steps`, with `model` set to `model`.
+Method InstallFakeWithModel(model As %String)
+{
+    Do ##class(sentai.unittest.search.SearchFixtures).RemoveProvider()
+    Set cfg = ##class(%DynamicObject).%FromJSON(##class(sentai.unittest.search.SearchFixtures).DoubleConfiguration())
+    Do cfg.%Set("model", model)
+    Set problem = ##class(sentai.unittest.search.SearchFixtures).WriteProvider("sentai-steps", "sentai.unittest.search.FakeEmbeddingService", cfg.%ToJSON(), 256, "model "_model)
+    Do $$$AssertEquals(problem, "", "the double with model "_model_" installs")
+}
+
+ClassMethod RowsWithIdentityEnding(suffix As %String) As %Integer
+{
+    Set rs = ##class(%SQL.Statement).%ExecDirect(, "SELECT providerIdentity FROM sentai_search.StepCorpus"), n = 0
+    While rs.%Next() {
+        Set identity = rs.%Get("providerIdentity")
+        If ($EXTRACT(identity, *-$LENGTH(suffix)+1, *) = suffix) Set n = n + 1
+    }
+    Quit n
+}
+
+ClassMethod CatalogSize() As %Integer
+{
+    Quit ##class(sentai.registry.StepType).GetCatalog().%Size()
+}
+
+ClassMethod FirstRowId() As %String
+{
+    // Aliased `firstId`: `FIRST` is reserved and the statement would be rejected (R-014).
+    Set rs = ##class(%SQL.Statement).%ExecDirect(, "SELECT MIN(%ID) AS firstId FROM sentai_search.StepCorpus")
+    Do rs.%Next()
+    Quit rs.%Get("firstId")
 }
 
 }

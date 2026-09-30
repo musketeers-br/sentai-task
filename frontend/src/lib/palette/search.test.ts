@@ -124,6 +124,13 @@ describe('paletteSections', () => {
 		expect(paletteSections(REGISTRY, 'rotate the journal', outcome)).toEqual(today(REGISTRY, 'rotate the journal'));
 	});
 
+	it('spec 017: warming — the provider is still loading — is today, like every unavailable reason', () => {
+		const outcome: StepSearchOutcome = { available: false, reason: 'warming' };
+		const sections = paletteSections(REGISTRY, 'free up disk space', outcome);
+		expect(sections.map((s) => s.id)).not.toContain('suggested');
+		expect(sections).toEqual(today(REGISTRY, 'free up disk space'));
+	});
+
 	it('case 7: an unknown identifier produces no suggested group at all', () => {
 		const sections = paletteSections(REGISTRY, 'anything', available(['nope', 0.99]));
 		expect(sections.map((s) => s.id)).not.toContain('suggested');
@@ -167,6 +174,7 @@ describe('invariants, over every input above', () => {
 		{ available: true, matches: [] },
 		{ available: false, reason: 'not-configured' },
 		{ available: false, reason: 'unreachable' },
+		{ available: false, reason: 'warming' },
 		{ available: false, reason: 'error' }
 	];
 	const queries = ['', '   ', 'integr', 'journal', 'a custom class', 'x'];

@@ -36,6 +36,11 @@ instance and on other IRIS servers, and watch every step live.
   The local quickstart works even when the public demo is down. *Open example flow* on the empty
   canvas runs a ready-made, read-only flow in about a second.
 
+  The first build also installs the palette's intent search inside IRIS — CPU-only Python packages
+  and a small language model, about 1.9 GB of image, once, at build time (about four minutes for the
+  whole build). There is no second service to wait for: intent search ranks about seven seconds
+  after the container reports healthy.
+
 ### Contest areas covered
 
 | Management Portal area | What SentaiTask offers | Proof |
@@ -44,10 +49,10 @@ instance and on other IRIS servers, and watch every step live.
 | **Operating system** | `storage-headroom-check` (free disk per database and journal directory, Embedded Python) and `db-size-report` (size and free space of every database) as flow steps | [Declared step types](#declared-step-types) |
 | **Work Queue Manager** | Read and edit WQM categories, the worker pools every step runs on | [API at a glance](#api-at-a-glance) |
 | **Logs** | Every run writes its own log (dispatch, each step start and end with its duration, the platform's failure reason verbatim, joins that stopped a step, who asked to cancel, targets that stopped answering, the outcome); a *Runs* screen finds any past run by flow and outcome, and *Export* saves one as a file | [Runs and run log](#runs-and-run-log), [spec 012](specs/012-run-log-history/) |
-| **Security and permissions** | `security-posture-report` as a flow step: enabled accounts and their roles, `%All` holders, services open to unauthenticated connections, auditing off, on any server. Every call runs with the operator's own IRIS credential; the platform's refusal is shown verbatim | [Report steps](#report-steps-security-web-applications-alerts-secrets), [spec 013](specs/013-area-report-steps/) |
+| **Security and permissions** | `security-posture-report` as a flow step: enabled accounts and their roles, `%All` holders, services open to unauthenticated connections, auditing off, on any server. `permissions-inventory`: every role with the resources it grants, every resource with what the public may do, risky combinations flagged. Every call runs with the operator's own IRIS credential; the platform's refusal is shown verbatim | [Report steps](#report-steps-security-web-applications-alerts-secrets), [spec 013](specs/013-area-report-steps/), [spec 020](specs/020-security-inventory/) |
 | **Web applications / REST** | `web-app-inventory`: every web application, whether it is a REST endpoint, its resource and authentication; anonymous endpoints are findings | [Report steps](#report-steps-security-web-applications-alerts-secrets) |
 | **Monitoring and alerts** | `system-alerts-check` gates a flow on the platform's serious alerts, application errors and resource statuses | [Report steps](#report-steps-security-web-applications-alerts-secrets) |
-| **Secrets** | `secrets-inventory`: the IRIS Wallet's collections, their protecting resources and secret names, never a value | [Report steps](#report-steps-security-web-applications-alerts-secrets) |
+| **Secrets** | `secrets-inventory`: the IRIS Wallet's collections, their protecting resources and secret names, never a value. `certificate-expiry-check`: x509 certificates and SSL/TLS configurations, failing when one expires within N days — schedule it and the flow warns before an outage. `oauth-inventory`: OAuth 2.0 server, clients, server definitions and resource servers ("not configured" is a normal state) | [Report steps](#report-steps-security-web-applications-alerts-secrets), [spec 020](specs/020-security-inventory/) |
 | **Distributed work** | A flow step can run on another IRIS instance (a *target server*), tracked and with its result collected on the primary | [DPI-I-588](#-implements-dpi-i-588-distributed-work-manager) |
 
 ---
@@ -139,6 +144,8 @@ Authorization*).
 - [Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
 - [Docker Desktop](https://www.docker.com/products/docker-desktop) with Docker Compose
 - **InterSystems IRIS 2026.2**. The container image built by this repo is the verified target.
+- **Disk and memory:** about 10 GB for the two images (`iris` 5.9 GB, `iris-target` 3.7 GB), and
+  about 450 MB of memory for the search worker inside `iris`. No GPU is used or needed.
 
 ---
 
@@ -153,7 +160,14 @@ docker-compose up -d --build
 ```
 
 The build compiles the canvas, loads the `sentai-task` module and registers the REST application
-`/csp/sentai/api/v1` on **http://localhost:52773**. When the container is up, open
+`/csp/sentai/api/v1` on **http://localhost:52773**. It also installs the palette's intent search
+inside IRIS (CPU-only Python packages and the `all-MiniLM-L6-v2` model, run offline) and the image
+starts its worker when IRIS starts — there is no separate model service.
+
+**A stack built before this change** keeps the old provider row until it is rebuilt: its row names an
+`ollama` service that no longer exists, so intent search answers `unreachable` and the palette keeps
+its local filter. `docker compose up -d --build` moves it over (every build starts a fresh instance
+with the in-process row); `docker compose up -d` alone does not. When the container is up, open
 
 **http://localhost:52773/csp/sentai/**
 
@@ -175,25 +189,40 @@ In an IRIS instance with the IPM client:
 USER>zpm "install sentai-task"
 ```
 
-The app runs immediately; the palette narrows by entry text. For **semantic** search ("describe
-the job, get the step type"), install one row in `%Embedding.Config` — in the namespace the module
-runs in — and pick the provider that fits the machine. Until a row exists the palette simply
-stays on its local filter; everything else works.
+The app runs immediately; the palette narrows by entry text. The module installs no Python
+package, downloads no model and writes no configuration: **semantic** search ("describe the job,
+get the step type") stays off until you add one row in `%Embedding.Config`, in the namespace the
+module runs in. Until then the palette simply stays on its local filter; everything else works.
 
-**No sidecar at all** — the platform's own in-process provider. Requires Embedded Python with the
-`sentence-transformers` package; the `INSERT` itself checks that and downloads the model once, so
-a failure names exactly what is missing (`hfCachePath` is where the model lands — pick a writable
-directory):
+**In-process, no extra service** (what the Docker image does). Three steps on the IRIS host:
+
+```sh
+# 1. The packages, CPU-only, in ONE command into a directory Embedded Python imports from.
+#    The index order matters: from PyPI alone, or in two commands, pip pulls the CUDA build of
+#    torch (5.4 GB instead of 1.3 GB).
+pip3 install --target <iris>/mgr/python     --index-url https://download.pytorch.org/whl/cpu --extra-index-url https://pypi.org/simple     torch sentence-transformers
+# 2. The model (88 MB), once, into a directory the IRIS user can read.
+<iris>/bin/irispython -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2', cache_folder='<iris>/mgr/sentai-models', device='cpu')"
+# 3. Run IRIS with HF_HUB_OFFLINE=1 and TRANSFORMERS_OFFLINE=1 in its environment: the model then
+#    loads from its files only (with no route to the model hub, the first load otherwise waits
+#    minutes).
+```
 
 ```sql
 INSERT INTO %Embedding.Config (Name, EmbeddingClass, Configuration, VectorLength, Description)
-VALUES ('sentai-steps', '%Embedding.SentenceTransformers',
-        '{"modelName":"sentence-transformers/all-MiniLM-L6-v2","hfCachePath":"/home/irisowner/hf-cache"}',
+VALUES ('sentai-steps', 'sentai.search.LocalEmbedding',
+        '{"modelName":"sentence-transformers/all-MiniLM-L6-v2","cachePath":"<iris>/mgr/sentai-models"}',
         384, 'Step-type search, in-process');
 ```
 
+The `INSERT` checks that the packages import and the model is in `cachePath`, and says which is
+missing. The first search afterwards answers `warming` and starts the worker that holds the model
+(≈450 MB, loads in about seven seconds); searches after that rank. The platform's own
+`%Embedding.SentenceTransformers` is not recommended: it reloads the model on every call (≈3.4 s
+per search).
+
 **Alternatives, all the same one row:** `sentai.search.EmbeddingService` with any
-OpenAI-compatible `Configuration` — a local [ollama](https://ollama.com) (it also installs
+OpenAI-compatible `Configuration` — an [ollama](https://ollama.com) you run (it also installs
 natively; no container needed) or any server speaking `POST /v1/embeddings` — or
 `%Embedding.OpenAI` for a hosted provider, which **sends the operator's query text off the
 machine**. Delete the row to drop semantic search again; nothing else changes.
@@ -436,10 +465,25 @@ too, and apply fixed rules. Each stores a report: `summary` (counts by severity)
 | `web-app-inventory` | web applications | `ANONYMOUS_REST_ENDPOINT` (high), `ANONYMOUS_APPLICATION` (medium): enabled, not system, unauthenticated allowed, no resource | `failOnFindings` |
 | `system-alerts-check` | the main monitoring dashboard | `SERIOUS_ALERTS_OVER`, `APPLICATION_ERRORS_OVER`, `STATUS_NOT_NORMAL` — the step fails on any | `maxSeriousAlerts` (0), `maxApplicationErrors` (0), `requireNormalStatus` (true) |
 | `secrets-inventory` | wallet collections and their secrets' names | `UNPROTECTED_COLLECTION` (medium) | — |
+| `certificate-expiry-check` | x509 credentials and each one's certificate validity; SSL/TLS configurations | `CERT_EXPIRED` (high), `CERT_EXPIRING` (medium) — the step fails on either; `CERT_VALIDITY_UNKNOWN`, `CONFIG_VALIDITY_NOT_REPORTED` (info) | `warnDays` (30, 1–365) |
+| `permissions-inventory` | roles (each one's resources and granted roles), resources | `PUBLIC_WRITE_OR_USE_SENSITIVE` (high: public W or U on `%DB_…`, `%Admin_…`, `%Development`), `PUBLIC_WRITE_OR_USE` (medium), `ROLE_GRANTS_ALL` (high) | `failOnFindings` |
+| `oauth-inventory` | OAuth 2.0 server and its clients, server definitions and their client configurations, resource servers | `OAUTH_PASSWORD_GRANT`, `OAUTH_NON_HTTPS_ADDRESS` (medium, loopback excepted) | `failOnFindings` |
 
 - Reports copy only named fields from the platform's answers; no password, hash, token or secret
   value can reach a result. The platform decides what the operator may read: reading users and
   services needs security administration privileges, and a refusal fails the step verbatim.
+- **A certificate that expires, caught before it does (spec 020).** Put *Certificate expiry check*
+  (*Warn days* 30) in a flow and schedule it weekly: the week a certificate enters the last 30 days,
+  the scheduled run fails and its log and result name the certificate and its expiry date. Only
+  certificates registered as x509 credentials carry a validity the platform reports; SSL/TLS
+  configurations that point at certificate files are listed with "validity not reported".
+- The security inventories read with security administration privileges, as the platform decides
+  (observed on IRIS 2026.2): roles, resources and certificates need `%Admin_Secure:U`; OAuth needs
+  `%Admin_OAuth2_Client:U`, `%Admin_OAuth2_Server:U` and `%Admin_OAuth2_Registration:U` (server
+  clients). Without them the step fails with the platform's 403, or keeps what it could read and
+  marks the rest `INCOMPLETE_READ`. Totals are
+  kept in `summary` (roles, resources, credentials, configurations) even when the details are cut to
+  fit the stored result. Private keys, key passwords and client secrets are never read into a result.
 - The canvas's own page `/csp/sentai` is anonymous by design (it serves only static files) and the
   web application inventory reports it; that finding is expected.
 
@@ -487,8 +531,8 @@ capability is *for* in the operator's terms is what makes it findable.
 
 Try it in the palette's search box: type the **job**, not the tool's name — the closest entries
 appear under **SUGGESTED** within a beat of the last keystroke (scores below as measured on the
-dev stack's `all-minilm`; `q` is the query, `matches` rank best-first and only what clears the
-0.20 floor):
+dev stack with `all-MiniLM-L6-v2` running inside IRIS; `q` is the query, `matches` rank best-first
+and only what clears the 0.20 floor):
 
 | You type | SUGGESTED offers first |
 |---|---|
@@ -519,32 +563,55 @@ palette changes (that is also the state CI runs in). On the dev stack this row i
 `docker compose up -d` comes up with search working and nothing manual; delete the row to run the
 stack without a provider, and it stays deleted until the next image rebuild.
 
-One row, in `IRISAPP`, is the whole setup:
+One row, in `IRISAPP`, is the whole setup. The dev and demo images install this one — the model
+runs **inside IRIS** (spec 017), from files baked into the image, with no network at run time:
+
+```sql
+INSERT INTO %Embedding.Config (Name, EmbeddingClass, Configuration, VectorLength, Description)
+VALUES ('sentai-steps', 'sentai.search.LocalEmbedding',
+        '{"modelName":"sentence-transformers/all-MiniLM-L6-v2","cachePath":"/usr/irissys/mgr/sentai-models"}',
+        384, 'Step-type search, in-process');
+```
+
+`Configuration` names the model and the directory it is cached in: `modelName`, `cachePath`, and an
+optional `pythonPath` (an extra directory to import the Python packages from). The row's validating
+trigger rejects a configuration whose packages do not import or whose model is not in `cachePath`,
+at insert time, with a message that says which. One process, `sentai.search.EmbeddingWorker`, holds
+the model and answers every search (see [Where SentaiTask uses Embedded Python](#-where-sentaitask-uses-embedded-python-and-why));
+the image starts it right after IRIS, and the first search starts it anywhere else.
+
+**Your own model server instead** — for example an [ollama](https://ollama.com) you run — is the
+same one row with `sentai.search.EmbeddingService`, which speaks the OpenAI-compatible
+`POST /v1/embeddings`:
 
 ```sql
 INSERT INTO %Embedding.Config (Name, EmbeddingClass, Configuration, VectorLength, Description)
 VALUES ('sentai-steps', 'sentai.search.EmbeddingService',
-        '{"host":"ollama","port":11434,"https":0,"path":"/v1/embeddings","model":"all-minilm"}',
-        384, 'Step-type search, local Ollama');
+        '{"host":"my-ollama","port":11434,"https":0,"path":"/v1/embeddings","model":"all-minilm"}',
+        384, 'Step-type search, my ollama');
 ```
 
-`Configuration` is the provider endpoint, in JSON: `host`, `port`, `https` (`0`/`1`), `path` (the
-OpenAI-compatible `POST` route, normalized onto a leading slash), `model`, and an optional `apiKey`
-(sent as `Authorization: Bearer …` only when present). Nothing is hardcoded: the dev stack serves
-`all-minilm` on the compose network's `ollama` service, and the row's validating trigger rejects a
-configuration missing `host`, `path` or `model` at insert time, with the platform's own message.
+Its `Configuration` is the endpoint: `host`, `port`, `https` (`0`/`1`), `path` (normalized onto a
+leading slash), `model`, and an optional `apiKey` (sent as `Authorization: Bearer …` only when
+present); the trigger rejects a configuration missing `host`, `path` or `model`. Changing the row
+rebuilds the stored corpus with the new provider on the next search, so two models' vectors are
+never compared.
 
 **Pointing at a different provider is a row change, not a code change.** The table names the class:
-`%Embedding.SentenceTransformers` or `%Embedding.OpenAI` are rows in the same table with their own
-`Configuration`, and `sentai.search.EmbeddingService` itself speaks the OpenAI-compatible shape
-any such provider serves.
+`%Embedding.OpenAI` (a hosted provider) is a row in the same table with its own `Configuration`, and
+`sentai.search.EmbeddingService` speaks the OpenAI-compatible shape any such provider serves. The
+platform's `%Embedding.SentenceTransformers` works too but is not recommended here: it loads the
+model again on every call (≈3.4 s per search measured, spec 017 research R-1), where
+`sentai.search.LocalEmbedding` loads it once.
 
 > **A hosted provider sends the operator's query text off the machine.** What you type into the
-> palette's search box travels, as the request body, to whatever host the row names. A local
-> provider keeps it on the compose network; a hosted one does not — that is the trade-off, and it
-> belongs to whoever writes the row. If the provider is unconfigured, unreachable, too slow, or
-> returns vectors the stored corpus cannot compare with, the answer is today's palette — no error,
-> no toast, and never a masquerading "no results".
+> palette's search box travels, as the request body, to whatever host the row names. The default
+> in-process provider keeps it inside IRIS, and a model server you run keeps it on your network; a
+> hosted one does not — that is the trade-off, and it belongs to whoever writes the row. If the provider is unconfigured, unreachable, too slow,
+> still loading its model (`warming` — the first seconds after the instance starts, while the
+> in-process provider's model loads), or returns vectors the stored corpus cannot compare with, the
+> answer is today's palette — no error, no toast, and never a masquerading "no results". The next
+> search after `warming` ranks as usual.
 
 #### 🐍 Where SentaiTask uses Embedded Python, and why
 
@@ -556,6 +623,16 @@ in ObjectScript: the list of directories comes from the platform, the threshold 
 
 It is a real step, not a demo: put it at the head of a nightly flow and the integrity checks behind
 it only start when there is room for them.
+
+**The semantic search model (spec 017).** Intent search embeds text with `sentence-transformers`
+inside the instance, because the model library is Python. It runs in one process,
+`sentai.search.EmbeddingWorker`, which loads the model once and answers every search (≈12 ms each)
+— loading it in each web-server process would cost ≈500 MB and a ≈10 s load per process. Python
+does two things there: load the model and encode a text. ObjectScript owns everything around them:
+starting and stopping the process, the `$SYSTEM.Event` exchange with `sentai.search.LocalEmbedding`
+(the provider the configuration row names), the timeouts, and every failure as a value
+(`warming`, `slow`, `error`). The model is loaded from its local files only, with no code allowed
+to arrive with it.
 
 #### The task catalog: the platform's Task Manager, as the platform reports it
 
@@ -694,6 +771,9 @@ main points:
 - **Validating needs `%Admin_Manage:USE` and read on IRISSYS**; the platform decides the rest.
 - **Remote steps (DPI-I-588):** only types run through the management API (`integrity-check`);
   targets must be `https` unless loopback — the compose demo allows `http` on its own network only.
+- **Semantic search warms up.** For the first seconds after the instance starts (≈7–11 s measured)
+  the search model is loading and intent search answers `warming` — the palette behaves as it does
+  without semantic search. One worker process serves every search, one at a time (≈12 ms each).
 
 The complete list, with the reasons behind each point, is in
 [`docs/limitations.md`](docs/limitations.md).

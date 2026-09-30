@@ -1,0 +1,12 @@
+    // The "Weekly maintenance window" use-case flow (docs/use-case-weekly-maintenance.md),
+    // seeded with the image so a fresh `docker compose up -d` already lists the example -
+    // nothing manual. Run as its own iris session AFTER iris.script has loaded the module,
+    // for the same stdin reason as iris-provider.script (the zpm shell consumes the rest).
+    //
+    // Idempotent: the flow is created only when no flow of that name exists, so an operator
+    // who edited or removed the demo is never overwritten. Installs made with zpm alone get
+    // the class, not the data - the document shows the one-line call that seeds it.
+    zn "IRISAPP"
+    set demoFlowId = ##class(sentai.demo.DemoFlows).EnsureSeeded()
+    if (demoFlowId = "") write "demo flow seed failed", !
+    halt

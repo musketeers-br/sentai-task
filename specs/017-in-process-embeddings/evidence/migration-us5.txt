@@ -1,0 +1,5 @@
+# T044 — an existing stack after the change, without --build
+# the spec 011 image (tag sentai-task-iris:pre-017, built before this feature) run on its own, with no ollama service beside it
+row: sentai.search.EmbeddingService {"host":"ollama","port":11434,"https":0,"path":"/v1/embeddings","model":"all-minilm"}
+search 'free up disk space': {"available":false,"reason":"unreachable"}  [HTTP 200, 5.396004 s]
+# after docker compose up -d --build (the spec 017 image): see api-us1-search.txt — the same search ranks storage-headroom-check 0.594

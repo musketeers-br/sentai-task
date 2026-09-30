@@ -1,0 +1,6 @@
+# T042 (local, without up.sh) — the demo account's grants, applied to the dev primary with scripts/demo/demo-account.script
+# the demo account and role are the published ones (scripts/demo/lib.sh); the corpus is emptied before each search, so the demo user must rebuild it
+## grants before this change (HEAD): RESULT:OK
+search as sentai-demo: {"available":false,"reason":"error"}  [HTTP 200]
+## grants with this change: RESULT:OK
+search as sentai-demo: {"available":true,"matches":[{"type":"switch-journal","score":0.5550734996795654297},{"type":"db-size-report","score":0.3196335136890411377},{"type":"purge-audit-records","score":0.2176262587308883667}]}  [HTTP 200]

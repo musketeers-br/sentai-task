@@ -1,0 +1,29 @@
+# T034 — SC-004. Five fresh starts: docker restart, wait for the worker to report ready, then the first search.
+start 1: healthy +11 s, worker ready +7 s after healthy; first search: 200 0.106289 s -> storage-headroom-check
+start 2: healthy +12 s, worker ready +6 s after healthy; first search: 200 0.106957 s -> storage-headroom-check
+start 3: healthy +12 s, worker ready +6 s after healthy; first search: 200 0.105132 s -> storage-headroom-check
+start 4: healthy +12 s, worker ready +6 s after healthy; first search: 200 0.107119 s -> storage-headroom-check
+start 5: healthy +12 s, worker ready +7 s after healthy; first search: 200 0.104277 s -> storage-headroom-check
+
+# 20 consecutive searches (warm), status and total time
+1 200 0.039866 free up disk space
+2 200 0.036795 check my globals are sound
+3 200 0.039590 get rid of old audit records
+4 200 0.037867 rotate the journal
+5 200 0.034396 free up disk space
+6 200 0.035080 check my globals are sound
+7 200 0.036180 get rid of old audit records
+8 200 0.036499 rotate the journal
+9 200 0.038408 free up disk space
+10 200 0.041691 check my globals are sound
+11 200 0.036729 get rid of old audit records
+12 200 0.042596 rotate the journal
+13 200 0.033218 free up disk space
+14 200 0.037039 check my globals are sound
+15 200 0.034375 get rid of old audit records
+16 200 0.035352 rotate the journal
+17 200 0.033238 free up disk space
+18 200 0.037111 check my globals are sound
+19 200 0.035318 get rid of old audit records
+20 200 0.033817 rotate the journal
+above one second: 0 of 20

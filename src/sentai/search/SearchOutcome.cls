@@ -1,12 +1,12 @@
 /// Spec 011: the one value semantic step-type search answers with, in both directions
 /// (Constitution IV — a predictable failure crosses layers as a value, never as an exception).
-///
+/// 
 /// There are exactly two shapes and they are mutually exclusive by construction:
-///
+/// 
 ///   available    {"available":true,  "matches":[{"type":..,"score":..}, …]}
 ///   unavailable  {"available":false, "reason":"not-configured"|"unreachable"|"slow"
-///                                                      |"incompatible"|"error"}
-///
+///                                                      |"incompatible"|"warming"|"error"}
+/// 
 /// An `unavailable` outcome cannot carry a partial ranking (FR-025) and a ranking cannot carry a
 /// reason: both are built by these constructors, and nothing here throws. Degradation is a **200**
 /// (R-007) — the product's answer when search is unusable is today's working palette, so an error
@@ -14,10 +14,11 @@
 Class sentai.search.SearchOutcome Extends %RegisteredObject
 {
 
-/// The reasons an outcome can be unavailable, in the order FR-024 lists them. `error` is the
-/// catch-all for anything that is not one of the four named provider conditions; it exists so a
+/// The reasons an outcome can be unavailable, in the order FR-024 lists them, plus `warming`
+/// (spec 017 FR-004a: the in-process provider is still loading its model). `error` is the
+/// catch-all for anything that is not one of the named provider conditions; it exists so a
 /// failure is still a value rather than a leak, and is never shown to the operator as a message.
-Parameter REASONS = "not-configured,unreachable,slow,incompatible,error";
+Parameter REASONS = "not-configured,unreachable,slow,incompatible,warming,error";
 
 /// A ranked answer. `matches` is already filtered to the floor and already ordered best first
 /// (the caller owns that ordering; this type does not re-sort and cannot invent a `type`).
