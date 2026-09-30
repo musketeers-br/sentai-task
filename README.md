@@ -476,9 +476,9 @@ and, for declared step types, `PARAM_REQUIRED`, `PARAM_TYPE_MISMATCH`, `PARAM_OU
 
 #### Report steps (security, web applications, alerts, secrets)
 
-Four read-only step types (spec 013, `executor: "platform-read"`) read the **management API of the
-instance the step runs on** with the operator's credential for it, so they run on target servers
-too, and apply fixed rules. Each stores a report: `summary` (counts by severity), `findings`
+Seven read-only step types (specs 013 and 020, `executor: "platform-read"`) read the **management
+API of the instance the step runs on** with the operator's credential for it, so they run on target
+servers too, and apply fixed rules. Each stores a report: `summary` (counts by severity), `findings`
 (severity, rule, item, detail) and `details`. The run view opens any step's result with **Result**.
 
 | Type | Reads | Findings | Parameters |
@@ -807,20 +807,25 @@ curl -H "$H" -H "X-Sentai-Target-Authorization: Bearer <target access token>" $A
 
 ## ⚠️ Known limitations (v1)
 
-SentaiTask v1 only promises what was proven on IRIS 2026.2 (spec `004-backend-hardening`). The
-main points:
+SentaiTask v1 only promises what was proven on IRIS 2026.2. The main points:
 
-- **Available step types:** `integrity-check`, `switch-journal`, `storage-headroom-check`,
-  `db-size-report` and `purge-task-history` (destructive: typed confirmation). The others are listed with `available: false` and refused with
-  `STEP_TYPE_NOT_SUPPORTED_ON_TARGET` until each one is proven.
-- **Schedules use the instance's clock**, and overlapping runs of the same flow are not
-  prevented (a long run may still be going when the next firing starts another).
+- **Step types not yet proven:** `compact-globals`, `defragment-globals`, `purge-audit-records` and
+  the legacy `custom` are listed with `available: false` and refused with
+  `STEP_TYPE_NOT_SUPPORTED_ON_TARGET`. Every other type in the catalog — the integrity check, the
+  journal switch, the task-history purge, the storage and size reports and the seven report steps —
+  runs.
+- **Remote steps (DPI-I-588):** management-API types (`integrity-check`) and the report steps run on
+  a target; declared in-process types do not (they would need SentaiTask installed there). Targets
+  must be `https` unless loopback — the compose demo allows `http` on its own network only.
+- **Schedules use the instance's clock**, overlapping runs of the same flow are not prevented, and
+  flows with a destructive step cannot be scheduled (they run by hand, with typed confirmation).
 - **Long runs need a run credential.** The canvas handles it at *Run now*; a plain `curl` dispatch
   without `runCredential` stops after the platform's 60-second token.
-- **Flows must name an existing WQM category**, such as `Default`.
+- **Flows must name an existing WQM category**, such as `Default`. Categories are read and edited
+  through the API only; the canvas has no category screen yet.
 - **Validating needs `%Admin_Manage:USE` and read on IRISSYS**; the platform decides the rest.
-- **Remote steps (DPI-I-588):** only types run through the management API (`integrity-check`);
-  targets must be `https` unless loopback — the compose demo allows `http` on its own network only.
+- **The overview is for the primary instance only**, and shows instance resources only: the
+  management API reports no host CPU, host memory or console log.
 - **Semantic search warms up.** For the first seconds after the instance starts (≈7–11 s measured)
   the search model is loading and intent search answers `warming` — the palette behaves as it does
   without semantic search. One worker process serves every search, one at a time (≈12 ms each).
@@ -884,53 +889,30 @@ frontend, `bash scripts/publish-canvas.sh` copies a fresh build into the running
 ```
 sentai-task/
 ├── src/sentai/
-│   ├── model/          # Flow, Step, Edge, Join, Run, StepRun, Category, LogEntry
-│   ├── registry/       # StepType: closed catalog (destructive / pausable / available)
-│   ├── validation/     # FlowValidator: the single gate
-│   ├── dispatch/       # WaveDispatcher, AdminApiClient, ScheduledFlowTask
+│   ├── model/          # Flow, Step, Edge, Join, Run, StepRun, Category, LogEntry, Schedule, Target…
+│   ├── registry/       # StepType: closed catalog (destructive / pausable / available / remoteCapable)
+│   ├── validation/     # FlowValidator: the single gate for validate, dispatch and schedule
+│   ├── dispatch/       # WaveDispatcher, AdminApiClient, executors, RunNarrator (run log)
 │   ├── steps/          # Declared in-process steps (StorageHeadroomCheck uses Embedded Python)
+│   │   └── reports/    # Read-only report steps: security, web apps, alerts, secrets, certificates, OAuth
+│   ├── schedule/       # ScheduleService, Timing, Wallet (run-as credential in the IRIS Wallet)
+│   ├── targets/        # TargetService: target servers (DPI-I-588)
+│   ├── overview/       # OverviewService, Readings, ProcessActions: the instance overview
+│   ├── search/         # Semantic step-type search, in-process embeddings (Embedded Python)
 │   ├── wqm/            # CategoryService: WQM read/write passthrough
 │   ├── catalog/        # TaskService: native Task Manager catalog
+│   ├── demo/           # Demo and showcase flows
 │   ├── rest/           # Dispatcher: REST API + SSE
 │   └── web/            # StaticFiles: serves the canvas build
 ├── tests/sentai/unittest/   # %UnitTest suites + AdminApiDouble
 ├── frontend/           # Canvas UI: SvelteKit + Svelte Flow, built to static files
-├── docs/             # Full known-limitations list
+├── docs/               # Full known-limitations list, use cases
 ├── design/             # Canvas UI prototypes (spec 002)
-├── specs/              # Spec-driven history: 001 contract spike → 007 management screens
+├── specs/              # Spec-driven history, one directory per feature (001 → 020)
 ├── scripts/sanitation/ # Reviewed cleanup of historical test residue
 ├── module.xml
 └── docker-compose.yml
 ```
-
----
-
-## 📊 Roadmap
-
-### ✅ Done
-
-* [x] **001**: Contract spike against the real IRIS management API ([compatibility statement](specs/001-validate-async-job-contract/compatibility.md))
-* [x] **003**: ObjectScript backend: persistence, validation, wave dispatch, SSE tracking
-* [x] **004**: Hardening. The product only promises what IRIS 2026.2 proved.
-* [x] **002**: Canvas UI: compose, validate, schedule, run and watch flows, in dark and light
-* [x] Runs renew their own credential when dispatched with `runCredential` (runs > 60 s work)
-* [x] **005**: Declared in-process steps: storage headroom (Embedded Python), database size report, journal switch
-* [x] **006**: Task catalog API: the native Task Manager as the platform reports it, with suspend and resume
-* [x] **007 (part A)**: Task catalog screen (list, filters, detail, SentaiTask origin, suspend/resume) and the typed confirmation before dispatching a destructive step
-* [x] **007 (part B)**: declared custom steps in the canvas: a *Custom* palette group and an inspector form generated from the API schema, with errors on their field
-* [x] **008**: Distributed targets — implements [DPI-I-588](https://ideas.intersystems.com/ideas/DPI-I-588) (API)
-* [x] **009**: Target servers in the canvas: Targets screen, *Run on*, target passwords at *Run now*, where each step runs
-* [x] **010**: Onboarding: *Open flow…*, *Save as…*, sign-in kept across reloads, a ready-made example flow and a getting-started guide
-* [x] **011**: Demo readiness: a public demo that stays up (proxy, secured accounts, least-privilege demo account, daily reset), this README's first screen, and a warning before a cancel that makes IRIS raise an alert
-* [x] **012**: Run log and run history: every run tells its own story, past runs are one click away, and any run exports as a file
-* [x] **013**: Area report steps: security posture, web applications, system alerts and secrets as flow steps, on any server
-* [x] **014**: Demo media (animated capture, stills) and the community article drafts in English and Portuguese
-* [x] **015**: Scheduled runs that execute, with the run-as credential kept in the IRIS Wallet
-
-### 🚧 Next
-
-* [ ] WQM category screen in the canvas (the API already has it)
-* [ ] Prove and enable the remaining step types, one at a time
 
 ---
 
