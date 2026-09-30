@@ -29,7 +29,8 @@
 	import SignIn from '$lib/shell/SignIn.svelte';
 	import StatusBar from '$lib/shell/StatusBar.svelte';
 	import TopBar from '$lib/shell/TopBar.svelte';
-	import { screenOf, urlForScreen, type Screen } from '$lib/shell/screen';
+	import { screenOf, urlForArea, urlForScreen, type Screen } from '$lib/shell/screen';
+	import OverviewScreen from '$lib/overview/OverviewScreen.svelte';
 	import { theme } from '$lib/shell/theme.svelte';
 
 	const editor = new FlowEditor();
@@ -174,6 +175,29 @@
 		});
 	});
 
+	/** Spec 019: an Overview card's detail view is addressable (`area=<id>`), so back closes it. */
+	function selectArea(area: string | null) {
+		void goto(urlForArea(page.url, area), { keepFocus: true, noScroll: true });
+	}
+
+	/**
+	 * Spec 019 US4 (research R-5): a flow created from an Overview card opens in the editor, and
+	 * the schedule dialog opens over it once it is loaded — only when it validated clean.
+	 */
+	let scheduleWhenLoaded = $state<string | null>(null);
+	function scheduleCreated(flowId: string, hasErrors: boolean) {
+		scheduleWhenLoaded = hasErrors ? null : flowId;
+		void goto(flowHref(flowId), { noScroll: true });
+	}
+	$effect(() => {
+		if (scheduleWhenLoaded !== null && editor.id === scheduleWhenLoaded && screen === 'flows') {
+			untrack(() => {
+				scheduleWhenLoaded = null;
+				scheduling = true;
+			});
+		}
+	});
+
 	/** Spec 012 US2: the Runs screen's filters live in the address (FR-007). */
 	function setRunsQuery(query: RunsQuery) {
 		void goto(urlForQuery(page.url, query), { keepFocus: true, noScroll: true });
@@ -276,6 +300,8 @@
 		const url = new URL(page.url);
 		url.searchParams.delete('flow');
 		url.searchParams.delete('run');
+		// Spec 019: without a flow the address must still name the editor, not the landing screen.
+		url.searchParams.set('view', 'flows');
 		await goto(url, { keepFocus: true, noScroll: true });
 	}
 
@@ -370,7 +396,30 @@
 <svelte:window {onkeydown} />
 <svelte:head><title>{editor.name} — SentaiTask</title></svelte:head>
 
-{#if phase.name === 'ready' && screen === 'targets'}
+{#if phase.name === 'ready' && screen === 'overview'}
+	<div class="app">
+		<TopBar
+			{editor}
+			{screen}
+			onnavigate={navigate}
+			user={session.user}
+			onsave={save}
+			onsaveas={() => (saveAsOpen = true)}
+			onnew={() => void guarded({ kind: 'new' })}
+			onopen={() => (openListOpen = true)}
+			onvalidate={validate}
+			onrun={() => (dispatchOpen = true)}
+			onschedule={() => (scheduling = true)}
+			onhelp={() => guide.openFromHelp()}
+			onsignout={signOut}
+			onhistory={runHistory}
+		/>
+		<OverviewScreen areaParam={page.url.searchParams.get('area')} registry={editor.registry} onarea={selectArea} onscheduled={scheduleCreated} />
+	</div>
+	{#if session.status === 'expired'}
+		<div class="overlay"><SignIn expired /></div>
+	{/if}
+{:else if phase.name === 'ready' && screen === 'targets'}
 	<div class="app">
 		<TopBar
 			{editor}

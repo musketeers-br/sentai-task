@@ -97,6 +97,10 @@ SentaiTask v1 only promises what was proven on IRIS 2026.2 (spec `004-backend-ha
   database or journal directory has less than 10% free; that run is a real finding, not a defect.
   The example is identified by its name: renaming it and choosing *Open example flow* again creates
   a new one under the well-known name.
+- **Overview screen (spec 019).** It is the landing screen for an address that names no screen,
+  flow or run. Auto-refresh exists only in the detail views (every 10 s, off by default, paused
+  while the tab is hidden); the cards refresh on *Refresh*. A report run from a card is kept in the
+  page's memory only and is gone after a reload. The overview is for the primary instance only.
 - **Instance overview (spec 018).** Primary instance only: a `target` is refused with
   `OVERVIEW_PRIMARY_ONLY`. The management API reports no host CPU, host memory or console log
   (`messages.log`), so the overview shows instance resources only; a process's *CPU time* is the

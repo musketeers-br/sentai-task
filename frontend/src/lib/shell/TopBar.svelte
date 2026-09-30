@@ -53,6 +53,9 @@
 	<span class="separator" aria-hidden="true"></span>
 
 	<nav class="tabs" aria-label="Screens">
+		<button type="button" aria-current={screen === 'overview' ? 'page' : undefined} onclick={() => onnavigate('overview')}>
+			Overview
+		</button>
 		<button type="button" aria-current={screen === 'flows' ? 'page' : undefined} onclick={() => onnavigate('flows')}>
 			Flows
 		</button>
@@ -159,8 +162,8 @@
 	.top-bar {
 		display: flex;
 		align-items: center;
-		/* Four tabs plus the flow actions must fit 1440 px without clipping (spec 009, 010, 012). */
-		gap: 6px;
+		/* Five tabs plus the flow actions must fit 1440 px without clipping (spec 009, 010, 012, 019). */
+		gap: 5px;
 		height: var(--chrome-top-bar-height);
 		flex-shrink: 0;
 		box-sizing: border-box;
@@ -171,7 +174,7 @@
 
 	.tabs {
 		display: flex;
-		gap: 4px;
+		gap: 2px;
 	}
 
 	.tabs button {
@@ -180,7 +183,7 @@
 		background: transparent;
 		border: 1px solid transparent;
 		border-radius: var(--radius-control);
-		padding: 6px 7px;
+		padding: 6px 5px;
 	}
 
 	.tabs button[aria-current='page'] {
@@ -213,7 +216,7 @@
 		flex-direction: column;
 		justify-content: center;
 		flex: 0 1 240px;
-		min-width: 112px;
+		min-width: 72px;
 		gap: 1px;
 	}
 
