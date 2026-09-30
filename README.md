@@ -49,10 +49,10 @@ instance and on other IRIS servers, and watch every step live.
 | **Operating system** | Instance resources on demand: processes (with suspend, resume and terminate), locks, shared memory, activity counters, devices, license use and web sessions — the management API reports no host CPU or memory, so none is shown. Disk: `storage-headroom-check` (Embedded Python) and `db-size-report` as flow steps | [Instance overview](#instance-overview), [spec 018](specs/018-instance-overview-api/), [Declared step types](#declared-step-types) |
 | **Work Queue Manager** | Read and edit WQM categories, the worker pools every step runs on | [API at a glance](#api-at-a-glance) |
 | **Logs** | Every run writes its own log (dispatch, each step start and end with its duration, the platform's failure reason verbatim, joins that stopped a step, who asked to cancel, targets that stopped answering, the outcome); a *Runs* screen finds any past run by flow and outcome, and *Export* saves one as a file | [Runs and run log](#runs-and-run-log), [spec 012](specs/012-run-log-history/) |
-| **Security and permissions** | `security-posture-report` as a flow step: enabled accounts and their roles, `%All` holders, services open to unauthenticated connections, auditing off, on any server. Every call runs with the operator's own IRIS credential; the platform's refusal is shown verbatim | [Report steps](#report-steps-security-web-applications-alerts-secrets), [spec 013](specs/013-area-report-steps/); on demand: [Instance overview](#instance-overview) |
+| **Security and permissions** | `security-posture-report` as a flow step: enabled accounts and their roles, `%All` holders, services open to unauthenticated connections, auditing off, on any server. `permissions-inventory`: every role with the resources it grants, every resource with what the public may do, risky combinations flagged. Every call runs with the operator's own IRIS credential; the platform's refusal is shown verbatim | [Report steps](#report-steps-security-web-applications-alerts-secrets), [spec 013](specs/013-area-report-steps/), [spec 020](specs/020-security-inventory/) |
 | **Web applications / REST** | `web-app-inventory`: every web application, whether it is a REST endpoint, its resource and authentication; anonymous endpoints are findings | [Report steps](#report-steps-security-web-applications-alerts-secrets) |
 | **Monitoring and alerts** | `system-alerts-check` gates a flow on the platform's serious alerts, application errors and resource statuses | [Report steps](#report-steps-security-web-applications-alerts-secrets) |
-| **Secrets** | `secrets-inventory`: the IRIS Wallet's collections, their protecting resources and secret names, never a value | [Report steps](#report-steps-security-web-applications-alerts-secrets) |
+| **Secrets** | `secrets-inventory`: the IRIS Wallet's collections, their protecting resources and secret names, never a value. `certificate-expiry-check`: x509 certificates and SSL/TLS configurations, failing when one expires within N days — schedule it and the flow warns before an outage. `oauth-inventory`: OAuth 2.0 server, clients, server definitions and resource servers ("not configured" is a normal state) | [Report steps](#report-steps-security-web-applications-alerts-secrets), [spec 020](specs/020-security-inventory/) |
 | **Distributed work** | A flow step can run on another IRIS instance (a *target server*), tracked and with its result collected on the primary | [DPI-I-588](#-implements-dpi-i-588-distributed-work-manager) |
 
 ---
@@ -466,10 +466,25 @@ too, and apply fixed rules. Each stores a report: `summary` (counts by severity)
 | `web-app-inventory` | web applications | `ANONYMOUS_REST_ENDPOINT` (high), `ANONYMOUS_APPLICATION` (medium): enabled, not system, unauthenticated allowed, no resource | `failOnFindings` |
 | `system-alerts-check` | the main monitoring dashboard | `SERIOUS_ALERTS_OVER`, `APPLICATION_ERRORS_OVER`, `STATUS_NOT_NORMAL` — the step fails on any | `maxSeriousAlerts` (0), `maxApplicationErrors` (0), `requireNormalStatus` (true) |
 | `secrets-inventory` | wallet collections and their secrets' names | `UNPROTECTED_COLLECTION` (medium) | — |
+| `certificate-expiry-check` | x509 credentials and each one's certificate validity; SSL/TLS configurations | `CERT_EXPIRED` (high), `CERT_EXPIRING` (medium) — the step fails on either; `CERT_VALIDITY_UNKNOWN`, `CONFIG_VALIDITY_NOT_REPORTED` (info) | `warnDays` (30, 1–365) |
+| `permissions-inventory` | roles (each one's resources and granted roles), resources | `PUBLIC_WRITE_OR_USE_SENSITIVE` (high: public W or U on `%DB_…`, `%Admin_…`, `%Development`), `PUBLIC_WRITE_OR_USE` (medium), `ROLE_GRANTS_ALL` (high) | `failOnFindings` |
+| `oauth-inventory` | OAuth 2.0 server and its clients, server definitions and their client configurations, resource servers | `OAUTH_PASSWORD_GRANT`, `OAUTH_NON_HTTPS_ADDRESS` (medium, loopback excepted) | `failOnFindings` |
 
 - Reports copy only named fields from the platform's answers; no password, hash, token or secret
   value can reach a result. The platform decides what the operator may read: reading users and
   services needs security administration privileges, and a refusal fails the step verbatim.
+- **A certificate that expires, caught before it does (spec 020).** Put *Certificate expiry check*
+  (*Warn days* 30) in a flow and schedule it weekly: the week a certificate enters the last 30 days,
+  the scheduled run fails and its log and result name the certificate and its expiry date. Only
+  certificates registered as x509 credentials carry a validity the platform reports; SSL/TLS
+  configurations that point at certificate files are listed with "validity not reported".
+- The security inventories read with security administration privileges, as the platform decides
+  (observed on IRIS 2026.2): roles, resources and certificates need `%Admin_Secure:U`; OAuth needs
+  `%Admin_OAuth2_Client:U`, `%Admin_OAuth2_Server:U` and `%Admin_OAuth2_Registration:U` (server
+  clients). Without them the step fails with the platform's 403, or keeps what it could read and
+  marks the rest `INCOMPLETE_READ`. Totals are
+  kept in `summary` (roles, resources, credentials, configurations) even when the details are cut to
+  fit the stored result. Private keys, key passwords and client secrets are never read into a result.
 - The canvas's own page `/csp/sentai` is anonymous by design (it serves only static files) and the
   web application inventory reports it; that finding is expected.
 

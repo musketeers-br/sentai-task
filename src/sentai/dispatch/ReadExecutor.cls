@@ -87,6 +87,10 @@ ClassMethod FitResult(json As %String, protected As %String) As %String
     Quit:($L(json) <= max) json
     Set obj = ##class(%DynamicAbstractObject).%FromJSON(json)
     Set details = obj.details, omitted = 0
+    // The markers are counted while cutting: added afterwards, they could push the report back
+    // over the limit and cost a finding (spec 020 finding).
+    Do obj.%Set("truncated", 1, "boolean")
+    Do obj.%Set("omitted", 0)
     // Cut the largest array inside details until it fits, one element at a time from the end.
     For {
         Quit:($L(obj.%ToJSON()) <= max)
@@ -102,10 +106,11 @@ ClassMethod FitResult(json As %String, protected As %String) As %String
         Quit:(largest = "")
         Do details.%Get(largest).%Remove(details.%Get(largest).%Size() - 1)
         Set omitted = omitted + 1
-    }
-    If (omitted > 0) {
-        Do obj.%Set("truncated", 1, "boolean")
         Do obj.%Set("omitted", omitted)
+    }
+    If (omitted = 0) {
+        Do obj.%Remove("truncated")
+        Do obj.%Remove("omitted")
     }
     // Still too big: the findings themselves, least severe last.
     Set cut = 0

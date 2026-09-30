@@ -113,6 +113,14 @@ SentaiTask v1 only promises what was proven on IRIS 2026.2 (spec `004-backend-ha
   IRIS 2026.2 it keeps counting severe `messages.log` entries after `$SYSTEM.Monitor.Clear()`, so an
   instance that raised alerts since it started fails `system-alerts-check` at the default
   threshold 0 until it restarts or the threshold is raised. Reports never correct anything.
+- **Security inventory (spec 020).** Certificate validity is what the platform reports for x509
+  credentials; the platform reports none for certificate *files* named by SSL/TLS configurations,
+  and SentaiTask does not open those files — register such a certificate as an x509 credential to
+  have it checked. On an instance without OAuth, `oauth-inventory` completes with the platform's
+  `ERROR #8864` text ("not configured"). Grant types are flagged only when the platform reports
+  them (client configurations on IRIS 2026.2 did not return `grant_types` in the spike). The
+  demo account has no `%Admin_Secure`, so on the public demo the three steps fail with the
+  platform's 403. Per-item reads stop at 200 (an *info* finding says how many were not read).
 - **Semantic search (spec 017).** The in-process search model loads in one worker process after the
   instance starts; until it is loaded (≈7–11 s measured, research R-2) searches answer `warming`
   and the palette keeps its local filter. The worker is started by the container image and, on any
