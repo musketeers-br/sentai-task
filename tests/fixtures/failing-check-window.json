@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "name": "Maintenance window with a failing check",
+  "defaultCategory": "Default",
+  "steps": [
+    {"id": "01", "type": "storage-headroom-check", "taskName": "Storage headroom", "namespace": "%SYS", "parameters": {"minFreePercent": 100}, "timeoutMinutes": 5, "wqmCategory": "Default"},
+    {"id": "02", "type": "db-size-report", "taskName": "Database size report", "namespace": "%SYS", "timeoutMinutes": 5, "wqmCategory": "Default"},
+    {"id": "03", "type": "switch-journal", "taskName": "Switch journal", "namespace": "%SYS", "timeoutMinutes": 5, "wqmCategory": "Default"},
+    {"id": "04", "type": "integrity-check", "taskName": "Integrity check - USER", "namespace": "USER", "timeoutMinutes": 10, "wqmCategory": "Default"}
+  ],
+  "edges": [
+    {"source": "01", "target": "03"},
+    {"source": "02", "target": "03"},
+    {"source": "03", "target": "04"}
+  ],
+  "joins": [
+    {"target": "03", "policy": "ALL_MUST_SUCCEED"}
+  ],
+  "canvasGeometry": {
+    "viewport": {"x": 0, "y": 40, "zoom": 0.85},
+    "nodes": {
+      "01": {"x": 0, "y": 0, "width": 240},
+      "02": {"x": 0, "y": 220, "width": 240},
+      "03": {"x": 340, "y": 110, "width": 240},
+      "04": {"x": 680, "y": 110, "width": 240}
+    }
+  }
+}
