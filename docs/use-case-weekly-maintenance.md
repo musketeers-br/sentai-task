@@ -202,8 +202,10 @@ curl -N http://localhost:52773/csp/sentai/api/v1/runs/<runGuid>/events -H "Autho
 ## When things go wrong — the product stays honest
 
 - **Disk below 15%** — 01 fails, naming each location with its free percentage. Nothing
-  downstream ever starts: 03–06 stay `skipped`, and the run reports partial failure, never
-  success (Constitution IV: a partially failed run is never reported as success).
+  downstream ever runs: the failure propagates through the `ALL_MUST_SUCCEED` join, and 03–06
+  transition straight to `failed` with the reason "One or more required inputs failed". The
+  run reports partial failure, never success (Constitution IV: a partially failed run is
+  never reported as success).
 - **The operator may not switch journals** — the platform refuses; its own `#921` text is the
   step's `failureReason`, nothing reinterpreted.
 - **A typo in the confirmation** — 428 with the backend's `detail`, verbatim.

@@ -650,6 +650,20 @@ components:
         progressTotal: { type: integer, nullable: true }
         confirmedBy: { type: string, nullable: true }
         confirmedAt: { type: string, format: date-time, nullable: true }
+        executedAs:
+          type: string
+          description: Who ran the step (spec 005); empty for steps the platform runs itself.
+        executedOn:
+          type: string
+          description: Where the step ran — "local" or a target server's name (spec 008). Served
+            as "local" while a step has not started; the step detail shows no place until it has.
+        result:
+          type: object
+          additionalProperties: true
+          description: >
+            The step's stored report (spec 005), {} when none. When the product's size limit cut
+            the stored report, the object itself carries "truncated": true and "omitted": <n>
+            (or the report's own findingsOmitted); shown as data, never as an error (spec 016).
 
     LogEntry:
       type: object

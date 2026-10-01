@@ -24,6 +24,8 @@
 	const destructive = $derived(data.info?.destructive === true);
 	const sr = $derived(monitor.stepFor(id));
 	const state = $derived(sr?.state ?? 'queued');
+	// Spec 016 US2: the node the addressed selection (?run=&step=) points at.
+	const selected = $derived(monitor.selectedStepId === id);
 	const duration = $derived(sr ? stepDurationMs(sr, monitor.now) : null);
 	const sources = $derived(incoming.current.map((c) => c.source).sort());
 	const waitingFor = $derived(sources.filter((s) => monitor.stepFor(s)?.state !== 'completed'));
@@ -54,6 +56,7 @@
 
 <article
 	class={`node state-${state}`}
+	class:selected
 	style:--node-category={`var(--category-${category})`}
 	style:--state-color={`var(--state-${state})`}
 	style:--state-text={`var(--state-text-${state})`}
@@ -227,6 +230,11 @@
 	.node.state-queued {
 		border-style: dashed;
 		border-left-style: solid;
+	}
+
+	/* Spec 016: the selected step's node — a ring in its own state colour, both themes. */
+	.node.selected {
+		box-shadow: 0 0 0 3px color-mix(in srgb, var(--state-color) 45%, transparent);
 	}
 
 	.hazard-band {

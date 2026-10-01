@@ -13,3 +13,8 @@ export function severityLabel(severity: string): 'INFO' | 'WARN' | 'ERROR' {
 	if (severity === 'warning') return 'WARN';
 	return 'INFO';
 }
+
+/** Spec 016 FR-010: a selected step's slice of the log — every attempt, in reading order. */
+export function sliceFor(log: readonly LogEntry[], stepId: string): LogEntry[] {
+	return chronological(log).filter((e) => e.stepId === stepId);
+}

@@ -1,0 +1,256 @@
+{
+  "guid": "6A6CBB6D-BC5D-11F1-B9AB-2E2C6305E137",
+  "flowId": "2",
+  "flowRevision": 1,
+  "state": "failed",
+  "startedAt": "2026-09-29 23:28:02",
+  "finishedAt": "2026-09-29 23:28:04",
+  "dispatchedBy": "_SYSTEM",
+  "trigger": "manual",
+  "totalDurationMs": 2000,
+  "steps": [
+    {
+      "guid": "6A7FC543-BC5D-11F1-B9AB-2E2C6305E137",
+      "stepId": "01",
+      "state": "completed",
+      "timeQueued": "2026-09-29 23:28:02",
+      "timeStarted": "2026-09-29 23:28:03",
+      "timeFinished": "2026-09-29 23:28:03",
+      "failureReason": "",
+      "progressCurrent": "",
+      "progressTotal": "",
+      "confirmedBy": "",
+      "confirmedAt": "",
+      "executedAs": "_SYSTEM",
+      "executedOn": "local",
+      "result": {
+        "databases": [
+          {
+            "name": "IRISAPP_DATA",
+            "directory": "/data/IRISAPP_DATA/",
+            "sizeMB": 11,
+            "freeMB": 9.5
+          },
+          {
+            "name": "IRISSYS",
+            "directory": "/usr/irissys/mgr/",
+            "sizeMB": 90,
+            "freeMB": 10
+          },
+          {
+            "name": "IRISAPP_CODE",
+            "directory": "/usr/irissys/mgr/IRISAPP_CODE/",
+            "sizeMB": 11,
+            "freeMB": 6.5
+          },
+          {
+            "name": "ENSLIB",
+            "directory": "/usr/irissys/mgr/enslib/",
+            "sizeMB": 153,
+            "freeMB": 11
+          },
+          {
+            "name": "IRISAUDIT",
+            "directory": "/usr/irissys/mgr/irisaudit/",
+            "sizeMB": 11,
+            "freeMB": 6.5
+          },
+          {
+            "name": "IRISLIB",
+            "directory": "/usr/irissys/mgr/irislib/",
+            "sizeMB": 379,
+            "freeMB": 0.49
+          },
+          {
+            "name": "IRISLOCALDATA",
+            "directory": "/usr/irissys/mgr/irislocaldata/",
+            "sizeMB": 11,
+            "freeMB": 8.9
+          },
+          {
+            "name": "IRISMETRICS",
+            "directory": "/usr/irissys/mgr/irismetrics/",
+            "sizeMB": 1,
+            "freeMB": 0.34
+          },
+          {
+            "name": "IRISSECURITY",
+            "directory": "/usr/irissys/mgr/irissecurity/",
+            "sizeMB": 1,
+            "freeMB": 0.27
+          },
+          {
+            "name": "IRISTEMP",
+            "directory": "/usr/irissys/mgr/iristemp/",
+            "sizeMB": 20,
+            "freeMB": 18
+          },
+          {
+            "name": "SENTAIWEB",
+            "directory": "/usr/irissys/mgr/sentaiweb/",
+            "sizeMB": 1,
+            "freeMB": 0.4
+          },
+          {
+            "name": "USER",
+            "directory": "/usr/irissys/mgr/user/",
+            "sizeMB": 11,
+            "freeMB": 9.9
+          }
+        ]
+      }
+    },
+    {
+      "guid": "6A7FDDE1-BC5D-11F1-B9AB-2E2C6305E137",
+      "stepId": "02",
+      "state": "failed",
+      "timeQueued": "2026-09-29 23:28:02",
+      "timeStarted": "2026-09-29 23:28:03",
+      "timeFinished": "2026-09-29 23:28:04",
+      "failureReason": "ERROR #5001: Storage headroom below 100%: '/data/IRISAPP_DATA/' has 23.4% free, below the 100% threshold; '/usr/irissys/mgr/' has 23.4% free, below the 100% threshold; '/usr/irissys/mgr/IRISAPP_CODE/' has 23.4% free, below the 100% threshold; '/usr/irissys/mgr/enslib/' has 23.4% free, below the 100% threshold; '/usr/irissys/mgr/irisaudit/' has 23.4% free, below the 100% threshold; '/usr/irissys/mgr/irislib/' has 23.4% free, below the 100% threshold; '/usr/irissys/mgr/irislocaldata/' has 23.4% free, below the 100% threshold; '/usr/irissys/mgr/irismetrics/' has 23.4% free, below the 100% threshold; '/usr/irissys/mgr/irissecurity/' has 23.4% free, below the 100% threshold; '/usr/irissys/mgr/iristemp/' has 23.4% free, below the 100% threshold; '/usr/irissys/mgr/sentaiweb/' has 23.4% free, below the 100% threshold; '/usr/irissys/mgr/user/' has 23.4% free, below the 100% threshold; '/usr/irissys/mgr/journal/' has 23.4% free, below the 100% threshold",
+      "progressCurrent": "",
+      "progressTotal": "",
+      "confirmedBy": "",
+      "confirmedAt": "",
+      "executedAs": "_SYSTEM",
+      "executedOn": "local",
+      "result": {
+        "minFreePercent": 100,
+        "locations": [
+          {
+            "path": "/data/IRISAPP_DATA/",
+            "freePercent": 23.4,
+            "ok": false
+          },
+          {
+            "path": "/usr/irissys/mgr/",
+            "freePercent": 23.4,
+            "ok": false
+          },
+          {
+            "path": "/usr/irissys/mgr/IRISAPP_CODE/",
+            "freePercent": 23.4,
+            "ok": false
+          },
+          {
+            "path": "/usr/irissys/mgr/enslib/",
+            "freePercent": 23.4,
+            "ok": false
+          },
+          {
+            "path": "/usr/irissys/mgr/irisaudit/",
+            "freePercent": 23.4,
+            "ok": false
+          },
+          {
+            "path": "/usr/irissys/mgr/irislib/",
+            "freePercent": 23.4,
+            "ok": false
+          },
+          {
+            "path": "/usr/irissys/mgr/irislocaldata/",
+            "freePercent": 23.4,
+            "ok": false
+          },
+          {
+            "path": "/usr/irissys/mgr/irismetrics/",
+            "freePercent": 23.4,
+            "ok": false
+          },
+          {
+            "path": "/usr/irissys/mgr/irissecurity/",
+            "freePercent": 23.4,
+            "ok": false
+          },
+          {
+            "path": "/usr/irissys/mgr/iristemp/",
+            "freePercent": 23.4,
+            "ok": false
+          },
+          {
+            "path": "/usr/irissys/mgr/sentaiweb/",
+            "freePercent": 23.4,
+            "ok": false
+          },
+          {
+            "path": "/usr/irissys/mgr/user/",
+            "freePercent": 23.4,
+            "ok": false
+          },
+          {
+            "path": "/usr/irissys/mgr/journal/",
+            "freePercent": 23.4,
+            "ok": false
+          }
+        ]
+      }
+    },
+    {
+      "guid": "6A7FE939-BC5D-11F1-B9AB-2E2C6305E137",
+      "stepId": "03",
+      "state": "failed",
+      "timeQueued": "2026-09-29 23:28:02",
+      "timeStarted": "",
+      "timeFinished": "2026-09-29 23:28:04",
+      "failureReason": "One or more required inputs failed",
+      "progressCurrent": "",
+      "progressTotal": "",
+      "confirmedBy": "",
+      "confirmedAt": "",
+      "executedAs": "",
+      "executedOn": "local",
+      "result": {}
+    }
+  ],
+  "sumOfStepsMs": 1000,
+  "log": [
+    {
+      "at": "2026-09-29 23:28:05.184",
+      "stepId": "",
+      "severity": "error",
+      "message": "Run failed: 1 completed, 2 failed, 0 cancelled (00:02)"
+    },
+    {
+      "at": "2026-09-29 23:28:04.791",
+      "stepId": "03",
+      "severity": "error",
+      "message": "#03 failed: \"One or more required inputs failed\""
+    },
+    {
+      "at": "2026-09-29 23:28:04.791",
+      "stepId": "03",
+      "severity": "error",
+      "message": "#03 not started: input #02 failed (all inputs must succeed)"
+    },
+    {
+      "at": "2026-09-29 23:28:04.007",
+      "stepId": "02",
+      "severity": "error",
+      "message": "#02 failed after 00:01: \"ERROR #5001: Storage headroom below 100%: '/data/IRISAPP_DATA/' has 23.4% free, below the 100% threshold; '/usr/irissys/mgr/' has 23.4% free, below the 100% threshold; '/usr/irissys/mgr/IRISAPP_CODE/' has 23.4% free, below the 100% threshold; '/usr/irissys/mgr/enslib/' has 23.4% free, below the 100% threshold; '/usr/irissys/mgr/irisaudit/' has 23.4% free, below the 100% threshold; '/usr/irissys/mgr/irislib/' has 23.4% free, below the 100% threshold; '/usr/irissys/mgr/irislocaldata/' has 23.4% free, below the 100% threshold; '/usr/irissys/mgr/irismetrics/' has 23.4% free, below the 100% threshold; '/usr/irissys/mgr/irissecurity/' has 23.4% free, below the 100% threshold; '/usr/irissys/mgr/iristemp/' has 23.4% free, below the 100% threshold; '/usr/irissys/mgr/sentaiweb/' has 23.4% free, below the 100% threshold; '/usr/irissys/mgr/user/' has 23.4% free, below the 100% threshold; '/usr/irissys/mgr/journal/' has 23.4% free, below the 100% threshold\""
+    },
+    {
+      "at": "2026-09-29 23:28:03.749",
+      "stepId": "01",
+      "severity": "info",
+      "message": "#01 completed in 00:00"
+    },
+    {
+      "at": "2026-09-29 23:28:03.582",
+      "stepId": "02",
+      "severity": "info",
+      "message": "#02 storage-headroom-check 02 started on local"
+    },
+    {
+      "at": "2026-09-29 23:28:03.577",
+      "stepId": "01",
+      "severity": "info",
+      "message": "#01 db-size-report 01 started on local"
+    },
+    {
+      "at": "2026-09-29 23:28:02.995",
+      "stepId": "",
+      "severity": "info",
+      "message": "Run dispatched by _SYSTEM (flow revision 1, 3 steps)"
+    }
+  ]
+}
