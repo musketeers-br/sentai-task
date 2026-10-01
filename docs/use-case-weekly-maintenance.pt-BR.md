@@ -203,8 +203,9 @@ curl -N http://localhost:52773/csp/sentai/api/v1/runs/<runGuid>/events -H "Autho
 ## Quando as coisas dão errado — o produto continua honesto
 
 - **Disco abaixo de 15%** — o 01 falha, nomeando cada local com sua porcentagem livre. Nada
-  downstream começa: 03–06 ficam `skipped`, e o run relata falha parcial, nunca sucesso
-  (Constituição IV: um run parcialmente falho nunca é reportado como sucesso).
+  downstream roda: a falha se propaga pelo join `ALL_MUST_SUCCEED`, e 03–06 transitam direto
+  para `failed` com o motivo "One or more required inputs failed". O run relata falha parcial,
+  nunca sucesso (Constituição IV: um run parcialmente falho nunca é reportado como sucesso).
 - **O operador não pode trocar journal** — a plataforma recusa; o texto `#921` dela é o
   `failureReason` do step, nada reinterpretado.
 - **Erro de digitação na confirmação** — 428 com o `detail` do backend, verbatim.
