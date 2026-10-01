@@ -24,6 +24,58 @@ instance and on other IRIS servers, and watch every step live.
   <img src="./assets/media/stills/overview.png" alt="The Overview screen: eleven cards — processes, locks, shared memory, activity, devices, licenses, web sessions, security posture, web applications, system alerts and secrets — each with its headline read now from the instance" width="880">
 </p>
 
+## ⚖️ For judges: two minutes
+
+**What is different here.** The other portals *show* you the instance. SentaiTask *runs work on
+it*: maintenance steps composed as a flow, dispatched several at a time as real Work Queue Manager
+jobs, on this instance and on other IRIS servers, each one followed to a terminal state. Nothing is
+simulated — every call goes to the platform's own management API (`/api/admin`) with **your**
+credential, and when the platform refuses, its answer is shown word for word.
+
+### Ninety seconds, Docker only
+
+```sh
+git clone https://github.com/musketeers-br/sentai-task.git && cd sentai-task
+docker compose up -d --build
+# then open http://localhost:52773/csp/sentai/ and sign in as _SYSTEM / SYS
+```
+
+1. **Overview** opens first — eleven cards, each read now from the instance. On *Security posture*,
+   press **Run report**: a flow step runs and opens its findings in the viewer a run uses.
+2. **Flows → Open example flow**, then **Validate flow**, then **Run now**.
+3. **Watch the canvas.** Steps in the same wave turn green together; a diamond is a join, and the
+   step after it waits for every input. *That parallelism is the product.*
+4. Open **RUN LOG**: who dispatched the run, each step's start, end and duration, and any failure in
+   the platform's own words. **Export** saves the whole run as JSON.
+5. Press **Schedule in Task Manager**: the flow becomes one native IRIS task, and its runs come back
+   marked *scheduled* in the history.
+
+No public demo to reach, no second service to wait for, no model to download at run time: the image
+carries everything. ([Docker](#docker) · [IPM: `zpm "install sentai-task"`](#ipm))
+
+### If you have two more minutes
+
+| Look at | Why it matters | Where |
+|---|---|---|
+| A step running on **another IRIS server** | Implements [DPI-I-588 *Distributed Work Manager*](https://ideas.intersystems.com/ideas/DPI-I-588), an idea with **Community Opportunity** status, with nothing installed on the far side | [Target servers](#-implements-dpi-i-588-distributed-work-manager) |
+| Typing a database directory to confirm a **destructive** step | The backend checks the value; destructive flows cannot be scheduled at all | [On the canvas](#on-the-canvas) |
+| Signing in as a user without `%Admin_Task` | Every call carries the operator's own credential — SentaiTask never re-implements IRIS permissions | [Core pieces](#core-pieces) |
+| Describing a job in the palette search | Intent search ranks the catalog by meaning, embedded **inside IRIS** via `%Embedding.Config`, offline | [Semantic step-type search](#-semantic-step-type-search-and-the-embedding-provider) |
+| The report steps | Security posture, permissions, web applications, secrets, certificate expiry, OAuth and system alerts — each one a step you can schedule | [Report steps](#report-steps-security-web-applications-alerts-secrets) |
+
+### The honest parts
+
+- **[Contest areas covered](#contest-areas-covered)** — nine areas, each row linking to the screen
+  or spec that proves it.
+- **[Known limitations](#%EF%B8%8F-known-limitations-v1)** — what is *not* proven on IRIS 2026.2 is
+  listed, including the four step types still marked `available: false`.
+- **[Running the tests](#-running-the-tests)** — 268 backend test methods against a double of the
+  management API, plus canvas unit tests and Playwright acceptance tests that drive real runs.
+- Built across 20 specs, each with its evidence kept in [`specs/`](specs/).
+- Written up on the Developer Community: [the walkthrough in English](https://community.intersystems.com/post/sentaitask-%E6%88%A6%E9%9A%8A-your-iris-maintenance-tasks-assembled-squad) and [a versão em português](https://pt.community.intersystems.com/post/sentaitask-%E6%88%A6%E9%9A%8A-tarefas-de-manuten%C3%A7%C3%A3o-do-iris-reunidas-como-um-esquadr%C3%A3o).
+
+---
+
 ## 🚀 Try it
 
 - **Public demo**: a stable address is being set up for the voting week; it will be listed here.
