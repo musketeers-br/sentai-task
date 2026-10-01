@@ -2,16 +2,21 @@
 
 SentaiTask v1 only promises what was proven on IRIS 2026.2 (spec `004-backend-hardening`):
 
-- **Available step types:** `integrity-check`, `switch-journal`, `storage-headroom-check`,
-  `db-size-report` and `purge-task-history` (spec `005-declared-custom-steps`, see
-  [Declared step types](../README.md#declared-step-types)). The others (`compact-globals`,
-  `defragment-globals`, `purge-audit-records`, `custom`) are still listed in `GET /catalog/step-types` with
-  `available: false`, and saved flows that use them still load. Validate, dispatch, schedule and
-  rerun refuse them with `STEP_TYPE_NOT_SUPPORTED_ON_TARGET`.
+- **Step types not yet proven.** `compact-globals`, `defragment-globals`, `purge-audit-records`
+  and the legacy `custom` are still listed in `GET /catalog/step-types` with `available: false`,
+  and saved flows that use them still load; validate, dispatch, schedule and rerun refuse them with
+  `STEP_TYPE_NOT_SUPPORTED_ON_TARGET`. `compact-globals` (`%SYS.Task.CompactGlobals`) and
+  `defragment-globals` (`%SYS.Task.Defragment`) name classes that are not installed on 2026.2; the
+  audit purge's class was corrected to the platform's `%SYS.Task.PurgeAudit`. Every other type
+  runs: `integrity-check`, `switch-journal`, `purge-task-history`, `storage-headroom-check`,
+  `db-size-report` (spec 005, see [Declared step types](../README.md#declared-step-types)) and the
+  seven report steps of specs 013 and 020 (see
+  [Report steps](../README.md#report-steps-security-web-applications-alerts-secrets)).
 - **Operators who validate need `%Admin_Manage:USE` and read on IRISSYS.** Validation reads the
   WQM categories with the operator's token; with less, that read is refused and every step reports
-  `CATEGORY_NOT_FOUND`. On IRIS 2026.2 those resources are also enough for the platform to allow
-  the task-history purge (it refuses the journal switch without `%Admin_Operate:USE`) — the
+  `CATEGORY_NOT_FOUND` — the message says the category "does not exist" when the platform actually
+  refused the read (`%Admin_Operate:USE` alone is refused — spec 005 research R-10). On IRIS 2026.2
+  those resources are also enough for the platform to allow the task-history purge (it refuses the journal switch without `%Admin_Operate:USE`) — the
   platform decides, not SentaiTask.
 - **Schedules (spec 015).** Times are the instance's local clock. Overlapping runs of the same flow
   are not prevented. The flow list's next run is the platform's value as of the last schedule read
@@ -24,11 +29,14 @@ SentaiTask v1 only promises what was proven on IRIS 2026.2 (spec `004-backend-ha
   refresh token (`runCredential`), with which the run renews its own credential until it ends —
   then both are erased. A dispatch **without** `runCredential` (e.g. plain `curl`) keeps the 60 s
   limit: later platform calls fail with 401, stored verbatim as the step's failure reason.
-- **Step parameters are not forwarded.** The platform start request carries no parameters, so
-  `databaseDirectory` and similar fields do not choose what the platform operates on.
+- **Management-API steps take no parameters.** The platform start request carries none, so
+  `databaseDirectory` and similar fields do not choose what the platform operates on (they are
+  still what the typed confirmation of a destructive step checks). Declared in-process and report
+  steps do read their declared parameters.
 - **Flows must name an existing WQM category.** Validation refuses an unknown category with
   `CATEGORY_NOT_FOUND`. The default for new flows, `SENTAI.DEFAULT`, does not exist on a stock
-  instance, so set a category such as `Default`.
+  instance, so set a category such as `Default`. Categories are read and edited through the API
+  (`/wqm/categories`); the canvas has no category screen yet.
 - **Destructive steps need a typed confirmation; nothing is pausable.** `purge-task-history` is
   the one available destructive type: dispatch refuses it (428) until the operator types its
   database directory or namespace, which the canvas asks for at *Run now* (spec 007 T009). No
@@ -42,9 +50,12 @@ SentaiTask v1 only promises what was proven on IRIS 2026.2 (spec `004-backend-ha
   Since spec 011, the canvas says so before such a cancel (*Cancel wave* and a running
   management-API step's *Cancel* ask first); in-process and queued steps cancel without it.
 - **Remote steps (spec 008, DPI-I-588).**
-  - Only types executed through the management API can run on a target in v1 (`integrity-check`);
-    declared in-process types are refused with `STEP_TYPE_NOT_REMOTE_CAPABLE` (they would need
-    SentaiTask installed on the target).
+  - Types executed through the management API (`integrity-check`) and the report steps
+    (`executor: "platform-read"`, specs 013 and 020) run on a target; declared in-process types
+    (`switch-journal`, `purge-task-history`, `storage-headroom-check`, `db-size-report`) are
+    refused with `STEP_TYPE_NOT_REMOTE_CAPABLE` (they would need SentaiTask installed there).
+  - Targets are registered by hand: nothing is discovered from the mirror configuration, and
+    nothing is placed by load.
   - A target must be `https://host:port` (TLS client configuration `SentaiTargets`, peer verified
     against the system CA bundle). `http` is accepted only for loopback targets, or when
     `^sentai("config","allowInsecureTargets")` is set — the demo image sets it for its compose
@@ -59,10 +70,6 @@ SentaiTask v1 only promises what was proven on IRIS 2026.2 (spec `004-backend-ha
     attempt still waits up to about 15 s (connection timeout). While it is down, the run's other
     steps advance more slowly and the remote step's timeout fires late: in the acceptance run a
     1-minute timeout failed the step about 2.5 minutes after it.
-- **Step-type classes that do not exist on 2026.2.** `compact-globals` (`%SYS.Task.CompactGlobals`)
-  and `defragment-globals` (`%SYS.Task.Defragment`) name classes that are not installed. They are
-  unavailable anyway. The audit purge's class was corrected to the platform's
-  `%SYS.Task.PurgeAudit`; it is still unavailable.
 - **Token check.** Every product request is first checked with the platform's
   `GET /api/admin/info`: 200 or 403 (an authenticated operator the platform refuses that read)
   pass; anything else is `401 Invalid or expired token`. What the operator may then do is decided
@@ -74,10 +81,6 @@ SentaiTask v1 only promises what was proven on IRIS 2026.2 (spec `004-backend-ha
   `%Admin_Task` or `%Admin_Operate`); a refusal is returned verbatim, and the passwords stored for
   that request are removed. The task runs as the schedule's run-as account. Tasks of the spec 001
   form (one per step) are removed on the flow's next schedule or unschedule; they never start a run.
-- **A refused WQM category read is reported as `CATEGORY_NOT_FOUND`.** Validation says the
-  category "does not exist" when the platform actually refused the read (operator without
-  `%Admin_Manage:USE` and read on IRISSYS; `%Admin_Operate:USE` alone is refused — spec 005
-  research R-10). Not changed yet.
 - **Task catalog.** The list reads each task (two platform calls per task): 151 tasks take about
   0.4 s on the dev container. A task deleted between the list and its reads shows up with
   `unavailable` entries instead of values.
@@ -97,8 +100,22 @@ SentaiTask v1 only promises what was proven on IRIS 2026.2 (spec `004-backend-ha
   database or journal directory has less than 10% free; that run is a real finding, not a defect.
   The example is identified by its name: renaming it and choosing *Open example flow* again creates
   a new one under the well-known name.
-- **Report steps (spec 013).** Reads are instance-wide: the step's namespace is not used. The
-  security report reads the roles of at most 200 enabled accounts (an *info* finding says how
+- **Overview screen (spec 019).** It is the landing screen for an address that names no screen,
+  flow or run. Auto-refresh exists only in the detail views (every 10 s, off by default, paused
+  while the tab is hidden); the cards refresh on *Refresh*. A report run from a card is kept in the
+  page's memory only and is gone after a reload. The overview is for the primary instance only.
+- **Instance overview (spec 018).** Primary instance only: a `target` is refused with
+  `OVERVIEW_PRIMARY_ONLY`. The management API reports no host CPU, host memory or console log
+  (`messages.log`), so the overview shows instance resources only; a process's *CPU time* is the
+  platform's per-process value. The license headline uses `license-usage`'s summary, which disagrees
+  with the dashboard's `Licensing` counters at the same moment (measured 1 vs 13 units). Report areas
+  show counts in the summary; findings appear only when the report is run. Web session ids, lock
+  delete ids and a process's CSP session id are never returned. When the platform refuses with an
+  empty status (as it does for a 403 on these reads), the product says `HTTP 403: no reason given`.
+  Process actions record the operator, pid, action and the platform's answer; the record is history
+  only and never decides a later action.
+- **Report steps (spec 013).** Reads are instance-wide: the step's namespace is not used; on a
+  target, they read that target's management API. The security report reads the roles of at most 200 enabled accounts (an *info* finding says how
   many were left out). The platform's `SeriousAlerts` counter is what the dashboard reports; on
   IRIS 2026.2 it keeps counting severe `messages.log` entries after `$SYSTEM.Monitor.Clear()`, so an
   instance that raised alerts since it started fails `system-alerts-check` at the default
@@ -127,8 +144,5 @@ SentaiTask v1 only promises what was proven on IRIS 2026.2 (spec `004-backend-ha
   platform settings reachable through the management API, such as WQM categories; on a
   disposable demo this is accepted, and the daily reset does not restore platform settings
   (it resets the product's flows and runs, the demo password and the alert state).
-- **Fixed in spec 011 (T025).** A platform SQL refusal while reading a flow (an operator with
-  no SQL privilege on the product's tables) is now reported by validation as `PLATFORM_REFUSED`
-  with the platform's text, so dispatch refuses it (422) instead of starting a run with no steps.
-  A platform job that ends `Failed` now records the platform's own `FailureReason` verbatim.
+
 ---

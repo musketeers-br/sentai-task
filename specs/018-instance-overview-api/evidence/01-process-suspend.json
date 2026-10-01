@@ -1,0 +1,31 @@
+{
+  "call_id": "01-process-suspend",
+  "captured_at": "2026-09-29T21:26:27Z",
+  "platform": {
+    "version": "IRIS for UNIX (Ubuntu Server LTS for x86-64 Containers) 2026.2 (Build 221U) Fri Jun 26 2026 09:58:52 EDT"
+  },
+  "request": {
+    "method": "POST",
+    "url_path": "/api/admin/v2/process/suspend",
+    "query": {
+      "id": "3163"
+    },
+    "headers": {
+      "Authorization": "<REDACTED>"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {},
+    "body": {
+      "status": {
+        "errors": [],
+        "summary": ""
+      },
+      "console": [],
+      "result": {}
+    }
+  },
+  "notes": "Disposable USER process running `hang 300`. Re-read GET /api/admin/v2/process?id=3163 after the call: {'State': 'SUSP', 'CanBeSuspended': False, 'CanBeTerminated': True}. A JSON body ({\"pid\"|\"Pid\"|\"id\": n}) instead of ?id= answers 400 ERROR #40300 \"Query parameter id is required\"."
+}

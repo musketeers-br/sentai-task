@@ -57,6 +57,12 @@ XData UrlMap [ XMLNamespace = "http://www.intersystems.com/urlmap" ]
     <Route Url="/targets/:name/online" Method="POST" Call="SetTargetOnline"/>
     <Route Url="/targets/:name/sign-in" Method="POST" Call="SignInToTarget"/>
     <Route Url="/targets/:name/status" Method="GET" Call="ReadTargetStatus"/>
+    <Route Url="/overview" Method="GET" Call="ReadOverview"/>
+    <Route Url="/overview/readings/:area" Method="GET" Call="ReadOverviewReading"/>
+    <Route Url="/overview/reports/:stepType" Method="POST" Call="RunOverviewReport"/>
+    <Route Url="/overview/areas/:area/flow" Method="POST" Call="CreateOverviewFlow"/>
+    <Route Url="/overview/processes/:pid/:action" Method="POST" Call="ActOnProcess"/>
+    <Route Url="/overview/process-actions" Method="GET" Call="ListProcessActions"/>
 </Routes>
 }
 
@@ -840,6 +846,74 @@ ClassMethod ReadTargetStatus(name As %String) As %Status
     Set header = $G(%request.CgiEnvs("HTTP_X_SENTAI_TARGET_AUTHORIZATION"))
     Set token = $S($ZCVT($E(header, 1, 7), "L") = "bearer ":$E(header, 8, *), 1:"")
     Quit ..WriteOutcome(##class(sentai.targets.TargetService).Status(name, token))
+}
+
+/// --- /overview (spec 018) ---
+/// FR-018: overview requests are for the primary instance only; a `target` in the query string or
+/// the body is refused before any platform call.
+ClassMethod OverviewTargetRefused(body As %DynamicObject = "") As %Boolean
+{
+    Quit:(%request.Get("target") '= "") 1
+    Quit:($IsObject(body) && body.%IsDefined("target")) 1
+    Quit 0
+}
+
+ClassMethod WritePrimaryOnly() As %Status
+{
+    Quit ..WriteProblem(400, "Bad Request", "OVERVIEW_PRIMARY_ONLY: overview readings, summaries and reports are for the primary instance only")
+}
+
+ClassMethod ReadOverview() As %Status
+{
+    Quit:..OverviewTargetRefused() ..WritePrimaryOnly()
+    Quit ..WriteJSON(200, ##class(sentai.overview.OverviewService).Summary(..CurrentToken()))
+}
+
+ClassMethod ReadOverviewReading(area As %String) As %Status
+{
+    Quit:..OverviewTargetRefused() ..WritePrimaryOnly()
+    If '##class(sentai.overview.Areas).IsReading(area) Quit ..WriteProblem(404, "Not Found", "UNKNOWN_READING: '"_area_"' is not an overview reading")
+    Quit ..WriteOutcome(##class(sentai.overview.Readings).Read(area, ..CurrentToken()))
+}
+
+ClassMethod RunOverviewReport(stepType As %String) As %Status
+{
+    Set body = ..ReadJSONBody()
+    Quit:..OverviewTargetRefused(body) ..WritePrimaryOnly()
+    Quit ..WriteOutcome(##class(sentai.overview.OverviewService).RunReport(stepType, body.parameters, ..CurrentToken()))
+}
+
+/// Spec 018 US4 (plan D-5): the application class builds and stores the flow; this handler keeps
+/// the structural check and the answer's shape, exactly as CreateFlow does (Constitution I).
+ClassMethod CreateOverviewFlow(area As %String) As %Status
+{
+    Set body = ..ReadJSONBody()
+    Quit:..OverviewTargetRefused(body) ..WritePrimaryOnly()
+    Set outcome = ##class(sentai.overview.AreaFlow).Definition(area, body.parameters, ..CurrentToken())
+    Quit:(outcome.httpStatus '= 200) ..WriteOutcome(outcome)
+    Set def = outcome.body
+    Set structural = ..ValidateStructural(def)
+    If '##class(sentai.validation.FlowValidator).HasNoErrors(structural) Quit ..WriteJSON(422, structural)
+    Set sc = ##class(sentai.overview.AreaFlow).Save(def, ..CurrentUser(), ..CurrentToken(), .flowId)
+    If $$$ISERR(sc) Quit ..TranslateSaveError(sc)
+    Set flow = ##class(sentai.model.Flow).%OpenId(flowId, 0)
+    Quit ..WriteJSON(201, {"flow": (..ShapeFlow(flow, 1)), "validation": (##class(sentai.overview.AreaFlow).Validation(flowId, ..CurrentToken()))})
+}
+
+/// Spec 018 US5: the platform's answer verbatim; terminate needs `{"confirmation": "<pid>"}`.
+ClassMethod ActOnProcess(pid As %String, action As %String) As %Status
+{
+    Set body = ..ReadJSONBody()
+    Quit:..OverviewTargetRefused(body) ..WritePrimaryOnly()
+    Set confirmation = $S($IsObject(body):body.confirmation, 1:"")
+    Quit ..WriteOutcome(##class(sentai.overview.ProcessActions).Act(pid, action, confirmation, ..CurrentUser(), ..CurrentToken()))
+}
+
+ClassMethod ListProcessActions() As %Status
+{
+    Set limit = %request.Get("limit")
+    If (limit '= "") && '((limit ? 1.N) && (+limit >= 1) && (+limit <= 200)) Quit ..WriteProblem(400, "Bad Request", "limit must be an integer from 1 to 200")
+    Quit ..WriteJSON(200, ##class(sentai.overview.ProcessActions).List($S(limit = "":50, 1:+limit)))
 }
 
 ClassMethod ReadJSONBody() As %DynamicObject
