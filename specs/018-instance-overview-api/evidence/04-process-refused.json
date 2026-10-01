@@ -1,0 +1,31 @@
+{
+  "call_id": "04-process-refused",
+  "captured_at": "2026-09-29T21:26:27Z",
+  "platform": {
+    "version": "IRIS for UNIX (Ubuntu Server LTS for x86-64 Containers) 2026.2 (Build 221U) Fri Jun 26 2026 09:58:52 EDT"
+  },
+  "request": {
+    "method": "POST",
+    "url_path": "/api/admin/v2/process/terminate",
+    "query": {
+      "id": "3163"
+    },
+    "headers": {
+      "Authorization": "<REDACTED>"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 403,
+    "headers": {},
+    "body": {
+      "status": {
+        "errors": [],
+        "summary": ""
+      },
+      "console": [],
+      "result": {}
+    }
+  },
+  "notes": "As a temporary operator whose only role grants %Admin_Manage:U and %DB_IRISSYS:R (no %Admin_Operate); created for the spike and deleted after it. Process state after the refused call: {'State': 'HANG', 'CanBeSuspended': True, 'CanBeTerminated': True}."
+}

@@ -29,9 +29,16 @@ export async function signInAt(
 	options: SignInOptions = {}
 ): Promise<void> {
 	if ((options.guide ?? 'dismissed') === 'dismissed') await dismissGuide(page);
-	await page.goto(`${ENTRY}${query}`);
+	// Spec 019 (research R-2): an address that names nothing now lands on Overview. Every spec
+	// written before it expects the flow editor, so an empty query asks for it explicitly; a spec
+	// about the landing screen passes LANDING.
+	const address = query === LANDING ? '' : query === '' ? '?view=flows' : query;
+	await page.goto(`${ENTRY}${address}`);
 	await submitSignIn(page, user, password);
 }
+
+/** Spec 019: sign in on the bare address — the landing screen, Overview. */
+export const LANDING = '<landing>';
 
 /** Stores "Don't show this again" before any document of `page` loads (idempotent per page). */
 const guideSeeded = new WeakSet<Page>();

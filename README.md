@@ -20,6 +20,10 @@ instance and on other IRIS servers, and watch every step live.
   <img src="./assets/media/sentai-run.gif" alt="SentaiTask running a flow: three integrity checks, one of them on a second IRIS server, and two security reports run in parallel, converge on a join, and the final report opens with its findings; then the run log and the run history" width="880">
 </p>
 
+<p align="center">
+  <img src="./assets/media/stills/overview.png" alt="The Overview screen: eleven cards — processes, locks, shared memory, activity, devices, licenses, web sessions, security posture, web applications, system alerts and secrets — each with its headline read now from the instance" width="880">
+</p>
+
 ## 🚀 Try it
 
 - **Public demo**: a stable address is being set up for the voting week; it will be listed here.
@@ -46,13 +50,13 @@ instance and on other IRIS servers, and watch every step live.
 | Management Portal area | What SentaiTask offers | Proof |
 |---|---|---|
 | **Task management** | Flows of tasks with dependencies and fan-in joins; dispatch, live tracking, cancel and rerun per step; native Task Manager catalog with filters, suspend and resume; schedules that run: one native task per flow, running as a run-as account whose password lives in the IRIS Wallet | [How to use](#-how-to-use), [spec 006](specs/006-task-catalog-api/) |
-| **Operating system** | `storage-headroom-check` (free disk per database and journal directory, Embedded Python) and `db-size-report` (size and free space of every database) as flow steps | [Declared step types](#declared-step-types) |
+| **Operating system** | Instance resources on demand: processes (with suspend, resume and terminate), locks, shared memory, activity counters, devices, license use and web sessions — the management API reports no host CPU or memory, so none is shown. Disk: `storage-headroom-check` (Embedded Python) and `db-size-report` as flow steps | the [Overview](#overview-the-landing-screen) screen, [spec 018](specs/018-instance-overview-api/), [spec 019](specs/019-canvas-instance-overview/), [Declared step types](#declared-step-types) |
 | **Work Queue Manager** | Read and edit WQM categories, the worker pools every step runs on | [API at a glance](#api-at-a-glance) |
 | **Logs** | Every run writes its own log (dispatch, each step start and end with its duration, the platform's failure reason verbatim, joins that stopped a step, who asked to cancel, targets that stopped answering, the outcome); a *Runs* screen finds any past run by flow and outcome, and *Export* saves one as a file | [Runs and run log](#runs-and-run-log), [spec 012](specs/012-run-log-history/) |
-| **Security and permissions** | `security-posture-report` as a flow step: enabled accounts and their roles, `%All` holders, services open to unauthenticated connections, auditing off, on any server. Every call runs with the operator's own IRIS credential; the platform's refusal is shown verbatim | [Report steps](#report-steps-security-web-applications-alerts-secrets), [spec 013](specs/013-area-report-steps/) |
+| **Security and permissions** | `security-posture-report` as a flow step: enabled accounts and their roles, `%All` holders, services open to unauthenticated connections, auditing off, on any server. `permissions-inventory`: every role with the resources it grants, every resource with what the public may do, risky combinations flagged. Every call runs with the operator's own IRIS credential; the platform's refusal is shown verbatim | [Report steps](#report-steps-security-web-applications-alerts-secrets), [spec 013](specs/013-area-report-steps/), [spec 020](specs/020-security-inventory/) |
 | **Web applications / REST** | `web-app-inventory`: every web application, whether it is a REST endpoint, its resource and authentication; anonymous endpoints are findings | [Report steps](#report-steps-security-web-applications-alerts-secrets) |
 | **Monitoring and alerts** | `system-alerts-check` gates a flow on the platform's serious alerts, application errors and resource statuses | [Report steps](#report-steps-security-web-applications-alerts-secrets) |
-| **Secrets** | `secrets-inventory`: the IRIS Wallet's collections, their protecting resources and secret names, never a value | [Report steps](#report-steps-security-web-applications-alerts-secrets) |
+| **Secrets** | `secrets-inventory`: the IRIS Wallet's collections, their protecting resources and secret names, never a value. `certificate-expiry-check`: x509 certificates and SSL/TLS configurations, failing when one expires within N days — schedule it and the flow warns before an outage. `oauth-inventory`: OAuth 2.0 server, clients, server definitions and resource servers ("not configured" is a normal state) | [Report steps](#report-steps-security-web-applications-alerts-secrets), [spec 020](specs/020-security-inventory/) |
 | **Distributed work** | A flow step can run on another IRIS instance (a *target server*), tracked and with its result collected on the primary | [DPI-I-588](#-implements-dpi-i-588-distributed-work-manager) |
 
 ---
@@ -266,6 +270,23 @@ scripts/demo/up.sh
 
 ## 💡 How to Use
 
+### Overview (the landing screen)
+
+After sign-in the canvas opens on **Overview** (spec 019): eleven cards, one per management area,
+read now with your own credential through the [instance overview API](#instance-overview).
+
+- **Instance resources** — *Processes*, *Locks*, *Shared memory*, *Activity*, *Devices*,
+  *Licenses*, *Web sessions*. **Open** shows every row the platform returned as a table you can sort
+  and filter, with an optional *Auto-refresh every 10 s* that pauses while the tab is hidden. On
+  *Processes*, **Suspend**, **Resume** and **Terminate** go to the platform; terminate asks you to
+  type the process id.
+- **Security posture, Web applications, System alerts, Secrets** — the card shows a count; **Run
+  report** runs the spec 013 report on demand and opens it in the same viewer a run uses, and the card
+  keeps its counts until you reload. **Schedule this check** turns it into a one-step flow and opens
+  the schedule dialog.
+- A card the platform refused shows the platform's answer (`HTTP 403 — …`) and the others still load.
+  *Flows* is one click away; every older address (`?flow=`, `?run=`, `?view=…`) opens what it names.
+
 ### On the canvas
 
 1. **Compose.** Drag an available step type (*Integrity check*, *Switch journal*, *Storage
@@ -446,6 +467,7 @@ run then renews its own credential and erases it when it ends. The canvas does t
 | Catalog | `GET /catalog/step-types` · `GET /catalog/step-types/search?q=…` · `GET /catalog/tasks` · `GET /catalog/tasks/{id}` · `POST /catalog/tasks/{id}/suspend` |
 | WQM | `GET /wqm/categories` · `GET/PUT /wqm/categories/{name}` |
 | Targets | `GET/POST /targets` · `GET/PUT/DELETE /targets/{name}` · `POST /targets/{name}/online` · `POST /targets/{name}/sign-in` · `GET /targets/{name}/status` |
+| Overview | `GET /overview` · `GET /overview/readings/{area}` · `POST /overview/reports/{stepType}` · `POST /overview/areas/{area}/flow` · `POST /overview/processes/{pid}/{suspend\|resume\|terminate}` · `GET /overview/process-actions` |
 
 Validation errors come back as `{"errors": [{"stepId", "code", "message"}], "warnings": [...]}`,
 with codes such as `CYCLE_DETECTED`, `STEP_TYPE_NOT_SUPPORTED_ON_TARGET`, `CATEGORY_NOT_FOUND`
@@ -454,9 +476,9 @@ and, for declared step types, `PARAM_REQUIRED`, `PARAM_TYPE_MISMATCH`, `PARAM_OU
 
 #### Report steps (security, web applications, alerts, secrets)
 
-Four read-only step types (spec 013, `executor: "platform-read"`) read the **management API of the
-instance the step runs on** with the operator's credential for it, so they run on target servers
-too, and apply fixed rules. Each stores a report: `summary` (counts by severity), `findings`
+Seven read-only step types (specs 013 and 020, `executor: "platform-read"`) read the **management
+API of the instance the step runs on** with the operator's credential for it, so they run on target
+servers too, and apply fixed rules. Each stores a report: `summary` (counts by severity), `findings`
 (severity, rule, item, detail) and `details`. The run view opens any step's result with **Result**.
 
 | Type | Reads | Findings | Parameters |
@@ -465,12 +487,55 @@ too, and apply fixed rules. Each stores a report: `summary` (counts by severity)
 | `web-app-inventory` | web applications | `ANONYMOUS_REST_ENDPOINT` (high), `ANONYMOUS_APPLICATION` (medium): enabled, not system, unauthenticated allowed, no resource | `failOnFindings` |
 | `system-alerts-check` | the main monitoring dashboard | `SERIOUS_ALERTS_OVER`, `APPLICATION_ERRORS_OVER`, `STATUS_NOT_NORMAL` — the step fails on any | `maxSeriousAlerts` (0), `maxApplicationErrors` (0), `requireNormalStatus` (true) |
 | `secrets-inventory` | wallet collections and their secrets' names | `UNPROTECTED_COLLECTION` (medium) | — |
+| `certificate-expiry-check` | x509 credentials and each one's certificate validity; SSL/TLS configurations | `CERT_EXPIRED` (high), `CERT_EXPIRING` (medium) — the step fails on either; `CERT_VALIDITY_UNKNOWN`, `CONFIG_VALIDITY_NOT_REPORTED` (info) | `warnDays` (30, 1–365) |
+| `permissions-inventory` | roles (each one's resources and granted roles), resources | `PUBLIC_WRITE_OR_USE_SENSITIVE` (high: public W or U on `%DB_…`, `%Admin_…`, `%Development`), `PUBLIC_WRITE_OR_USE` (medium), `ROLE_GRANTS_ALL` (high) | `failOnFindings` |
+| `oauth-inventory` | OAuth 2.0 server and its clients, server definitions and their client configurations, resource servers | `OAUTH_PASSWORD_GRANT`, `OAUTH_NON_HTTPS_ADDRESS` (medium, loopback excepted) | `failOnFindings` |
 
 - Reports copy only named fields from the platform's answers; no password, hash, token or secret
   value can reach a result. The platform decides what the operator may read: reading users and
   services needs security administration privileges, and a refusal fails the step verbatim.
+- **A certificate that expires, caught before it does (spec 020).** Put *Certificate expiry check*
+  (*Warn days* 30) in a flow and schedule it weekly: the week a certificate enters the last 30 days,
+  the scheduled run fails and its log and result name the certificate and its expiry date. Only
+  certificates registered as x509 credentials carry a validity the platform reports; SSL/TLS
+  configurations that point at certificate files are listed with "validity not reported".
+- The security inventories read with security administration privileges, as the platform decides
+  (observed on IRIS 2026.2): roles, resources and certificates need `%Admin_Secure:U`; OAuth needs
+  `%Admin_OAuth2_Client:U`, `%Admin_OAuth2_Server:U` and `%Admin_OAuth2_Registration:U` (server
+  clients). Without them the step fails with the platform's 403, or keeps what it could read and
+  marks the rest `INCOMPLETE_READ`. Totals are
+  kept in `summary` (roles, resources, credentials, configurations) even when the details are cut to
+  fit the stored result. Private keys, key passwords and client secrets are never read into a result.
 - The canvas's own page `/csp/sentai` is anonymous by design (it serves only static files) and the
   web application inventory reports it; that finding is expected.
+
+#### Instance overview
+
+Spec 018: every contest area readable on demand, on the primary instance, with the operator's own
+credential. The area list is compiled (`sentai.overview.Areas`); a request can only name one of its
+ids, never a platform path.
+
+| Area | `GET /overview` headline (from one read) | Detail |
+|---|---|---|
+| `processes` | count, busiest process by commands | `GET /overview/readings/processes` — pid, user, namespace, routine, state, commands, globals, *CPU time (process)*, what the platform allows (`CanBeSuspended`, `CanBeTerminated`) |
+| `locks` | count | `…/readings/locks` |
+| `memory` | shared memory used (%) of the platform's `Total` row, most used consumer | `…/readings/memory` (`SMHUsedPercent` computed from the same answer) |
+| `activity` | uptime, last backup, global refs/s, busy processes | `…/readings/activity` (system usage, dashboard, seize counters) |
+| `devices` · `web-sessions` | count | `…/readings/devices`, `…/readings/web-sessions` (never the session id) |
+| `licenses` | units in use and authorized (`license-usage` summary) | `…/readings/licenses` |
+| `security` · `web-apps` · `alerts` · `secrets` | enabled accounts · web applications · serious alerts and application errors · wallet collections | `POST /overview/reports/{stepType}` runs the spec 013 report on demand (same code, same findings, no run) |
+
+- Each area of the summary carries its own outcome — `ok`, `refused` (the platform's HTTP status
+  and `platformStatus` verbatim) or `unreachable` — so an operator without security administration
+  still sees every instance area. The summary makes 10 platform reads for 11 areas (≈0.25 s on the
+  dev stack) and never runs a report.
+- `POST /overview/areas/{area}/flow` turns a report area into an ordinary one-step flow
+  (`Check: <label>`) that passes the validation gate and can be scheduled with `/schedule`.
+- Process actions call `POST /api/admin/v2/process/<action>?id=<pid>` as the platform's contract
+  requires (proved in [spec 018 evidence](specs/018-instance-overview-api/evidence/)); terminate
+  answers `428` until the body carries `{"confirmation": "<pid>"}`. Every action that reached the
+  platform is recorded (`GET /overview/process-actions`), accepted or refused; the product never
+  refuses a pid on its own.
 
 #### Declared step types
 
@@ -742,20 +807,25 @@ curl -H "$H" -H "X-Sentai-Target-Authorization: Bearer <target access token>" $A
 
 ## ⚠️ Known limitations (v1)
 
-SentaiTask v1 only promises what was proven on IRIS 2026.2 (spec `004-backend-hardening`). The
-main points:
+SentaiTask v1 only promises what was proven on IRIS 2026.2. The main points:
 
-- **Available step types:** `integrity-check`, `switch-journal`, `storage-headroom-check`,
-  `db-size-report` and `purge-task-history` (destructive: typed confirmation). The others are listed with `available: false` and refused with
-  `STEP_TYPE_NOT_SUPPORTED_ON_TARGET` until each one is proven.
-- **Schedules use the instance's clock**, and overlapping runs of the same flow are not
-  prevented (a long run may still be going when the next firing starts another).
+- **Step types not yet proven:** `compact-globals`, `defragment-globals`, `purge-audit-records` and
+  the legacy `custom` are listed with `available: false` and refused with
+  `STEP_TYPE_NOT_SUPPORTED_ON_TARGET`. Every other type in the catalog — the integrity check, the
+  journal switch, the task-history purge, the storage and size reports and the seven report steps —
+  runs.
+- **Remote steps (DPI-I-588):** management-API types (`integrity-check`) and the report steps run on
+  a target; declared in-process types do not (they would need SentaiTask installed there). Targets
+  must be `https` unless loopback — the compose demo allows `http` on its own network only.
+- **Schedules use the instance's clock**, overlapping runs of the same flow are not prevented, and
+  flows with a destructive step cannot be scheduled (they run by hand, with typed confirmation).
 - **Long runs need a run credential.** The canvas handles it at *Run now*; a plain `curl` dispatch
   without `runCredential` stops after the platform's 60-second token.
-- **Flows must name an existing WQM category**, such as `Default`.
+- **Flows must name an existing WQM category**, such as `Default`. Categories are read and edited
+  through the API only; the canvas has no category screen yet.
 - **Validating needs `%Admin_Manage:USE` and read on IRISSYS**; the platform decides the rest.
-- **Remote steps (DPI-I-588):** only types run through the management API (`integrity-check`);
-  targets must be `https` unless loopback — the compose demo allows `http` on its own network only.
+- **The overview is for the primary instance only**, and shows instance resources only: the
+  management API reports no host CPU, host memory or console log.
 - **Semantic search warms up.** For the first seconds after the instance starts (≈7–11 s measured)
   the search model is loading and intent search answers `warming` — the palette behaves as it does
   without semantic search. One worker process serves every search, one at a time (≈12 ms each).
@@ -819,53 +889,30 @@ frontend, `bash scripts/publish-canvas.sh` copies a fresh build into the running
 ```
 sentai-task/
 ├── src/sentai/
-│   ├── model/          # Flow, Step, Edge, Join, Run, StepRun, Category, LogEntry
-│   ├── registry/       # StepType: closed catalog (destructive / pausable / available)
-│   ├── validation/     # FlowValidator: the single gate
-│   ├── dispatch/       # WaveDispatcher, AdminApiClient, ScheduledFlowTask
+│   ├── model/          # Flow, Step, Edge, Join, Run, StepRun, Category, LogEntry, Schedule, Target…
+│   ├── registry/       # StepType: closed catalog (destructive / pausable / available / remoteCapable)
+│   ├── validation/     # FlowValidator: the single gate for validate, dispatch and schedule
+│   ├── dispatch/       # WaveDispatcher, AdminApiClient, executors, RunNarrator (run log)
 │   ├── steps/          # Declared in-process steps (StorageHeadroomCheck uses Embedded Python)
+│   │   └── reports/    # Read-only report steps: security, web apps, alerts, secrets, certificates, OAuth
+│   ├── schedule/       # ScheduleService, Timing, Wallet (run-as credential in the IRIS Wallet)
+│   ├── targets/        # TargetService: target servers (DPI-I-588)
+│   ├── overview/       # OverviewService, Readings, ProcessActions: the instance overview
+│   ├── search/         # Semantic step-type search, in-process embeddings (Embedded Python)
 │   ├── wqm/            # CategoryService: WQM read/write passthrough
 │   ├── catalog/        # TaskService: native Task Manager catalog
+│   ├── demo/           # Demo and showcase flows
 │   ├── rest/           # Dispatcher: REST API + SSE
 │   └── web/            # StaticFiles: serves the canvas build
 ├── tests/sentai/unittest/   # %UnitTest suites + AdminApiDouble
 ├── frontend/           # Canvas UI: SvelteKit + Svelte Flow, built to static files
-├── docs/             # Full known-limitations list
+├── docs/               # Full known-limitations list, use cases
 ├── design/             # Canvas UI prototypes (spec 002)
-├── specs/              # Spec-driven history: 001 contract spike → 007 management screens
+├── specs/              # Spec-driven history, one directory per feature (001 → 020)
 ├── scripts/sanitation/ # Reviewed cleanup of historical test residue
 ├── module.xml
 └── docker-compose.yml
 ```
-
----
-
-## 📊 Roadmap
-
-### ✅ Done
-
-* [x] **001**: Contract spike against the real IRIS management API ([compatibility statement](specs/001-validate-async-job-contract/compatibility.md))
-* [x] **003**: ObjectScript backend: persistence, validation, wave dispatch, SSE tracking
-* [x] **004**: Hardening. The product only promises what IRIS 2026.2 proved.
-* [x] **002**: Canvas UI: compose, validate, schedule, run and watch flows, in dark and light
-* [x] Runs renew their own credential when dispatched with `runCredential` (runs > 60 s work)
-* [x] **005**: Declared in-process steps: storage headroom (Embedded Python), database size report, journal switch
-* [x] **006**: Task catalog API: the native Task Manager as the platform reports it, with suspend and resume
-* [x] **007 (part A)**: Task catalog screen (list, filters, detail, SentaiTask origin, suspend/resume) and the typed confirmation before dispatching a destructive step
-* [x] **007 (part B)**: declared custom steps in the canvas: a *Custom* palette group and an inspector form generated from the API schema, with errors on their field
-* [x] **008**: Distributed targets — implements [DPI-I-588](https://ideas.intersystems.com/ideas/DPI-I-588) (API)
-* [x] **009**: Target servers in the canvas: Targets screen, *Run on*, target passwords at *Run now*, where each step runs
-* [x] **010**: Onboarding: *Open flow…*, *Save as…*, sign-in kept across reloads, a ready-made example flow and a getting-started guide
-* [x] **011**: Demo readiness: a public demo that stays up (proxy, secured accounts, least-privilege demo account, daily reset), this README's first screen, and a warning before a cancel that makes IRIS raise an alert
-* [x] **012**: Run log and run history: every run tells its own story, past runs are one click away, and any run exports as a file
-* [x] **013**: Area report steps: security posture, web applications, system alerts and secrets as flow steps, on any server
-* [x] **014**: Demo media (animated capture, stills) and the community article drafts in English and Portuguese
-* [x] **015**: Scheduled runs that execute, with the run-as credential kept in the IRIS Wallet
-
-### 🚧 Next
-
-* [ ] WQM category screen in the canvas (the API already has it)
-* [ ] Prove and enable the remaining step types, one at a time
 
 ---
 

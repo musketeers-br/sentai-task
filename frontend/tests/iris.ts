@@ -50,6 +50,38 @@ export function createOperatorWithoutTaskPrivilege(): Operator {
 	return { user, password };
 }
 
+/**
+ * Spec 019 SC-003: a temporary operator with the public demo's primary resources
+ * (`scripts/demo/lib.sh` PRIMARY_RESOURCES, no security administration), under an e2e role name
+ * so the real `SentaiDemo` role is never touched. Delete it with `deleteDemoOperator`.
+ */
+const DEMO_ROLE = 'SentaiE2EDemo';
+const DEMO_RESOURCES = '%DB_IRISAPP_CODE:R,%DB_IRISAPP_DATA:RW,%Admin_Manage:U,%DB_IRISSYS:RW,%Admin_Operate:U';
+
+export function createDemoRoleOperator(): Operator {
+	const user = `e2e_demo_${randomBytes(3).toString('hex')}`;
+	const password = randomBytes(18).toString('base64url');
+	const out = irisSys(
+		[
+			`if '##class(Security.Roles).Exists("${DEMO_ROLE}") { set sc=##class(Security.Roles).Create("${DEMO_ROLE}","e2e: the public demo's primary resources","${DEMO_RESOURCES}") }`,
+			`set sc=##class(Security.Users).Create("${user}","${DEMO_ROLE}","${password}","e2e temporary demo-role operator")`,
+			`write "RESULT:",$select(sc=1:"OK",1:$system.Status.GetErrorText(sc)),!`
+		].join('\n')
+	);
+	const result = /RESULT:(.*)/.exec(out)?.[1]?.trim();
+	if (result !== 'OK') throw new Error(`could not create the temporary operator: ${result ?? 'no answer'}`);
+	return { user, password };
+}
+
+export function deleteDemoOperator(operator: Operator): void {
+	irisSys(
+		[
+			`set sc=##class(Security.Users).Delete("${operator.user}")`,
+			`if ##class(Security.Roles).Exists("${DEMO_ROLE}") { set sc=##class(Security.Roles).Delete("${DEMO_ROLE}") }`
+		].join('\n')
+	);
+}
+
 export function deleteOperator(operator: Operator): void {
 	irisSys(
 		[
@@ -81,7 +113,8 @@ export function deleteFlow(flowId: string): void {
 const DEV_CONTAINER = 'sentai-task-iris-1';
 export const EXAMPLE_FLOW_NAME = 'Example: storage health check';
 /** Names this feature's tests and quickstart create; nothing else may be deleted. */
-const TEST_FLOW_PREFIXES = ['us17-', 'us18-', 'us19-', 'us20-', 'us21-', 'perf-', 'QS ', 'plan010-probe-', 'us28-'];
+// Spec 019: flows an Overview card creates are named `Check: <label>` (spec 018 research R-8).
+const TEST_FLOW_PREFIXES = ['us17-', 'us18-', 'us19-', 'us20-', 'us21-', 'perf-', 'QS ', 'plan010-probe-', 'us28-', 'us29-', 'Check: '];
 
 /**
  * Throws `refused: …` unless this is the local dev instance and `expectedName` is a flow this
@@ -145,4 +178,38 @@ export function recordScheduledStartFailure(flowId: string, expectedName: string
 	);
 	const result = /RESULT:(.*)/.exec(out)?.[1]?.trim();
 	if (result !== 'OK') throw new Error(`could not record the start failure: ${result ?? 'no answer'}`);
+}
+
+// --- spec 020: throw-away x509 credentials for the certificate expiry check -------------------
+
+const CERT_PREFIX = 'sentai-e2e-020-';
+
+function assertCertAlias(alias: string): void {
+	if (!alias.startsWith(CERT_PREFIX) || !/^[A-Za-z0-9-]+$/.test(alias)) throw new Error(`refused: "${alias}" is not a spec 020 test certificate`);
+	const container = process.env.SENTAI_CONTAINER ?? DEV_CONTAINER;
+	if (container !== DEV_CONTAINER) throw new Error(`refused: container ${container} is not ${DEV_CONTAINER}`);
+}
+
+/**
+ * An x509 credential `alias` on the dev primary whose self-signed certificate expires in `days`
+ * days. Only the public certificate is loaded: the key file is deleted as soon as openssl writes
+ * it, and the certificate file right after the load.
+ */
+export function createTestCertificate(alias: string, days: number): void {
+	assertCertAlias(alias);
+	const file = `/tmp/${alias}.crt`;
+	execFileSync('docker', ['exec', CONTAINER, 'sh', '-c',
+		`openssl req -x509 -newkey rsa:2048 -nodes -keyout /tmp/${alias}.key -out ${file} -days ${Math.max(1, Math.floor(days))} -subj "/CN=${alias}" 2>/dev/null; rm -f /tmp/${alias}.key`],
+		{ env: { ...process.env, MSYS_NO_PATHCONV: '1' } });
+	const out = irisSys(
+		`set x=##class(%SYS.X509Credentials).%New(),x.Alias="${alias}" set sc=x.LoadCertificate("${file}") set:sc sc=x.%Save() write "RESULT:",$select(sc=1:"OK",1:$system.Status.GetErrorText(sc)),!`
+	);
+	execFileSync('docker', ['exec', '-u', 'root', CONTAINER, 'rm', '-f', file], { env: { ...process.env, MSYS_NO_PATHCONV: '1' } });
+	const result = /RESULT:(.*)/.exec(out)?.[1]?.trim();
+	if (result !== 'OK') throw new Error(`could not create test certificate ${alias}: ${result ?? 'no answer'}`);
+}
+
+export function deleteTestCertificate(alias: string): void {
+	assertCertAlias(alias);
+	irisSys(`if ##class(%SYS.X509Credentials).%ExistsId("${alias}") { set sc=##class(%SYS.X509Credentials).%DeleteId("${alias}") }`);
 }
