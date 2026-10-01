@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "name": "Security posture with fail-on-findings",
+  "defaultCategory": "Default",
+  "steps": [
+    {"id": "01", "type": "security-posture-report", "taskName": "Security posture report", "namespace": "%SYS", "parameters": {"failOnFindings": true}, "timeoutMinutes": 5, "wqmCategory": "Default"}
+  ],
+  "edges": [],
+  "joins": [],
+  "canvasGeometry": {
+    "viewport": {"x": 0, "y": 40, "zoom": 0.9},
+    "nodes": {
+      "01": {"x": 0, "y": 0, "width": 240}
+    }
+  }
+}
