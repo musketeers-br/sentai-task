@@ -31,6 +31,8 @@ ClassMethod Build(taskId As %Integer, listEntry As %DynamicObject, singleRead As
         Do ..Copy(singleRead.result, "TaskClass", task, "class")
         Do ..Copy(singleRead.result, "RunAsUser", task, "runAsUser")
         Do ..Copy(singleRead.result, "TimePeriod", task, "timePeriod")
+        // Spec 023 (research R-3): the platform's own text, only when it sent one.
+        If singleRead.result.%Get("Description") '= "" Do task.%Set("description", singleRead.result.%Get("Description"))
     } Else {
         Do unavailable.%Push(..Unavailable("single", ["class", "runAsUser", "timePeriod"], singleRead))
     }

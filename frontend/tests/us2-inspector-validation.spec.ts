@@ -1,6 +1,6 @@
 import { writeFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
-import { canonicalFlow, envelope, EVIDENCE_DIR, seedFlow, signIn, v1Flow } from './support';
+import { canonicalFlow, envelope, EVIDENCE_DIR, flowButton, seedFlow, signIn, v1Flow } from './support';
 
 // spec.md User Story 2 — Inspector and Validation (Q3 + Q4).
 
@@ -45,7 +45,7 @@ test('Q3 — the inspector shows the bound sections and edits the step', async (
 	await expect(node).toContainText('timeout 25 min');
 	await page.screenshot({ path: `${EVIDENCE_DIR}/q3-inspector.png` });
 
-	await page.getByRole('button', { name: 'Save flow' }).click();
+	await flowButton(page, 'save').click();
 	await expect(page.getByTestId('flow-meta')).toContainText('rev 2');
 });
 
@@ -58,7 +58,7 @@ test('Q4 — validation reports errors and warnings; only errors block schedulin
 	await signIn(page, `?flow=${id}`);
 
 	const validateCall = page.waitForResponse((r) => r.url().endsWith(`/flows/${id}/validate`));
-	await page.getByRole('button', { name: 'Validate flow' }).click();
+	await flowButton(page, 'validate').click();
 	const response = await validateCall;
 	const report = await response.json();
 	writeFileSync(
@@ -82,14 +82,14 @@ test('Q4 — validation reports errors and warnings; only errors block schedulin
 	await expect(page.locator('.svelte-flow__node[data-id="02"]').getByTestId('validation-error')).toContainText(
 		"Namespace 'DOCBOOK' does not exist on this instance"
 	);
-	const schedule = page.getByRole('button', { name: 'Schedule in Task Manager' });
+	const schedule = flowButton(page, 'schedule');
 	await expect(schedule).toBeDisabled();
 	await page.screenshot({ path: `${EVIDENCE_DIR}/q4-status-bar.png` });
 
 	// Fixing the error re-enables scheduling; the remaining warning does not block it (FR-010).
 	await page.locator('.svelte-flow__node[data-id="02"] h3').click();
 	await page.getByLabel('Inspector', { exact: true }).getByLabel('Namespace').fill('USER');
-	await page.getByRole('button', { name: 'Validate flow' }).click();
+	await flowButton(page, 'validate').click();
 	await expect(page.getByTestId('status-errors')).toHaveCount(0);
 	await expect(page.getByTestId('status-warnings')).toHaveText('1 precondition not met (#03)');
 	await expect(schedule).toBeEnabled();
@@ -99,11 +99,11 @@ test('Q4 (spec 004) — steps of types unsupported in v1 are refused at validati
 	const id = await seedFlow(request, canonicalFlow(`Q4 unsupported ${Date.now()}`));
 	await signIn(page, `?flow=${id}`);
 
-	await page.getByRole('button', { name: 'Validate flow' }).click();
+	await flowButton(page, 'validate').click();
 	// Spec 005: switch-journal (#05) is available, so only #04 is refused.
 	await expect(page.getByTestId('status-errors')).toHaveText('1 error blocks scheduling (#04)');
 	await expect(page.locator('.svelte-flow__node[data-id="04"]').getByTestId('validation-error')).toContainText(
 		"Step type 'purge-audit-records' is not supported on the target platform in v1"
 	);
-	await expect(page.getByRole('button', { name: 'Schedule in Task Manager' })).toBeDisabled();
+	await expect(flowButton(page, 'schedule')).toBeDisabled();
 });

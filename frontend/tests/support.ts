@@ -1,4 +1,7 @@
-import { expect, type APIRequestContext, type Page } from '@playwright/test';
+/// <reference types="node" />
+import { mkdirSync, writeFileSync } from 'node:fs';
+import AxeBuilder from '@axe-core/playwright';
+import { expect, type APIRequestContext, type Locator, type Page } from '@playwright/test';
 
 export const USER = process.env.IRIS_USER ?? '_SYSTEM';
 export const PASSWORD = process.env.IRIS_PASSWORD ?? 'SYS';
@@ -272,3 +275,62 @@ export function canonicalFlow(name: string) {
 		}
 	};
 }
+
+// --- Spec 023: the flow bar and the collapsible palette -----------------------------------------
+// Specs locate flow controls and palette entries through these helpers, so a renamed control or a
+// collapsed group changes one place (tasks T004/T019).
+
+/** The open flow's own bar (spec 023 FR-005), under the global top bar on Flows. */
+export const flowBar = (page: Page) => page.getByRole('toolbar', { name: 'Flow' });
+
+const FLOW_BUTTONS = { open: 'Open…', save: 'Save', validate: 'Validate', run: 'Run now', schedule: 'Schedule' } as const;
+
+/** A flow-bar button by what it does; its label may change (Saving…, Validating…) mid-action. */
+export function flowButton(page: Page, action: keyof typeof FLOW_BUTTONS): Locator {
+	const label = FLOW_BUTTONS[action];
+	const busy = action === 'save' ? 'Saving…' : action === 'validate' ? 'Validating…' : null;
+	const name = busy ? new RegExp(`^(${label}|${busy})$`) : label;
+	return flowBar(page).getByRole('button', { name, exact: typeof name === 'string' ? true : undefined });
+}
+
+/** The ⋯ menu button (New flow, Save as…, Run history). */
+export const flowMoreButton = (page: Page) => flowBar(page).getByRole('button', { name: 'More flow actions' });
+
+/** Opens ⋯ and returns one of its items. */
+export async function flowMenuItem(page: Page, item: 'New flow' | 'Save as…' | 'Run history'): Promise<Locator> {
+	await flowMoreButton(page).click();
+	return page.getByRole('menuitem', { name: item });
+}
+
+const palette = (page: Page) => page.getByRole('complementary', { name: 'Step types' });
+
+/** Opens every collapsed palette group and the unsupported group (spec 023 FR-013). */
+export async function expandPalette(page: Page): Promise<void> {
+	await expect(palette(page).locator('[data-step-type]').first()).toBeVisible();
+	const more = palette(page).getByRole('button', { name: /^Show( \d+ more)?$/ });
+	while ((await more.count()) > 0) await more.first().click();
+}
+
+/** A palette entry, opening its collapsed group first when it is hidden. */
+export async function paletteEntry(page: Page, type: string): Promise<Locator> {
+	const entry = palette(page).locator(`[data-step-type="${type}"]`).first();
+	await expect(palette(page).locator('[data-step-type]').first()).toBeVisible();
+	if ((await entry.count()) === 0) await expandPalette(page);
+	return entry;
+}
+
+/**
+ * Spec 023 SC-008: no `serious` or `critical` axe violation on the page as it stands. The full
+ * result is kept as evidence; a failure lists each violation with its first target.
+ */
+export async function expectNoSeriousA11y(page: Page, label: string): Promise<void> {
+	const result = await new AxeBuilder({ page }).analyze();
+	mkdirSync(A11Y_EVIDENCE, { recursive: true });
+	writeFileSync(`${A11Y_EVIDENCE}/a11y-${label}.json`, JSON.stringify(result, null, 2));
+	const serious = result.violations
+		.filter((v) => v.impact === 'serious' || v.impact === 'critical')
+		.map((v) => `${v.impact} ${v.id}: ${v.help} — ${v.nodes[0]?.target.join(' ')}`);
+	expect(serious, label).toEqual([]);
+}
+
+const A11Y_EVIDENCE = '../specs/023-canvas-design-refresh/evidence';

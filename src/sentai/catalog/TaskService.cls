@@ -6,10 +6,11 @@ Class sentai.catalog.TaskService Extends %RegisteredObject
 {
 
 /// GET /catalog/tasks: list read to enumerate, then single + info per task (sequential, R-2),
-/// filtered in memory on the corrected values. Envelope unchanged: {total, matched, items}.
-ClassMethod List(bearerToken As %String, q As %String = "", namespace As %String = "", filter As %String = "all", destructiveOnly As %String = "0") As %DynamicObject
+/// filtered in memory on the corrected values. Envelope {total, matched, items} plus, since spec
+/// 023, `counts` over every enumerated task before filtering (its research R-2).
+ClassMethod List(bearerToken As %String, q As %String = "", namespace As %String = "", filter As %String = "all", destructiveOnly As %String = "0", unclassifiedOnly As %String = "0") As %DynamicObject
 {
-    If '##class(sentai.catalog.TaskFilter).Validate(q, namespace, filter, destructiveOnly, .problem) {
+    If '##class(sentai.catalog.TaskFilter).Validate(q, namespace, filter, destructiveOnly, unclassifiedOnly, .problem) {
         Quit ..Problem(400, problem)
     }
 
@@ -18,7 +19,7 @@ ClassMethod List(bearerToken As %String, q As %String = "", namespace As %String
         Quit ..Refusal(list)
     }
 
-    Set items = [], total = 0
+    Set items = [], total = 0, suspended = 0, destructive = 0, unclassified = 0
     Set iter = list.result.%GetIterator()
     While iter.%GetNext(.k, .entry) {
         Set total = total + 1
@@ -30,7 +31,11 @@ ClassMethod List(bearerToken As %String, q As %String = "", namespace As %String
             Set (single, info) = {"httpStatus": 0}
         }
         Set task = ##class(sentai.catalog.TaskShape).Build(id, entry, single, info)
-        If ##class(sentai.catalog.TaskFilter).Matches(task, q, namespace, filter, destructiveOnly) {
+        // A task whose info read failed has no suspended value: counted in no suspended total.
+        If task.%IsDefined("suspended") && task.suspended Set suspended = suspended + 1
+        If task.destructive Set destructive = destructive + 1
+        If task.destructiveUnknown Set unclassified = unclassified + 1
+        If ##class(sentai.catalog.TaskFilter).Matches(task, q, namespace, filter, destructiveOnly, unclassifiedOnly) {
             Do items.%Push(task)
         }
     }
@@ -38,6 +43,11 @@ ClassMethod List(bearerToken As %String, q As %String = "", namespace As %String
     Set body = {"items": (items)}
     Do body.%Set("total", total, "number")
     Do body.%Set("matched", items.%Size(), "number")
+    Set counts = {}
+    Do counts.%Set("suspended", suspended, "number")
+    Do counts.%Set("destructive", destructive, "number")
+    Do counts.%Set("unclassified", unclassified, "number")
+    Do body.%Set("counts", counts)
     Quit ..Ok(body)
 }
 

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { canonicalFlow, connect, edge, EVIDENCE_DIR, hexToRgb, seedFlow, signIn } from './support';
+import { canonicalFlow, connect, edge, EVIDENCE_DIR, flowButton, hexToRgb, paletteEntry, seedFlow, signIn } from './support';
 
 // spec.md User Story 1 — Flow Composition (Q1 + Q2).
 
@@ -16,7 +16,7 @@ test('Q1 — composes the canonical graph from the palette, with one shared fan-
 	// Spec 004 D-1: types not proven on the platform are listed but disabled (spec 005 made
 	// switch-journal available).
 	for (const type of ['purge-audit-records', 'compact-globals', 'custom']) {
-		const entry = page.locator(`[data-step-type="${type}"]`);
+		const entry = await paletteEntry(page, type);
 		await expect(entry).toBeDisabled();
 		await expect(entry).toContainText('not supported in v1');
 	}
@@ -30,7 +30,7 @@ test('Q1 — composes the canonical graph from the palette, with one shared fan-
 		['integrity-check', 608, 290]
 	];
 	for (const [type, x, y] of drops) {
-		await page.locator(`[data-step-type="${type}"]`).dragTo(pane, { targetPosition: { x, y } });
+		await (await paletteEntry(page, type)).dragTo(pane, { targetPosition: { x, y } });
 	}
 	await expect(page.locator('.svelte-flow__node')).toHaveCount(5);
 	await expect(page.locator('.svelte-flow__node[data-id="01"] article')).toHaveCSS(
@@ -64,7 +64,7 @@ test('Q1 — composes the canonical graph from the palette, with one shared fan-
 	await page.screenshot({ path: `${EVIDENCE_DIR}/q1-flow-composition.png` });
 
 	// The composed flow persists: first save creates it (rev 1) and puts its id in the URL.
-	await page.getByRole('button', { name: 'Save flow' }).click();
+	await flowButton(page, 'save').click();
 	await expect(page).toHaveURL(/[?&]flow=\d+/);
 	await expect(page.getByTestId('flow-meta')).toContainText('rev 1');
 });

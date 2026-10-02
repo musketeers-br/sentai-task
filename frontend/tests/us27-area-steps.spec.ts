@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { readRun, runToEnd } from './runs-support';
-import { seedFlow, signIn, signInAt } from './support';
+import { paletteEntry, seedFlow, signIn, signInAt } from './support';
 
 // spec 013 — area report steps: security posture, web application inventory, system alerts
 // check and secrets inventory, on the primary and on iris-target; results readable in the canvas.
@@ -24,7 +24,7 @@ test('us27 palette — Security and Monitoring groups list the four report types
 	await expect(palette.getByRole('heading', { name: 'SECURITY' })).toBeVisible();
 	await expect(palette.getByRole('heading', { name: 'MONITORING' })).toBeVisible();
 	for (const type of [...REPORTS, 'system-alerts-check']) {
-		await expect(palette.locator(`[data-step-type="${type}"]`)).toBeEnabled();
+		await expect(await paletteEntry(page, type)).toBeEnabled();
 	}
 });
 

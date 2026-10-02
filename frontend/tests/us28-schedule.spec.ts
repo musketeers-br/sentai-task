@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { deleteFlowWithRuns, recordScheduledStartFailure } from './iris';
-import { nativeTaskIds, PASSWORD, seedFlow, signIn, signInAt, unscheduleFlow, USER, v1Flow } from './support';
+import { flowButton, nativeTaskIds, PASSWORD, seedFlow, signIn, signInAt, unscheduleFlow, USER, v1Flow } from './support';
 
 // spec 015 User Story 4 — the schedule dialog against the real platform (no firing here; the
 // acceptance script proves firing): schedule, see, update, renew, refuse, unschedule; history marker.
@@ -8,7 +8,7 @@ import { nativeTaskIds, PASSWORD, seedFlow, signIn, signInAt, unscheduleFlow, US
 const dialogOf = (page: Page) => page.getByRole('dialog', { name: 'Schedule in Task Manager' });
 
 async function openDialog(page: Page) {
-	await page.getByRole('button', { name: 'Schedule in Task Manager' }).click();
+	await flowButton(page, 'schedule').click();
 	await expect(dialogOf(page).getByTestId('schedule-instance-time')).toBeVisible();
 	return dialogOf(page);
 }

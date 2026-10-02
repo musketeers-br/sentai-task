@@ -33,9 +33,9 @@ ClassMethod ListEntry(id As %Integer, name As %String, namespace As %String = "%
     Quit e
 }
 
-ClassMethod ScriptSingle(id As %Integer, taskClass As %String, runAsUser As %String = "_SYSTEM", timePeriod As %String = "Weekly", name As %String = "", namespace As %String = "%SYS")
+ClassMethod ScriptSingle(id As %Integer, taskClass As %String, runAsUser As %String = "_SYSTEM", timePeriod As %String = "Weekly", name As %String = "", namespace As %String = "%SYS", description As %String = "")
 {
-    Set r = {"Name": (name), "RunAsUser": (runAsUser), "TaskClass": (taskClass), "NameSpace": (namespace), "TimePeriod": (timePeriod), "RunAfterGUID": ""}
+    Set r = {"Name": (name), "RunAsUser": (runAsUser), "TaskClass": (taskClass), "NameSpace": (namespace), "TimePeriod": (timePeriod), "RunAfterGUID": "", "Description": (description)}
     Do ##class(sentai.unittest.AdminApiDouble).Script("/api/admin/v2/task?id="_id, "GET", 200, "", ..Envelope(r))
 }
 

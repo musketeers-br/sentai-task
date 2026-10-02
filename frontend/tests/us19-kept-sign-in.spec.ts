@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
-import { dismissGuide, entry, PASSWORD, seedFlow, signIn, signInAt, submitSignIn, token, USER } from './support';
+import { dismissGuide, entry, flowButton, paletteEntry, PASSWORD, seedFlow, signIn, signInAt, submitSignIn, token, USER } from './support';
 
 // spec 010 User Story 3 — A reload keeps the operator signed in (FR-009…FR-014, SC-003, SC-007).
 
@@ -135,7 +135,7 @@ test('us19 duplicated tab — the copy never replays the copied token and signs 
 	await page.waitForTimeout(70_000);
 	for (const p of [page, copy]) {
 		await expect(p.getByText('Your session could not be renewed')).toHaveCount(0);
-		await p.getByRole('banner').getByRole('button', { name: 'Open flow…' }).click();
+		await flowButton(p, 'open').click();
 		await expect(p.getByRole('dialog', { name: 'Open flow' }).getByTestId('flow-count')).toBeVisible();
 		await p.keyboard.press('Escape');
 	}
@@ -239,7 +239,7 @@ test('us19 reload during a save — the canvas shows the last revision the serve
 	const name = `us19-inflight-${Date.now()}`;
 	const id = await seedFlow(page.request, oneStepFlow(name));
 	await signIn(page, `?flow=${id}`);
-	await page.locator('[data-step-type="db-size-report"]').click();
+	await (await paletteEntry(page, 'db-size-report')).click();
 
 	let held = false;
 	await page.route(
@@ -249,7 +249,7 @@ test('us19 reload during a save — the canvas shows the last revision the serve
 			else void route.continue();
 		}
 	);
-	await page.getByRole('button', { name: 'Save flow' }).click();
+	await flowButton(page, 'save').click();
 	await expect.poll(() => held).toBe(true);
 	// The route stays: unrouting would release the held PUT to the server. The reload drops it.
 	await page.reload();

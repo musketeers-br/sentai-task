@@ -24,6 +24,58 @@ instance and on other IRIS servers, and watch every step live.
   <img src="./assets/media/stills/overview.png" alt="The Overview screen: eleven cards — processes, locks, shared memory, activity, devices, licenses, web sessions, security posture, web applications, system alerts and secrets — each with its headline read now from the instance" width="880">
 </p>
 
+## ⚖️ For judges: two minutes
+
+**What is different here.** The other portals *show* you the instance. SentaiTask *runs work on
+it*: maintenance steps composed as a flow, dispatched several at a time as real Work Queue Manager
+jobs, on this instance and on other IRIS servers, each one followed to a terminal state. Nothing is
+simulated — every call goes to the platform's own management API (`/api/admin`) with **your**
+credential, and when the platform refuses, its answer is shown word for word.
+
+### Ninety seconds, Docker only
+
+```sh
+git clone https://github.com/musketeers-br/sentai-task.git && cd sentai-task
+docker compose up -d --build
+# then open http://localhost:52773/csp/sentai/ and sign in as _SYSTEM / SYS
+```
+
+1. **Overview** opens first — eleven cards, each read now from the instance. On *Security posture*,
+   press **Run report**: a flow step runs and opens its findings in the viewer a run uses.
+2. **Flows → Open example flow**, then **Validate flow**, then **Run now**.
+3. **Watch the canvas.** Steps in the same wave turn green together; a diamond is a join, and the
+   step after it waits for every input. *That parallelism is the product.*
+4. Open **RUN LOG**: who dispatched the run, each step's start, end and duration, and any failure in
+   the platform's own words. **Export** saves the whole run as JSON.
+5. Press **Schedule in Task Manager**: the flow becomes one native IRIS task, and its runs come back
+   marked *scheduled* in the history.
+
+No public demo to reach, no second service to wait for, no model to download at run time: the image
+carries everything. ([Docker](#docker) · [IPM: `zpm "install sentai-task"`](#ipm))
+
+### If you have two more minutes
+
+| Look at | Why it matters | Where |
+|---|---|---|
+| A step running on **another IRIS server** | Implements [DPI-I-588 *Distributed Work Manager*](https://ideas.intersystems.com/ideas/DPI-I-588), an idea with **Community Opportunity** status, with nothing installed on the far side | [Target servers](#-implements-dpi-i-588-distributed-work-manager) |
+| Typing a database directory to confirm a **destructive** step | The backend checks the value; destructive flows cannot be scheduled at all | [On the canvas](#on-the-canvas) |
+| Signing in as a user without `%Admin_Task` | Every call carries the operator's own credential — SentaiTask never re-implements IRIS permissions | [Core pieces](#core-pieces) |
+| Describing a job in the palette search | Intent search ranks the catalog by meaning, embedded **inside IRIS** via `%Embedding.Config`, offline | [Semantic step-type search](#-semantic-step-type-search-and-the-embedding-provider) |
+| The report steps | Security posture, permissions, web applications, secrets, certificate expiry, OAuth and system alerts — each one a step you can schedule | [Report steps](#report-steps-security-web-applications-alerts-secrets) |
+
+### The honest parts
+
+- **[Contest areas covered](#contest-areas-covered)** — nine areas, each row linking to the screen
+  or spec that proves it.
+- **[Known limitations](#%EF%B8%8F-known-limitations-v1)** — what is *not* proven on IRIS 2026.2 is
+  listed, including the four step types still marked `available: false`.
+- **[Running the tests](#-running-the-tests)** — 268 backend test methods against a double of the
+  management API, plus canvas unit tests and Playwright acceptance tests that drive real runs.
+- Built across 20 specs, each with its evidence kept in [`specs/`](specs/).
+- Written up on the Developer Community: [the walkthrough in English](https://community.intersystems.com/post/sentaitask-%E6%88%A6%E9%9A%8A-your-iris-maintenance-tasks-assembled-squad) and [a versão em português](https://pt.community.intersystems.com/post/sentaitask-%E6%88%A6%E9%9A%8A-tarefas-de-manuten%C3%A7%C3%A3o-do-iris-reunidas-como-um-esquadr%C3%A3o).
+
+---
+
 ## 🚀 Try it
 
 - **Public demo**: a stable address is being set up for the voting week; it will be listed here.
@@ -274,7 +326,16 @@ scripts/demo/up.sh
 
 After sign-in the canvas opens on **Overview** (spec 019): eleven cards, one per management area,
 read now with your own credential through the [instance overview API](#instance-overview).
+Above the cards (spec 023):
 
+- **Could not read …** — listed at the top only when some reading failed: each refused or
+  unreachable area, or the task catalog, with the platform's answer, so a refused card is never
+  found only by scanning.
+- **Needs attention** — no backup ever taken (from *Activity*), suspended scheduled tasks
+  (**Show in catalog**) and tasks the step-type catalog cannot classify (**Show them**), each with
+  one action. "Nothing needs attention" appears only when both reads succeeded.
+- **Next 24 hours** — the Task Manager's next runs by half hour on the instance's own clock, with
+  destructive and suspended ones marked and the next run after the window.
 - **Instance resources** — *Processes*, *Locks*, *Shared memory*, *Activity*, *Devices*,
   *Licenses*, *Web sessions*. **Open** shows every row the platform returned as a table you can sort
   and filter, with an optional *Auto-refresh every 10 s* that pauses while the tab is hidden. On
@@ -718,6 +779,7 @@ exist; the single read gives `class`, `runAsUser` and `timePeriod`; the info rea
 | `status` | `"1"` means OK. After a failed run, it is the platform's own error text for its stored status, the same text as the portal and the history show |
 | `lastError` | The platform's `Error` field verbatim. It reads `"Success"` after a successful run and is empty after a failed one; the failure text is in `status` |
 | `nextRun` | Verbatim, and `""` when the platform has none (for example a run-after task; see `timePeriod`). A suspended task keeps its `nextRun` |
+| `description` | The platform's own `Description` (single read), verbatim. Absent when the platform sent none or the read failed |
 | `destructive` / `destructiveUnknown` | From the step-type catalog only. A class the catalog does not name is `destructiveUnknown: true`, never a guess. SentaiTask's own scheduled tasks take it from the step they run |
 | `origin` | `{flowId, stepId, flowExists}` on tasks named `SentaiTask: <flowId>#<stepId>` (the product's generator) |
 | `unavailable` | Lists the fields a failed per-task read would have given, with the platform's HTTP status and its `status` object verbatim |
@@ -726,9 +788,11 @@ exist; the single read gives `class`, `runAsUser` and `timePeriod`; the info rea
 `isDestructive` and `lastRun` remain as deprecated aliases of `destructive` and `lastFinished`.
 
 **Filters.** `q` (name or class, case-insensitive), `namespace`, `filter=all|scheduled|suspended`
-("scheduled" means not suspended) and `destructiveOnly=0|1|true|false`. A task whose
-destructiveness is unknown is excluded by `destructiveOnly`. Other values → 400 `INVALID_FILTER`.
-`total` and `matched` give "N of M".
+("scheduled" means not suspended), `destructiveOnly=0|1|true|false` and
+`unclassifiedOnly=0|1|true|false`. A task whose destructiveness is unknown is excluded by
+`destructiveOnly` and is exactly what `unclassifiedOnly` keeps. Other values → 400
+`INVALID_FILTER`. `total` and `matched` give "N of M"; `counts` gives `suspended`, `destructive`
+and `unclassified` over every task, before any filter, so they do not change when a filter does.
 
 **Suspend and resume.** `POST /catalog/tasks/{id}/suspend` with `{"suspended": true|false}` calls
 the platform's `task/suspend` or `task/resume`, then reads the task again.

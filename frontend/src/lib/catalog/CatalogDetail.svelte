@@ -2,15 +2,21 @@
 	import { untrack } from 'svelte';
 	import { api } from '$lib/api/client';
 	import StateShape from '$lib/design/StateShape.svelte';
+	import type { StepTypeInfo } from '$lib/flow/document';
+	import Modal from '$lib/shell/Modal.svelte';
 	import {
 		createSequence,
+		destructiveReason,
 		DETAIL_FIELDS,
 		originMark,
+		outsideMark,
 		reduceSuspendAction,
 		refusalText,
 		statusLabel,
-		suspendActionFor,
+		stepFromTask,
+		suspendToggle,
 		type CatalogTaskView,
+		type StepDraft,
 		type SuspendActionEvent,
 		type SuspendActionState,
 		type Value
@@ -21,15 +27,21 @@
 	// link only when the API says the flow exists, recent runs only when the API sent them.
 	let {
 		taskParam,
+		registry,
 		flowHref,
 		onopenflow,
+		onaddtoflow,
 		onchanged,
 		onclose
 	}: {
 		/** The `task` query value, as typed in the address. */
 		taskParam: string;
+		/** Spec 023: the step-type catalog, for the destructive reason and Add to a flow. */
+		registry: StepTypeInfo[];
 		flowHref: (flowId: string) => string;
 		onopenflow: (flowId: string) => void;
+		/** Spec 023 FR-018: put this task's step type on the open flow. */
+		onaddtoflow: (step: StepDraft) => void;
 		/** The list must be re-read (FR-011). */
 		onchanged: () => void;
 		onclose: () => void;
@@ -62,11 +74,28 @@
 		if (next.reread.includes('list')) onchanged();
 	}
 
-	async function setSuspended(task: CatalogTaskView, suspended: boolean) {
-		if (action.name === 'pending') return;
-		apply({ type: 'send', suspended });
+	// Spec 023 FR-020: the toggle asks first; only Confirm sends the spec 007 call.
+	let confirmOpen = $state(false);
+
+	function toggle(task: CatalogTaskView) {
+		const checked = suspendToggle(task).checked;
+		if (checked === null || action.name === 'pending') return;
+		apply({ type: 'toggle', suspended: !checked });
+		confirmOpen = action.name === 'confirming';
+	}
+
+	async function confirmToggle(task: CatalogTaskView) {
+		if (action.name !== 'confirming') return;
+		const suspended = action.suspended;
+		apply({ type: 'confirm' });
+		confirmOpen = false;
 		const result = await api.setSuspended(task.taskId, suspended);
 		apply(result.ok ? { type: 'ok', task: result.value } : { type: 'fail', error: result.error });
+	}
+
+	/** Every way the confirmation closes without Confirm (Cancel, Escape) sends nothing. */
+	function onconfirmclose() {
+		if (action.name === 'confirming') apply({ type: 'cancel' });
 	}
 
 	/** `quiet`: a re-read after an action keeps the shown task until the answer arrives. */
@@ -128,26 +157,83 @@
 			{/if}
 			{#if origin}
 				<span class="mark sentai">SentaiTask</span>
+			{:else if outsideMark(task)}
+				<span class="mark muted" data-testid="outside-mark">created outside SentaiTask</span>
 			{/if}
 		</div>
 
-		{@const offered = suspendActionFor(task)}
+		{@const draft = stepFromTask(task, registry)}
+		{@const toggleView = suspendToggle(task)}
 		<div class="actions">
-			{#if offered === 'suspend'}
-				<button type="button" class="secondary" disabled={action.name === 'pending'} onclick={() => setSuspended(task, true)}>
-					{action.name === 'pending' ? 'Suspending…' : 'Suspend'}
-				</button>
-			{:else if offered === 'resume'}
-				<button type="button" class="secondary" disabled={action.name === 'pending'} onclick={() => setSuspended(task, false)}>
-					{action.name === 'pending' ? 'Resuming…' : 'Resume'}
-				</button>
-			{:else if task.suspended.kind === 'unavailable'}
+			<button
+				type="button"
+				class="primary"
+				disabled={!draft.ok}
+				data-testid="add-to-flow"
+				onclick={() => draft.ok && onaddtoflow(draft.step)}
+			>
+				Add to a flow
+			</button>
+			{#if !draft.ok}<span class="note" data-testid="add-to-flow-reason">{draft.reason}</span>{/if}
+			<span class="spacer"></span>
+			<label class="switch" class:on={toggleView.checked === true}>
+				<input
+					type="checkbox"
+					role="switch"
+					checked={toggleView.checked === true}
+					aria-checked={toggleView.checked === true}
+					disabled={toggleView.checked === null || action.name === 'pending'}
+					onclick={(e) => {
+						e.preventDefault();
+						toggle(task);
+					}}
+				/>
+				<span class="track" aria-hidden="true"><span class="thumb"></span></span>
+				{action.name === 'pending' ? (action.suspended ? 'Suspending…' : 'Resuming…') : 'Suspended'}
+			</label>
+			{#if task.suspended.kind === 'unavailable'}
 				<span class="note">Suspend/Resume unavailable: HTTP {task.suspended.reason.httpStatus} — {task.suspended.reason.text}</span>
 			{/if}
 			{#if action.name === 'error'}
 				<p class="action-error" role="alert" data-testid="action-error">{action.message}</p>
 			{/if}
 		</div>
+
+		{@const reason = destructiveReason(task, registry)}
+		{#if reason}
+			<section class="why" data-testid="destructive-reason" aria-labelledby="why-title">
+				<h3 id="why-title">Why this is destructive</h3>
+				{#if reason.kind === 'stepType'}
+					<p>{reason.text}</p>
+				{:else}
+					{@const flowId = reason.flowId}
+					<p>
+						Destructive because
+						<a
+							href={flowHref(flowId)}
+							onclick={(e) => {
+								e.preventDefault();
+								onopenflow(flowId);
+							}}>flow {flowId}</a
+						> contains a destructive step.
+					</p>
+				{/if}
+				<p class="note">classified from the step-type registry · not editable here</p>
+			</section>
+		{/if}
+
+		<Modal bind:open={confirmOpen} labelledby="suspend-confirm-title" describedby="suspend-confirm-body" onclose={onconfirmclose}>
+			<div class="confirm">
+				<h2 id="suspend-confirm-title">{toggleView.confirm.title}</h2>
+				<p id="suspend-confirm-body">{toggleView.confirm.body}</p>
+				<div class="confirm-actions">
+					<button type="button" class="quiet" onclick={() => (confirmOpen = false)}>Cancel</button>
+					<button type="button" class="primary" onclick={() => void confirmToggle(task)}>
+						{toggleView.confirm.action === 'suspend' ? 'Suspend' : 'Resume'}
+					</button>
+				</div>
+			</div>
+		</Modal>
 
 		<dl class="fields">
 			{#each DETAIL_FIELDS as field (field.key)}
@@ -191,14 +277,14 @@
 			<section class="runs" aria-labelledby="runs-title" data-testid="recent-runs">
 				<h3 id="runs-title">Recent runs</h3>
 				{#if task.recentRuns.length === 0}
-					<p class="message">No runs reported</p>
+					<p class="message">No run recorded. This task has never executed on this instance.</p>
 				{:else}
 					<table>
 						<thead>
 							<tr><th>Start</th><th>Completed</th><th>Status</th><th>Result</th><th>User</th><th>Logged</th></tr>
 						</thead>
 						<tbody>
-							{#each task.recentRuns as run, i (i)}
+							{#each task.recentRuns.slice(0, 5) as run, i (i)}
 								<tr data-testid="recent-run">
 									<td>{run.start}</td><td>{run.completed}</td><td>{run.status}</td><td>{run.result}</td><td>{run.user}</td><td>{run.loggedAt}</td>
 								</tr>
@@ -312,21 +398,131 @@
 		padding: 10px var(--space-section) 0;
 	}
 
-	.secondary {
+	.primary:disabled {
+		opacity: 0.45;
+		cursor: default;
+	}
+
+	.primary {
 		font: inherit;
 		font-size: var(--size-body);
-		font-weight: 500;
-		color: var(--color-text);
-		background: var(--color-card);
-		border: 1px solid var(--color-border);
+		font-weight: 600;
+		color: var(--color-ground);
+		background: var(--color-text);
+		border: 1px solid var(--color-text);
 		border-radius: var(--radius-control);
 		padding: 6px 12px;
 		cursor: pointer;
 	}
 
-	.secondary:disabled {
+	.spacer {
+		flex-grow: 1;
+	}
+
+	.switch {
+		position: relative;
+		display: inline-flex;
+		align-items: center;
+		gap: 7px;
+		font-size: var(--size-body);
+		cursor: pointer;
+	}
+
+	/* The real control covers the whole switch, so a click anywhere on it reaches the input. */
+	.switch input {
+		position: absolute;
+		inset: 0;
+		z-index: 1;
+		margin: 0;
+		opacity: 0;
+		cursor: inherit;
+	}
+
+	.track {
+		position: relative;
+		width: 30px;
+		height: 16px;
+		border: 1px solid var(--color-border);
+		border-radius: 999px;
+		background: var(--color-card);
+	}
+
+	.thumb {
+		position: absolute;
+		top: 2px;
+		left: 2px;
+		width: 10px;
+		height: 10px;
+		border-radius: 50%;
+		background: var(--color-text-muted);
+		transition: left 120ms;
+	}
+
+	.switch.on .track {
+		background: var(--color-text);
+		border-color: var(--color-text);
+	}
+
+	.switch.on .thumb {
+		left: 16px;
+		background: var(--color-ground);
+	}
+
+	.switch input:focus-visible + .track {
+		outline: 2px solid var(--color-focus-ring);
+		outline-offset: 2px;
+	}
+
+	.switch:has(input:disabled) {
 		opacity: 0.45;
 		cursor: default;
+	}
+
+	.why {
+		margin: 10px var(--space-section) 0;
+		padding: 10px 12px;
+		border: 1px solid var(--destructive-accent);
+		border-radius: var(--radius-control);
+		background: var(--destructive-surface);
+	}
+
+	.why h3 {
+		margin-top: 0;
+		color: var(--destructive-text);
+	}
+
+	.why p {
+		margin: 0 0 6px;
+		font-size: var(--size-body);
+		line-height: 1.5;
+	}
+
+	.confirm {
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+		padding: 20px;
+		max-width: 420px;
+	}
+
+	.confirm p {
+		margin: 0;
+		font-size: var(--size-body);
+		line-height: 1.5;
+		color: var(--color-text-muted);
+	}
+
+	/* The dialog sits in the top layer, outside this panel: sizes are set, not inherited. */
+	.confirm-actions button {
+		font-size: var(--size-body);
+		padding: 6px 12px;
+	}
+
+	.confirm-actions {
+		display: flex;
+		justify-content: flex-end;
+		gap: 8px;
+		margin-top: 6px;
 	}
 
 	.note {

@@ -287,6 +287,7 @@ paths:
         - { name: namespace, in: query, schema: { type: string }, description: "Case-insensitive equality" }
         - { name: filter, in: query, schema: { type: string, enum: [all, scheduled, suspended], default: all }, description: "scheduled = not suspended per the platform" }
         - { name: destructiveOnly, in: query, schema: { type: string, enum: ["0", "1", "true", "false"], default: "0" }, description: "Excludes destructiveUnknown tasks" }
+        - { name: unclassifiedOnly, in: query, schema: { type: string, enum: ["0", "1", "true", "false"], default: "0" }, description: "Spec 023: only destructiveUnknown tasks (the catalog cannot classify their class)" }
       responses:
         "200":
           description: OK
@@ -297,6 +298,13 @@ paths:
                 properties:
                   total: { type: integer, description: Tasks on the platform's list }
                   matched: { type: integer, description: Tasks returned after the filters }
+                  counts:
+                    type: object
+                    description: "Spec 023: over every task the list read enumerated, before any filter"
+                    properties:
+                      suspended: { type: integer, description: "suspended = true (a task whose info read failed is not counted)" }
+                      destructive: { type: integer }
+                      unclassified: { type: integer, description: "destructiveUnknown = true" }
                   items: { type: array, items: { $ref: "#/components/schemas/CatalogTask" } }
         "400": { description: "INVALID_FILTER", content: { application/json: { schema: { $ref: "#/components/schemas/Problem" } } } }
         "403": { description: "The platform refused the list read (verbatim platformStatus)", content: { application/json: { schema: { $ref: "#/components/schemas/Problem" } } } }
@@ -706,6 +714,7 @@ components:
         class: { type: string, example: "%SYS.Task.IntegrityCheck", description: "Platform TaskClass (single read)" }
         runAsUser: { type: string }
         timePeriod: { type: string, example: "Weekly", description: "Verbatim, e.g. Daily, Weekly, Run After" }
+        description: { type: string, description: "Spec 023: the platform's Description (single read), verbatim; absent when empty or the read failed" }
         nextRun: { type: string, description: "Verbatim NextScheduled; empty when the platform has none; kept while suspended" }
         lastStarted: { type: string }
         lastFinished: { type: string }

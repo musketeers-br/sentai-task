@@ -2,7 +2,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
 import { deleteFlowWithRuns, EXAMPLE_FLOW_NAME, RUNBOOK_CREATED_NAMES } from './iris';
-import { envelope, PASSWORD, seedFlow, signIn, signInAt, token, USER } from './support';
+import { envelope, flowButton, flowMoreButton, PASSWORD, paletteEntry, seedFlow, signIn, signInAt, token, USER } from './support';
 import { contrastFailures } from './theming';
 
 // spec 022 — the runbook gallery replaces the empty canvas (FR-001…FR-012), and inherits us20's
@@ -114,7 +114,7 @@ test('us31 start from scratch — the gallery never blocks blank-canvas authorin
 	await expect(gallery(page)).toHaveCount(0);
 
 	// The palette works on the canvas the gallery left behind.
-	await page.locator('[data-step-type="db-size-report"]').click();
+	await (await paletteEntry(page, 'db-size-report')).click();
 	await expect(page.locator('.svelte-flow__node')).toHaveCount(1);
 });
 
@@ -151,7 +151,7 @@ test('us31 use — one action from the card to a running flow (FR-006, FR-010, S
 	await expect(page.locator('.svelte-flow__edge')).toHaveCount(0);
 
 	// Validate flow checks it against the instance exactly like any flow.
-	await page.getByRole('button', { name: 'Validate flow' }).click();
+	await flowButton(page, 'validate').click();
 	await expect(page.getByRole('status').filter({ hasText: 'Flow is valid — no errors, no warnings.' })).toBeVisible();
 
 	// Run now completes both read-only steps (the retired us20 run guarantee).
@@ -180,16 +180,16 @@ test('us31 idempotent — Use again opens the same flow; never a duplicate (FR-0
 	await page.mouse.down();
 	await page.mouse.move(box.x + 30, box.y + 172, { steps: 8 });
 	await page.mouse.up();
-	await page.getByRole('button', { name: 'Save flow' }).click();
+	await flowButton(page, 'save').click();
 	await expect(page.getByTestId('flow-meta')).toContainText('rev 2');
 
 	// The ready-made entry from Open flow… leads to the gallery, whose Use opens the same flow
 	// (spec 022 FR-013 — the name index decides, never a duplicate).
-	await page.getByRole('banner').getByRole('button', { name: 'More' }).click();
+	await flowMoreButton(page).click();
 	await page.getByRole('menuitem', { name: 'New flow' }).click();
 	await expect.poll(() => new URL(page.url()).searchParams.get('flow')).toBeNull();
 	await emptyListFor(page, 1);
-	await page.getByRole('banner').getByRole('button', { name: 'Open flow…' }).click();
+	await flowButton(page, 'open').click();
 	await page.getByRole('dialog', { name: 'Open flow' }).getByRole('button', { name: 'Browse runbooks' }).click();
 	await expect(page.getByTestId('runbook-gallery')).toBeVisible();
 	await page.locator('[data-testid="runbook-card"][data-runbook="example-storage-health-check"]').getByTestId('runbook-card-use').click();
@@ -211,12 +211,12 @@ test('us31 guard — the ready-made path over unsaved edits asks first (FR-008, 
 	});
 	await signInAt(page, `?flow=${seeded}`);
 	await expect(page.getByRole('heading', { name: 'STEP TYPES' })).toBeVisible();
-	await page.locator('[data-step-type="db-size-report"]').click(); // unsaved edit
+	await (await paletteEntry(page, 'db-size-report')).click(); // unsaved edit
 
 	// Spec 022 FR-013: the ready-made path is *Browse runbooks* — over unsaved edits it goes
 	// through the same guard (FR-008).
 	await emptyListFor(page, 1);
-	await page.getByRole('banner').getByRole('button', { name: 'Open flow…' }).click();
+	await flowButton(page, 'open').click();
 	await page.getByRole('dialog', { name: 'Open flow' }).getByRole('button', { name: 'Browse runbooks' }).click();
 	const guard = page.getByRole('dialog', { name: /^Save changes to / });
 	await expect(guard).toBeVisible();
@@ -255,7 +255,7 @@ test('us31 weekly window — Use opens the seeded flow; destructive content is c
 	await expect(page.getByLabel('Flow name')).toHaveValue('Weekly maintenance window');
 	await expect(page.locator('.svelte-flow__node')).toHaveCount(6);
 
-	await page.getByRole('button', { name: 'Validate flow' }).click();
+	await flowButton(page, 'validate').click();
 	await expect(page.getByRole('status').filter({ hasText: 'Flow is valid — no errors, no warnings.' })).toBeVisible();
 
 	// Purge task history is destructive: the platform demands the typed confirmation, exactly as
@@ -345,7 +345,7 @@ test('us31 shared account — a used runbook reopens as the same flow, edits int
 	await page.mouse.down();
 	await page.mouse.move(box.x + 30, box.y + 150, { steps: 6 });
 	await page.mouse.up();
-	await page.getByRole('button', { name: 'Save flow' }).click();
+	await flowButton(page, 'save').click();
 	await expect(page.getByTestId('flow-meta')).toContainText('rev 2');
 
 	// The next visitor of the shared account: a fresh arrival at the Flows screen — the same
@@ -404,7 +404,7 @@ test('us31 one path — the guide and Open flow… offer Browse runbooks; the lo
 
 	// From Open flow…: the empty-state entry lands on the gallery too.
 	await emptyListFor(page, 1);
-	await page.getByRole('banner').getByRole('button', { name: 'Open flow…' }).click();
+	await flowButton(page, 'open').click();
 	const dialog = page.getByRole('dialog', { name: 'Open flow' });
 	await dialog.getByRole('button', { name: 'Browse runbooks' }).click();
 	await expect(dialog).toHaveCount(0);

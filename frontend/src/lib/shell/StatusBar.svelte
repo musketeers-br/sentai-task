@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { formatSummary } from '$lib/flow/document';
+	import { formatSummary, SNAP } from '$lib/flow/document';
 	import type { FlowEditor } from '$lib/flow/editor.svelte';
 	import { formatErrors, formatWarnings } from '$lib/flow/report';
 
@@ -36,7 +36,7 @@
 		</span>
 	{/if}
 	<span class="spacer"></span>
-	<span class="faint">snap 8 px</span>
+	<span class="faint">snap {SNAP} px</span>
 	<span class="faint" data-testid="zoom">zoom {Math.round(editor.zoom * 100)}%</span>
 </footer>
 

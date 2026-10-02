@@ -1,35 +1,56 @@
 /// <reference types="node" />
-import { execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { envelope, signIn } from './support';
+import { runInIrisApp } from './iris';
 
-// spec 011 — User Story 2, end to end against the published bundle: with the similarity service
-// stopped, the palette is indistinguishable from today's in every way (FR-023) — the local
+// spec 011 — User Story 2, end to end against the published bundle: with the similarity provider
+// unreachable, the palette is indistinguishable from today's in every way (FR-023) — the local
 // filter narrows by entry text, today's no-match message shows when nothing matches, and no
 // SUGGESTED group, toast or error appears. Degraded and working runs look identical.
 
 const EVIDENCE = '../specs/011-semantic-step-search/evidence';
-const COMPOSE = process.env.COMPOSE_FILE ?? 'docker-compose.yml';
 
 const search = (page: Page) => page.getByLabel('Search step type');
 
-function compose(action: 'stop' | 'start'): string {
-	return execFileSync('docker', ['compose', '-f', COMPOSE, action, 'ollama'], {
-		encoding: 'utf8',
-		cwd: '..'
-	});
+// Since spec 017 the provider is in-process (`sentai.search.LocalEmbedding`), so the story's
+// unreachable-host condition is produced the way an operator meets it in the field (README,
+// "Alternatives, all the same one row"): the `sentai-steps` row is pointed at an OpenAI-compatible
+// `EmbeddingService` whose host refuses the connection — fast, like the stopped container it
+// replaces (research R-013). The original row is saved inside IRIS and put back afterwards. Like
+// every script in tests/iris.ts, each command is one line at column zero — a leading tab would
+// make the terminal read it as a continuation of the previous line.
+const SWAP = [
+	'Set rs = ##class(%SQL.Statement).%ExecDirect(, "SELECT EmbeddingClass, Configuration FROM %Embedding.Config WHERE Name = \'sentai-steps\'")',
+	'While rs.%Next() { Set ^SentaiE2E("us23","class") = rs.EmbeddingClass, ^SentaiE2E("us23","config") = rs.Configuration }',
+	'Set cfg = ##class(%DynamicObject).%New()',
+	'Do cfg.%Set("host","127.0.0.1")',
+	'Do cfg.%Set("port",9)',
+	'Do cfg.%Set("https",0)',
+	'Do cfg.%Set("path","/v1/embeddings")',
+	'Do cfg.%Set("model","all-minilm")',
+	'Set rs = ##class(%SQL.Statement).%ExecDirect(, "UPDATE %Embedding.Config SET EmbeddingClass = \'sentai.search.EmbeddingService\', Configuration = ? WHERE Name = \'sentai-steps\'", cfg.%ToJSON())',
+	'Write "US23SWAP=", rs.%SQLCODE, !'
+].join('\n');
+
+const RESTORE = [
+	'If $DATA(^SentaiE2E("us23","class")) { Set rs = ##class(%SQL.Statement).%ExecDirect(, "UPDATE %Embedding.Config SET EmbeddingClass = ?, Configuration = ? WHERE Name = \'sentai-steps\'", ^SentaiE2E("us23","class"), ^SentaiE2E("us23","config")) Write "US23RESTORE=", rs.%SQLCODE, ! Kill ^SentaiE2E("us23") }'
+].join('\n');
+
+function expectMarker(out: string, marker: string): void {
+	if (!out.includes(marker)) {
+		throw new Error(`the sentai-steps row was not swapped as expected (${marker} missing):\n${out}`);
+	}
 }
 
 test.beforeAll(() => {
-	// The provider row stays; the service behind it does not answer. A stopped container is the
-	// unreachable-host condition of the story, and it fails fast (research R-013).
-	compose('stop');
+	// The provider row stays; the endpoint behind it does not answer.
+	expectMarker(runInIrisApp(SWAP), 'US23SWAP=0');
 });
 
 test.afterAll(() => {
 	// The dev stack gets its provider back.
-	compose('start');
+	expectMarker(runInIrisApp(RESTORE), 'US23RESTORE=0');
 });
 
 test('us23 — with the provider down, the palette is exactly today’s: local filter, no-match message, no SUGGESTED group, no error', async ({ page }) => {
@@ -71,7 +92,7 @@ test('us23 — with the provider down, the palette is exactly today’s: local f
 		`${EVIDENCE}/us23-search-degradation.json`,
 		envelope(
 			'us23-search-degradation',
-			{ provider: 'ollama stopped (docker compose stop ollama)' },
+			{ provider: 'sentai-steps row → EmbeddingService at an unreachable host' },
 			{ suggestedGroups: 0, pageErrors: 0, noMatchMessage: 'today\u2019s own' },
 			[
 				'With the similarity service down, the palette narrows by entry text exactly as before, shows today\u2019s no-match message, and raises no error (FR-023).'

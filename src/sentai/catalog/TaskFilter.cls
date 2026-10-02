@@ -5,7 +5,7 @@
 Class sentai.catalog.TaskFilter Extends %RegisteredObject
 {
 
-ClassMethod Validate(q As %String, namespace As %String, filter As %String, destructiveOnly As %String, Output problem As %String) As %Boolean
+ClassMethod Validate(q As %String, namespace As %String, filter As %String, destructiveOnly As %String, unclassifiedOnly As %String, Output problem As %String) As %Boolean
 {
     Set problem = ""
     If '$LISTFIND($LB("all", "scheduled", "suspended"), filter) {
@@ -16,10 +16,15 @@ ClassMethod Validate(q As %String, namespace As %String, filter As %String, dest
         Set problem = "INVALID_FILTER: destructiveOnly must be one of 0, 1, true, false"
         Quit 0
     }
+    // Spec 023: same closed value set as destructiveOnly.
+    If '$LISTFIND($LB("0", "1", "true", "false"), unclassifiedOnly) {
+        Set problem = "INVALID_FILTER: unclassifiedOnly must be one of 0, 1, true, false"
+        Quit 0
+    }
     Quit 1
 }
 
-ClassMethod Matches(task As %DynamicObject, q As %String, namespace As %String, filter As %String, destructiveOnly As %String) As %Boolean
+ClassMethod Matches(task As %DynamicObject, q As %String, namespace As %String, filter As %String, destructiveOnly As %String, unclassifiedOnly As %String = "0") As %Boolean
 {
     If (q '= "") {
         Set needle = $ZCONVERT(q, "L")
@@ -31,6 +36,8 @@ ClassMethod Matches(task As %DynamicObject, q As %String, namespace As %String, 
     If (filter = "scheduled") && '(task.%IsDefined("suspended") && 'task.suspended) Quit 0
     If (filter = "suspended") && '(task.%IsDefined("suspended") && task.suspended) Quit 0
     If ((destructiveOnly = "1") || (destructiveOnly = "true")) && 'task.destructive Quit 0
+    // Spec 023: the tasks the step-type catalog cannot classify (destructiveUnknown).
+    If ((unclassifiedOnly = "1") || (unclassifiedOnly = "true")) && 'task.destructiveUnknown Quit 0
     Quit 1
 }
 

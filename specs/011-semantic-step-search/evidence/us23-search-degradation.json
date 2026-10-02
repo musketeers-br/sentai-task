@@ -1,8 +1,8 @@
 {
   "evidence_id": "us23-search-degradation",
-  "captured_at": "2026-09-28T23:21:28.480Z",
+  "captured_at": "2026-10-02T14:18:06.512Z",
   "request": {
-    "provider": "ollama stopped (docker compose stop ollama)"
+    "provider": "sentai-steps row → EmbeddingService at an unreachable host"
   },
   "response": {
     "suggestedGroups": 0,

@@ -160,6 +160,9 @@ export function formatSummary(s: FlowSummary): string {
 	return `${plural(s.steps, 'step')} · ${plural(s.joins, 'join')} · ${s.destructive} destructive`;
 }
 
+/** The canvas grid every dropped or dragged step snaps to, in px (spec 002); the status bar says it. */
+export const SNAP = 8;
+
 export function toDefinition(doc: FlowDocument): FlowDefinition {
 	return {
 		name: doc.name,

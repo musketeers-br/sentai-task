@@ -1,13 +1,17 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import { api } from '$lib/api/client';
-	import { refusalText } from '$lib/catalog/catalog';
+	import { refusalText, type CatalogPage } from '$lib/catalog/catalog';
 	import type { StepTypeInfo } from '$lib/flow/document';
 	import type { Finding } from '$lib/flow/report';
 	import ParameterForm from '$lib/inspector/ParameterForm.svelte';
 	import ResultPanel from '$lib/run/ResultPanel.svelte';
 	import AreaCard from './AreaCard.svelte';
+	import AttentionBand from './AttentionBand.svelte';
+	import { attention, scheduleStrip, unreadSummary } from './attention';
 	import ReadingView from './ReadingView.svelte';
+	import ScheduleStrip from './ScheduleStrip.svelte';
+	import UnreadSummary from './UnreadSummary.svelte';
 	import { isInstanceArea, paramFindings, withCardReport, withSummary, type AreaCardView } from './overview';
 
 	// Spec 019: the landing screen — spec 018's 11 areas from one summary read. Report cards run
@@ -17,7 +21,8 @@
 		areaParam,
 		registry,
 		onarea,
-		onscheduled
+		onscheduled,
+		onlink
 	}: {
 		/** The `area` query value: the detail view shown, or null for the cards. */
 		areaParam: string | null;
@@ -25,6 +30,8 @@
 		onarea: (area: string | null) => void;
 		/** A flow was created from a card: open it, and the schedule dialog when it validated clean. */
 		onscheduled: (flowId: string, hasErrors: boolean) => void;
+		/** Spec 023: an attention action — an address on this app, e.g. the catalog filtered. */
+		onlink: (query: string) => void;
 	} = $props();
 
 	type Screen = { kind: 'loading' } | { kind: 'cards'; cards: AreaCardView[] } | { kind: 'unreachable'; text: string } | { kind: 'refused'; text: string };
@@ -41,11 +48,42 @@
 	const instanceCards = $derived(cards ? cards.filter((c) => c.group === 'instance') : []);
 	const reportCards = $derived(cards ? cards.filter((c) => c.group === 'report') : []);
 
+	// Spec 023 US3: the catalog is read beside the summary; each fails on its own (FR-026).
+	type CatalogRead = { kind: 'loading' } | { kind: 'ready'; page: CatalogPage } | { kind: 'unread'; line: string };
+	let catalogRead = $state<CatalogRead>({ kind: 'loading' });
+	let summaryReadAt = $state<string | null>(null);
+
+	const summaryLine = $derived(view.kind === 'unreachable' || view.kind === 'refused' ? view.text : null);
+	const summaryDone = $derived(view.kind !== 'loading');
+	const attentionView = $derived(
+		!summaryDone || catalogRead.kind === 'loading'
+			? null
+			: attention({ cards, catalog: catalogRead.kind === 'ready' ? catalogRead.page : null, backupStepDeclared: registry.some((t) => t.category === 'backup') })
+	);
+	const strip = $derived(
+		catalogRead.kind !== 'ready' || !summaryDone ? null : scheduleStrip(catalogRead.page.items, cards ? summaryReadAt : null)
+	);
+	const unread = $derived(
+		unreadSummary({ cards, summary: summaryLine, catalog: catalogRead.kind === 'unread' ? catalogRead.line : null })
+	);
+
+	async function loadCatalog() {
+		const result = await api.catalogTasks();
+		catalogRead = result.ok ? { kind: 'ready', page: result.value } : { kind: 'unread', line: refusalText(result.error) };
+	}
+
+	function refresh() {
+		void load();
+		void loadCatalog();
+	}
+
 	async function load() {
 		const result = await api.overviewSummary();
 		if (result.ok) {
 			const previous = view.kind === 'cards' ? view.cards : [];
 			view = { kind: 'cards', cards: withSummary(previous, result.value) };
+			// Each area's readAt is the instance clock at the summary read: the strip's "now".
+			summaryReadAt = result.value[0]?.state.readAt ?? null;
 		} else if (result.error.kind === 'network') {
 			view = { kind: 'unreachable', text: result.error.message };
 		} else {
@@ -54,7 +92,7 @@
 	}
 
 	$effect(() => {
-		untrack(() => void load());
+		untrack(() => refresh());
 	});
 
 	function specsFor(stepType: string | null) {
@@ -101,7 +139,13 @@
 			<h1>Overview</h1>
 			<span class="count">Every management area of this instance, read now with your own credential.</span>
 			<span class="spacer"></span>
-			<button type="button" onclick={() => void load()}>Refresh</button>
+			<button type="button" onclick={refresh}>Refresh</button>
+		</div>
+		<!-- Spec 023: what needs attention, above spec 019's cards; each part fails on its own. -->
+		<div class="attention">
+			<UnreadSummary {unread} />
+			<AttentionBand view={attentionView} {onlink} />
+			<ScheduleStrip result={strip} unreadLine={catalogRead.kind === 'unread' ? catalogRead.line : null} />
 		</div>
 		{#if notice}<p class="notice mono" data-testid="overview-notice">{notice}</p>{/if}
 		{#if areaParam !== null && cards && !detail}
@@ -212,6 +256,10 @@
 	.notice {
 		padding: 10px var(--space-section);
 		margin: 0;
+	}
+
+	.attention {
+		padding: 0 var(--space-section);
 	}
 
 	.scroll {

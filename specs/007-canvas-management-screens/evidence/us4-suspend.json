@@ -1,9 +1,9 @@
 {
   "evidence_id": "us4-suspend",
-  "captured_at": "2026-10-02T05:48:20.271Z",
+  "captured_at": "2026-10-02T14:11:20.705Z",
   "request": {
     "method": "POST",
-    "path": "/csp/sentai/api/v1/catalog/tasks/1283/suspend",
+    "path": "/csp/sentai/api/v1/catalog/tasks/1285/suspend",
     "bodies": [
       {
         "suspended": true
@@ -20,16 +20,17 @@
     ],
     "bodies": [
       {
-        "taskId": 1283,
-        "name": "SentaiTask: 430 us10 suspend 1790920095193",
+        "taskId": 1285,
+        "name": "SentaiTask: 154 us10 suspend 1790950275342",
         "namespace": "IRISAPP",
         "origin": {
-          "flowId": "430",
+          "flowId": "154",
           "flowExists": true
         },
         "class": "sentai.dispatch.ScheduledFlowTask",
         "runAsUser": "_SYSTEM",
         "timePeriod": "Weekly",
+        "description": "SentaiTask scheduled flow (spec 015)",
         "nextRun": "2026-10-03 03:00:00",
         "lastStarted": "",
         "lastFinished": "",
@@ -42,16 +43,17 @@
         "isDestructive": false
       },
       {
-        "taskId": 1283,
-        "name": "SentaiTask: 430 us10 suspend 1790920095193",
+        "taskId": 1285,
+        "name": "SentaiTask: 154 us10 suspend 1790950275342",
         "namespace": "IRISAPP",
         "origin": {
-          "flowId": "430",
+          "flowId": "154",
           "flowExists": true
         },
         "class": "sentai.dispatch.ScheduledFlowTask",
         "runAsUser": "_SYSTEM",
         "timePeriod": "Weekly",
+        "description": "SentaiTask scheduled flow (spec 015)",
         "nextRun": "2026-10-03 03:00:00",
         "lastStarted": "",
         "lastFinished": "",
@@ -66,7 +68,7 @@
     ]
   },
   "notes": [
-    "Task 1283 was created by scheduling test flow 430; it and the flow were deleted afterwards.",
-    "Each button was disabled while its call was pending; detail and row then showed the state in the answer, and a fresh GET agreed."
+    "Task 1285 was created by scheduling test flow 154; it and the flow were deleted afterwards.",
+    "Each change was confirmed first (spec 023); the switch was disabled while its call was pending; detail and row then showed the state in the answer, and a fresh GET agreed."
   ]
 }

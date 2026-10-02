@@ -726,7 +726,8 @@ ClassMethod ListCatalogTasks() As %Status
     Set namespace = %request.Get("namespace")
     Set filter = $S(%request.Get("filter") '= "":%request.Get("filter"), 1:"all")
     Set destructiveOnly = $S(%request.Get("destructiveOnly") '= "":%request.Get("destructiveOnly"), 1:"0")
-    Quit ..WriteOutcome(##class(sentai.catalog.TaskService).List(..CurrentToken(), q, namespace, filter, destructiveOnly))
+    Set unclassifiedOnly = $S(%request.Get("unclassifiedOnly") '= "":%request.Get("unclassifiedOnly"), 1:"0")
+    Quit ..WriteOutcome(##class(sentai.catalog.TaskService).List(..CurrentToken(), q, namespace, filter, destructiveOnly, unclassifiedOnly))
 }
 
 ClassMethod ReadCatalogTask(taskId As %String) As %Status

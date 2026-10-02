@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { SNAP } from '$lib/flow/document';
 	import {
 		Background,
 		BackgroundVariant,
@@ -27,7 +28,6 @@
 	const edgeTypes: EdgeTypes = { flow: FlowEdge };
 	const { screenToFlowPosition } = useSvelteFlow();
 
-	const SNAP = 8;
 	const snap = (n: number) => Math.round(n / SNAP) * SNAP;
 
 	function ondragover(event: DragEvent) {

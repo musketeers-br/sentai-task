@@ -1,9 +1,9 @@
 {
   "evidence_id": "us6-typed-confirmation",
-  "captured_at": "2026-10-02T05:48:35.778Z",
+  "captured_at": "2026-10-02T14:11:36.844Z",
   "request": {
     "method": "POST",
-    "path": "/csp/sentai/api/v1/flows/434/dispatch",
+    "path": "/csp/sentai/api/v1/flows/158/dispatch",
     "bodies": [
       [
         {
@@ -31,7 +31,7 @@
         "detail": "Step '01' requires a matching typed confirmation before dispatch"
       },
       {
-        "guid": "E8A632AC-BE24-11F1-A4E0-EA1061ACC2C9"
+        "guid": "2DF8937B-BE6B-11F1-895A-1A2E27139EB1"
       }
     ]
   },

@@ -4,6 +4,7 @@
 	import { page } from '$app/state';
 	import { SvelteFlowProvider } from '@xyflow/svelte';
 	import { api, describeError } from '$lib/api/client';
+	import { filtersFromUrl, withFilters, type CatalogFilters, type StepDraft } from '$lib/catalog/catalog';
 	import CatalogScreen from '$lib/catalog/CatalogScreen.svelte';
 	import TargetsScreen from '$lib/targets/TargetsScreen.svelte';
 	import { session } from '$lib/api/session.svelte';
@@ -13,7 +14,10 @@
 	import { afterSave, decide, needsGuard, type GuardChoice, type PendingSwitch } from '$lib/flows/guard';
 	import { defaultFlowName } from '$lib/flows/list';
 	import RunbookGallery from '$lib/flows/RunbookGallery.svelte';
-	import { useRunbook, type Runbook } from '$lib/flows/runbooks';
+	import { EXAMPLE_RUNBOOK, useRunbook, type Runbook } from '$lib/flows/runbooks';
+	import EmptyCanvas from '$lib/flows/EmptyCanvas.svelte';
+	import FlowBar from '$lib/flow/FlowBar.svelte';
+	import { exampleAvailable } from '$lib/flows/example';
 	import OpenFlowDialog from '$lib/flows/OpenFlowDialog.svelte';
 	import GettingStartedDialog from '$lib/guide/GettingStartedDialog.svelte';
 	import { guide, shouldAutoOpen } from '$lib/guide/guide.svelte';
@@ -117,6 +121,22 @@
 	async function loadTargets() {
 		const targets = await api.listTargets();
 		if (targets.ok) editor.targets = targets.value;
+	}
+
+	/** Spec 023: the catalog's filters live in the address, so Overview can link to them. */
+	function followCatalogFilters(filters: CatalogFilters) {
+		const next = withFilters(page.url, filters);
+		if (next.href !== page.url.href) void goto(next, { replaceState: true, keepFocus: true, noScroll: true });
+	}
+
+	/** Spec 023 FR-018: the task's step type joins the open flow, which becomes unsaved. */
+	function addTaskToFlow(step: StepDraft) {
+		const lowest = editor.nodes.reduce((max, n) => Math.max(max, n.position.y), -180);
+		const node = editor.addStep(step.type, { x: 0, y: lowest + 180 });
+		if (!node) return;
+		const fields = { ...(step.namespace ? { namespace: step.namespace } : {}), ...(step.runAsUser ? { runAsUser: step.runAsUser } : {}) };
+		if (Object.keys(fields).length > 0) editor.updateStep(node.id, fields);
+		navigate('flows');
 	}
 
 	/** The catalog detail is addressable too (`task=<id>`), so back closes it. */
@@ -232,6 +252,9 @@
 	const showGallery = $derived(
 		unreadable === null && editor.id === null && editor.steps.length === 0 && !galleryDismissed
 	);
+	/** Spec 023 FR-008: the template card is offered only when the example's step types are
+	 *    declared, available and non-destructive (spec 010 FR-019). */
+	const showExample = $derived(exampleAvailable(editor.registry));
 
 	// --- Spec 010 FR-006: the one unsaved-changes guard --------------------------------------
 	// Every switch away from the open flow goes through `guarded`: New flow, Open flow…, Open
@@ -436,45 +459,21 @@
 
 {#if phase.name === 'ready' && screen === 'overview'}
 	<div class="app">
-		<TopBar
-			{editor}
-			{screen}
-			onnavigate={navigate}
-			user={session.user}
-			onsave={save}
-			onsaveas={() => (saveAsOpen = true)}
-			onnew={() => void guarded({ kind: 'new' })}
-			onopen={() => (openListOpen = true)}
-			onvalidate={validate}
-			onrun={() => (dispatchOpen = true)}
-			onschedule={() => (scheduling = true)}
-			onhelp={() => guide.openFromHelp()}
-			onsignout={signOut}
-			onhistory={runHistory}
+		<TopBar {screen} onnavigate={navigate} user={session.user} onhelp={() => guide.openFromHelp()} onsignout={signOut} />
+		<OverviewScreen
+			areaParam={page.url.searchParams.get('area')}
+			registry={editor.registry}
+			onarea={selectArea}
+			onscheduled={scheduleCreated}
+			onlink={(query) => void goto(new URL(query, page.url), { noScroll: true })}
 		/>
-		<OverviewScreen areaParam={page.url.searchParams.get('area')} registry={editor.registry} onarea={selectArea} onscheduled={scheduleCreated} />
 	</div>
 	{#if session.status === 'expired'}
 		<div class="overlay"><SignIn expired /></div>
 	{/if}
 {:else if phase.name === 'ready' && screen === 'targets'}
 	<div class="app">
-		<TopBar
-			{editor}
-			{screen}
-			onnavigate={navigate}
-			user={session.user}
-			onsave={save}
-			onsaveas={() => (saveAsOpen = true)}
-			onnew={() => void guarded({ kind: 'new' })}
-			onopen={() => (openListOpen = true)}
-			onvalidate={validate}
-			onrun={() => (dispatchOpen = true)}
-			onschedule={() => (scheduling = true)}
-			onhelp={() => guide.openFromHelp()}
-			onsignout={signOut}
-			onhistory={runHistory}
-		/>
+		<TopBar {screen} onnavigate={navigate} user={session.user} onhelp={() => guide.openFromHelp()} onsignout={signOut} />
 		<TargetsScreen targetParam={page.url.searchParams.get('target')} onselect={selectTarget} onchanged={loadTargets} />
 	</div>
 	{#if session.status === 'expired'}
@@ -482,22 +481,7 @@
 	{/if}
 {:else if phase.name === 'ready' && screen === 'runs'}
 	<div class="app">
-		<TopBar
-			{editor}
-			{screen}
-			onnavigate={navigate}
-			user={session.user}
-			onsave={save}
-			onsaveas={() => (saveAsOpen = true)}
-			onnew={() => void guarded({ kind: 'new' })}
-			onopen={() => (openListOpen = true)}
-			onvalidate={validate}
-			onrun={() => (dispatchOpen = true)}
-			onschedule={() => (scheduling = true)}
-			onhelp={() => guide.openFromHelp()}
-			onsignout={signOut}
-			onhistory={runHistory}
-		/>
+		<TopBar {screen} onnavigate={navigate} user={session.user} onhelp={() => guide.openFromHelp()} onsignout={signOut} />
 		<RunsScreen query={queryFromUrl(page.url)} onquery={setRunsQuery} onopen={openRun} />
 	</div>
 	{#if session.status === 'expired'}
@@ -505,23 +489,17 @@
 	{/if}
 {:else if phase.name === 'ready' && screen === 'catalog'}
 	<div class="app">
-		<TopBar
-			{editor}
-			{screen}
-			onnavigate={navigate}
-			user={session.user}
-			onsave={save}
-			onsaveas={() => (saveAsOpen = true)}
-			onnew={() => void guarded({ kind: 'new' })}
-			onopen={() => (openListOpen = true)}
-			onvalidate={validate}
-			onrun={() => (dispatchOpen = true)}
-			onschedule={() => (scheduling = true)}
-			onhelp={() => guide.openFromHelp()}
-			onsignout={signOut}
-			onhistory={runHistory}
+		<TopBar {screen} onnavigate={navigate} user={session.user} onhelp={() => guide.openFromHelp()} onsignout={signOut} />
+		<CatalogScreen
+			taskParam={page.url.searchParams.get('task')}
+			initialFilters={filtersFromUrl(page.url)}
+			registry={editor.registry}
+			{flowHref}
+			onselect={selectTask}
+			onopenflow={openFlow}
+			onaddtoflow={addTaskToFlow}
+			onfilters={followCatalogFilters}
 		/>
-		<CatalogScreen taskParam={page.url.searchParams.get('task')} {flowHref} onselect={selectTask} onopenflow={openFlow} />
 	</div>
 	{#if session.status === 'expired'}
 		<div class="overlay"><SignIn expired /></div>
@@ -543,20 +521,16 @@
 	{/if}
 {:else if phase.name === 'ready'}
 	<div class="app">
-		<TopBar
+		<TopBar {screen} onnavigate={navigate} user={session.user} onhelp={() => guide.openFromHelp()} onsignout={signOut} />
+		<FlowBar
 			{editor}
-			{screen}
-			onnavigate={navigate}
-			user={session.user}
+			onopen={() => (openListOpen = true)}
 			onsave={save}
 			onsaveas={() => (saveAsOpen = true)}
 			onnew={() => void guarded({ kind: 'new' })}
-			onopen={() => (openListOpen = true)}
 			onvalidate={validate}
 			onrun={() => (dispatchOpen = true)}
 			onschedule={() => (scheduling = true)}
-			onhelp={() => guide.openFromHelp()}
-			onsignout={signOut}
 			onhistory={runHistory}
 		/>
 		<div class="workspace">
@@ -578,6 +552,14 @@
 					targets={editor.targets.map((t) => t.name)}
 					onuse={(runbook) => void guarded({ kind: 'runbook', runbook })}
 					onstartblank={() => (galleryDismissed = true)}
+				/>
+			{:else if unreadable === null && editor.steps.length === 0}
+				<!-- Spec 023 FR-007–FR-009: every other empty flow says how to start — the blank
+				     canvas after *Start from scratch*, or an open flow with no steps. -->
+				<EmptyCanvas
+					showTemplate={showExample}
+					ontemplate={() => void guarded({ kind: 'runbook', runbook: EXAMPLE_RUNBOOK })}
+					onimport={() => navigate('catalog')}
 				/>
 			{/if}
 				{#if unreadable !== null && editor.id === null && editor.steps.length === 0}
