@@ -2,32 +2,45 @@
 	import { untrack } from 'svelte';
 	import { api } from '$lib/api/client';
 	import StateShape from '$lib/design/StateShape.svelte';
+	import type { StepTypeInfo } from '$lib/flow/document';
 	import {
+		ageText,
 		catalogQuery,
 		createSequence,
+		footerText,
 		namespaceOptions,
-		NO_FILTERS,
 		orderByNextRun,
 		originMark,
 		refusalText,
 		statusLabel,
 		type CatalogFilters,
-		type CatalogPage
+		type CatalogPage,
+		type StepDraft
 	} from './catalog';
 	import CatalogDetail from './CatalogDetail.svelte';
 	import CatalogValue from './CatalogValue.svelte';
 
 	let {
 		taskParam,
+		initialFilters,
+		registry,
 		flowHref,
 		onselect,
-		onopenflow
+		onopenflow,
+		onaddtoflow,
+		onfilters
 	}: {
 		/** The `task` query value (FR-002): the detail shown, or null for none. */
 		taskParam: string | null;
+		/** Spec 023: the filters the address preselects (Overview's links); read once. */
+		initialFilters: CatalogFilters;
+		registry: StepTypeInfo[];
 		flowHref: (flowId: string) => string;
 		onselect: (taskId: number | null) => void;
 		onopenflow: (flowId: string) => void;
+		onaddtoflow: (step: StepDraft) => void;
+		/** Spec 023: the filters changed; the address follows them. */
+		onfilters: (filters: CatalogFilters) => void;
 	} = $props();
 
 	// The platform's Task Manager as the spec 006 API reports it (US-1, US-3). Rows, counts,
@@ -46,7 +59,7 @@
 
 	let screen = $state<Screen>({ name: 'loading' });
 	let now = $state(Date.now());
-	let filters = $state<CatalogFilters>({ ...NO_FILTERS });
+	let filters = $state<CatalogFilters>(untrack(() => ({ ...initialFilters })));
 	/** Typed text; copied into `filters.q` 300 ms after the last keystroke. */
 	let searchText = $state('');
 	let namespaces = $state<string[]>(['all']);
@@ -54,7 +67,8 @@
 
 	const sequence = createSequence();
 	const rows = $derived(screen.name === 'ready' ? orderByNextRun(screen.page.items) : []);
-	const age = $derived(screen.name === 'ready' ? Math.max(0, Math.round((now - screen.readAt) / 1000)) : 0);
+	const age = $derived(screen.name === 'ready' ? ageText(screen.readAt, Math.max(now, screen.readAt)) : '');
+	const counts = $derived(screen.name === 'ready' && screen.page.counts.kind === 'value' ? screen.page.counts.value : null);
 
 	$effect(() => {
 		// A local clock for "updated N s ago" only; it never calls the API.
@@ -66,7 +80,10 @@
 	// tracked: a token renewal inside the call must not re-read the list (no polling).
 	$effect(() => {
 		const query = { ...filters };
-		untrack(() => void load(query));
+		untrack(() => {
+			void load(query);
+			onfilters(query);
+		});
 	});
 
 	$effect(() => {
@@ -99,6 +116,8 @@
 		<h1 id="catalog-title">Task catalog</h1>
 		{#if screen.name === 'ready'}
 			<span class="count" data-testid="catalog-count">{screen.page.matched} of {screen.page.total} tasks</span>
+			<span class="count" aria-hidden="true">·</span>
+			<span class="count" data-testid="catalog-freshness">{age}</span>
 		{/if}
 		<span class="spacer"></span>
 		<button type="button" class="secondary" disabled={reading} onclick={() => load()}>Refresh</button>
@@ -123,6 +142,7 @@
 				<label class:checked={filters.state === value}>
 					<input type="radio" name="catalog-state" {value} bind:group={filters.state} />
 					{label}
+					{#if value === 'suspended' && counts}<span class="tally" data-testid="count-suspended">{counts.suspended}</span>{/if}
 				</label>
 			{/each}
 		</fieldset>
@@ -133,7 +153,16 @@
 				<path d="M5 3.6 L5 6.2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" />
 			</svg>
 			Destructive only
+			{#if counts}<span class="tally" data-testid="count-destructive">{counts.destructive}</span>{/if}
 		</label>
+		<!-- Spec 023 FR-015, FR-019: a filter, not a way to classify — the catalog classifies. -->
+		<label class="toggle neutral" class:checked={filters.unclassifiedOnly}>
+			<input type="checkbox" bind:checked={filters.unclassifiedOnly} />
+			{#if counts}<span data-testid="count-unclassified">{counts.unclassified}</span>{/if} unclassified
+		</label>
+		{#if filters.unclassifiedOnly}
+			<span class="note" data-testid="unclassified-note">A classification is added to the step-type catalog in a reviewed change — not here.</span>
+		{/if}
 	</div>
 
 	{#if screen.name === 'ready' && screen.banner}
@@ -147,7 +176,7 @@
 		<div class="body">
 			<p class="message refused" role="alert" data-testid="catalog-refusal">{screen.message}</p>
 			{#if taskParam !== null}
-				<CatalogDetail {taskParam} {flowHref} {onopenflow} onchanged={() => load()} onclose={() => onselect(null)} />
+				<CatalogDetail {taskParam} {registry} {flowHref} {onopenflow} {onaddtoflow} onchanged={() => load()} onclose={() => onselect(null)} />
 			{/if}
 		</div>
 	{:else}
@@ -219,12 +248,11 @@
 			</table>
 		</div>
 		{#if taskParam !== null}
-			<CatalogDetail {taskParam} {flowHref} {onopenflow} onchanged={() => load()} onclose={() => onselect(null)} />
+			<CatalogDetail {taskParam} {registry} {flowHref} {onopenflow} {onaddtoflow} onchanged={() => load()} onclose={() => onselect(null)} />
 		{/if}
 		</div>
 		<footer class="foot">
-			<span>sorted by next run</span>
-			<span data-testid="catalog-freshness">updated {age} s ago</span>
+			<span data-testid="catalog-footer">{footerText(screen.page)}</span>
 		</footer>
 	{/if}
 </section>
@@ -371,6 +399,27 @@
 		color: var(--destructive-text);
 		background: var(--destructive-surface);
 		border-color: var(--destructive-accent);
+	}
+
+	/* Spec 023: "unclassified" is not a hazard, so its filter is not drawn as one. */
+	.toggle.neutral.checked {
+		color: var(--color-ground);
+		background: var(--color-text);
+		border-color: var(--color-text);
+	}
+
+	.tally {
+		font-family: var(--font-mono);
+		font-weight: 600;
+		border: 1px solid currentColor;
+		border-radius: var(--radius-chip);
+		padding: 0 5px;
+		line-height: 1.4;
+	}
+
+	.note {
+		font-size: var(--size-caption);
+		color: var(--color-text-muted);
 	}
 
 	.banner {

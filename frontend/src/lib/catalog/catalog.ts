@@ -3,6 +3,8 @@
 // Nothing here decides which tasks exist, what they are or whether they are destructive: every
 // value is the API's, and a value the API did not send stays absent (FR-007, FR-019).
 import type { ApiError, PlatformStatus } from '$lib/api/client';
+import { consequence } from '$lib/flow/consequence';
+import type { StepTypeInfo } from '$lib/flow/document';
 
 export interface WireUnavailable {
 	read: string;
@@ -33,6 +35,8 @@ export interface WireCatalogTask {
 	origin?: TaskOrigin;
 	recentRuns?: WireRecentRun[];
 	unavailable?: WireUnavailable[];
+	/** Spec 023: the platform's own Description, absent when it sent none. */
+	description?: string;
 	className?: string;
 	isDestructive?: boolean;
 	lastRun?: string;
@@ -65,10 +69,18 @@ export interface RecentRun {
 	loggedAt: string;
 }
 
+/** Spec 023: over every task the list read enumerated, before any filter. */
+export interface CatalogCounts {
+	suspended: number;
+	destructive: number;
+	unclassified: number;
+}
+
 export interface WireCatalogPage {
 	total: number | string;
 	matched: number | string;
 	items: WireCatalogTask[];
+	counts?: { suspended: number | string; destructive: number | string; unclassified: number | string };
 }
 
 export interface UnavailableReason {
@@ -96,6 +108,8 @@ export interface CatalogTaskView {
 	lastError: Value<string>;
 	suspended: Value<boolean>;
 	destructive: 'yes' | 'no' | 'unknown';
+	/** Spec 023 FR-017: the platform's description. */
+	description: Value<string>;
 	origin?: TaskOrigin;
 	/** Item read only: absent → no section, [] → "No runs reported" (US-1.7). */
 	recentRuns?: RecentRun[];
@@ -104,6 +118,8 @@ export interface CatalogTaskView {
 export interface CatalogPage {
 	total: number;
 	matched: number;
+	/** Spec 023 FR-015: absent when the API sent none — never shown as 0. */
+	counts: Value<CatalogCounts>;
 	items: CatalogTaskView[];
 }
 
@@ -143,6 +159,7 @@ export function fromWireCatalogTask(w: WireCatalogTask): CatalogTaskView {
 		lastError: value('lastError'),
 		suspended: value('suspended'),
 		destructive: w.destructiveUnknown || w.destructive === undefined ? 'unknown' : w.destructive ? 'yes' : 'no',
+		description: w.description ? { kind: 'value', value: w.description } : { kind: 'absent' },
 		...(w.origin ? { origin: { ...w.origin } } : {}),
 		...(Array.isArray(w.recentRuns)
 			? {
@@ -174,6 +191,7 @@ export const DETAIL_FIELDS = [
 	{ key: 'taskId', label: 'ID' },
 	{ key: 'namespace', label: 'Namespace' },
 	{ key: 'className', label: 'Class' },
+	{ key: 'description', label: 'Description' },
 	{ key: 'runAsUser', label: 'Run as user' },
 	{ key: 'timePeriod', label: 'Time period' },
 	{ key: 'nextRun', label: 'Next run' },
@@ -190,8 +208,90 @@ export function fromWireCatalogPage(w: WireCatalogPage): CatalogPage {
 	return {
 		total: Number(w.total),
 		matched: Number(w.matched),
+		counts: w.counts
+			? {
+					kind: 'value',
+					value: {
+						suspended: Number(w.counts.suspended),
+						destructive: Number(w.counts.destructive),
+						unclassified: Number(w.counts.unclassified)
+					}
+				}
+			: { kind: 'absent' },
 		items: (w.items ?? []).map(fromWireCatalogTask)
 	};
+}
+
+/** Spec 023 FR-015: how long ago the list was read (milliseconds since the epoch). */
+export function ageText(readAt: number, now: number): string {
+	const seconds = Math.max(0, Math.floor((now - readAt) / 1000));
+	if (seconds < 60) return `updated ${seconds} s ago`;
+	return `updated ${Math.floor(seconds / 60)} min ago`;
+}
+
+/** Spec 023 FR-016: the order and the API's totals; no total when the API sent none. */
+export function footerText(page: CatalogPage): string {
+	if (page.counts.kind !== 'value') return 'sorted by next run';
+	const c = page.counts.value;
+	return `sorted by next run · ${c.destructive} destructive · ${c.suspended} suspended · ${c.unclassified} unclassified`;
+}
+
+export type DestructiveReason = { kind: 'stepType'; text: string } | { kind: 'flow'; flowId: string };
+
+/**
+ * Spec 023 FR-017 (research R-4): why a destructive task is destructive, as the step-type catalog
+ * states it — the matched type's consequence with its declared defaults — or, for a SentaiTask
+ * flow task, the flow whose step makes it so. Nothing is said about a task that is not destructive.
+ */
+export function destructiveReason(task: CatalogTaskView, registry: readonly StepTypeInfo[]): DestructiveReason | null {
+	if (task.destructive !== 'yes') return null;
+	const entry = matchedStepType(task, registry);
+	if (entry) return { kind: 'stepType', text: consequence(entry.type, declaredDefaults(entry)) };
+	if (task.origin) return { kind: 'flow', flowId: task.origin.flowId };
+	return null;
+}
+
+/** Spec 023 FR-020a: the catalog reports no SentaiTask origin for this task. */
+export function outsideMark(task: CatalogTaskView): boolean {
+	return !task.origin;
+}
+
+export interface StepDraft {
+	type: string;
+	namespace?: string;
+	runAsUser?: string;
+}
+
+export type AddToFlow = { ok: true; step: StepDraft } | { ok: false; reason: string };
+
+/**
+ * Spec 023 FR-018 (research R-6): the step a catalog task becomes — the declared type whose class
+ * is the task's, with the task's namespace and run-as user. The catalog carries no task settings,
+ * so the parameters are the type's defaults, as when it is dragged from the palette.
+ */
+export function stepFromTask(task: CatalogTaskView, registry: readonly StepTypeInfo[]): AddToFlow {
+	if (task.className.kind !== 'value') return { ok: false, reason: 'the task class could not be read' };
+	const entry = matchedStepType(task, registry);
+	if (!entry) return { ok: false, reason: 'no step type declares this class' };
+	if (!entry.available) return { ok: false, reason: 'this step type is not supported in v1' };
+	return {
+		ok: true,
+		step: {
+			type: entry.type,
+			namespace: task.namespace,
+			...(task.runAsUser.kind === 'value' && task.runAsUser.value ? { runAsUser: task.runAsUser.value } : {})
+		}
+	};
+}
+
+function matchedStepType(task: CatalogTaskView, registry: readonly StepTypeInfo[]): StepTypeInfo | undefined {
+	if (task.className.kind !== 'value' || !task.className.value) return undefined;
+	const className = task.className.value;
+	return registry.find((t) => t.className !== '' && t.className === className);
+}
+
+function declaredDefaults(entry: StepTypeInfo): Record<string, unknown> {
+	return Object.fromEntries((entry.parameters ?? []).filter((p) => p.default !== undefined).map((p) => [p.name, p.default]));
 }
 
 const TIMESTAMP = /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}/;
@@ -242,9 +342,11 @@ export interface CatalogFilters {
 	namespace: string;
 	state: 'all' | 'scheduled' | 'suspended';
 	destructiveOnly: boolean;
+	/** Spec 023 FR-015: only the tasks the step-type catalog cannot classify. */
+	unclassifiedOnly: boolean;
 }
 
-export const NO_FILTERS: CatalogFilters = { q: '', namespace: 'all', state: 'all', destructiveOnly: false };
+export const NO_FILTERS: CatalogFilters = { q: '', namespace: 'all', state: 'all', destructiveOnly: false, unclassifiedOnly: false };
 
 /**
  * The query the API filters with (FR-005): defaults are omitted, so an unfiltered read is a bare
@@ -256,8 +358,34 @@ export function catalogQuery(filters: CatalogFilters): string {
 	if (filters.namespace !== 'all') params.set('namespace', filters.namespace);
 	if (filters.state !== 'all') params.set('filter', filters.state);
 	if (filters.destructiveOnly) params.set('destructiveOnly', '1');
+	if (filters.unclassifiedOnly) params.set('unclassifiedOnly', '1');
 	const query = params.toString();
 	return query ? `?${query}` : '';
+}
+
+const STATES: readonly CatalogFilters['state'][] = ['all', 'scheduled', 'suspended'];
+
+/** Spec 023: the filters an address preselects (Overview's "Show in catalog"); unknown values are ignored. */
+export function filtersFromUrl(url: URL): CatalogFilters {
+	const state = url.searchParams.get('filter');
+	return {
+		...NO_FILTERS,
+		state: STATES.includes(state as CatalogFilters['state']) ? (state as CatalogFilters['state']) : 'all',
+		destructiveOnly: url.searchParams.get('destructiveOnly') === '1',
+		unclassifiedOnly: url.searchParams.get('unclassifiedOnly') === '1'
+	};
+}
+
+/** The same address with these filters; defaults are left out, everything else is kept. */
+export function withFilters(url: URL, filters: CatalogFilters): URL {
+	const next = new URL(url);
+	if (filters.state === 'all') next.searchParams.delete('filter');
+	else next.searchParams.set('filter', filters.state);
+	for (const key of ['destructiveOnly', 'unclassifiedOnly'] as const) {
+		if (filters[key]) next.searchParams.set(key, '1');
+		else next.searchParams.delete(key);
+	}
+	return next;
 }
 
 /** Research R-2: "all" plus the namespaces an unfiltered read returned, in the order it did. */
@@ -286,13 +414,42 @@ export function suspendActionFor(task: CatalogTaskView): 'suspend' | 'resume' | 
 
 export type SuspendActionState =
 	| { name: 'idle' }
+	| { name: 'confirming'; suspended: boolean }
 	| { name: 'pending'; suspended: boolean }
 	| { name: 'error'; message: string };
 
 export type SuspendActionEvent =
+	| { type: 'toggle'; suspended: boolean }
+	| { type: 'cancel' }
+	| { type: 'confirm' }
 	| { type: 'send'; suspended: boolean }
 	| { type: 'ok'; task: CatalogTaskView }
 	| { type: 'fail'; error: ApiError };
+
+export interface SuspendToggle {
+	/** The API's suspended value; null when it is unavailable (the toggle is then disabled). */
+	checked: boolean | null;
+	confirm: { action: 'suspend' | 'resume'; title: string; body: string };
+}
+
+/**
+ * Spec 023 FR-020: one switch for Suspend/Resume, from the API's `suspended`, and the simple
+ * confirmation it asks (not the typed gate of destructive steps). No permission is guessed.
+ */
+export function suspendToggle(task: CatalogTaskView): SuspendToggle {
+	const checked = task.suspended.kind === 'value' ? task.suspended.value : null;
+	const action = checked ? 'resume' : 'suspend';
+	const flowNote = task.origin
+		? ` It runs flow ${task.origin.flowId} on its schedule: the scheduled runs of that flow stop until it is resumed.`
+		: '';
+	return {
+		checked,
+		confirm:
+			action === 'suspend'
+				? { action, title: `Suspend “${task.name}”?`, body: `The Task Manager will not run this task until it is resumed.${flowNote}` }
+				: { action, title: `Resume “${task.name}”?`, body: 'The Task Manager runs this task again on its schedule.' }
+	};
+}
 
 /**
  * Data-model §CatalogScreen state. After any answer the shown state is the API's: a success
@@ -304,6 +461,13 @@ export function reduceSuspendAction(
 	event: SuspendActionEvent
 ): { state: SuspendActionState; task?: CatalogTaskView; reread: Array<'item' | 'list'> } {
 	switch (event.type) {
+		case 'toggle':
+			// Spec 023: nothing is sent until the operator confirms.
+			return state.name === 'pending' ? { state, reread: [] } : { state: { name: 'confirming', suspended: event.suspended }, reread: [] };
+		case 'cancel':
+			return state.name === 'confirming' ? { state: { name: 'idle' }, reread: [] } : { state, reread: [] };
+		case 'confirm':
+			return state.name === 'confirming' ? { state: { name: 'pending', suspended: state.suspended }, reread: [] } : { state, reread: [] };
 		case 'send':
 			return state.name === 'pending' ? { state, reread: [] } : { state: { name: 'pending', suspended: event.suspended }, reread: [] };
 		case 'ok':

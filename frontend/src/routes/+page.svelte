@@ -4,6 +4,7 @@
 	import { page } from '$app/state';
 	import { SvelteFlowProvider } from '@xyflow/svelte';
 	import { api, describeError } from '$lib/api/client';
+	import { filtersFromUrl, withFilters, type CatalogFilters, type StepDraft } from '$lib/catalog/catalog';
 	import CatalogScreen from '$lib/catalog/CatalogScreen.svelte';
 	import TargetsScreen from '$lib/targets/TargetsScreen.svelte';
 	import { session } from '$lib/api/session.svelte';
@@ -120,6 +121,22 @@
 	async function loadTargets() {
 		const targets = await api.listTargets();
 		if (targets.ok) editor.targets = targets.value;
+	}
+
+	/** Spec 023: the catalog's filters live in the address, so Overview can link to them. */
+	function followCatalogFilters(filters: CatalogFilters) {
+		const next = withFilters(page.url, filters);
+		if (next.href !== page.url.href) void goto(next, { replaceState: true, keepFocus: true, noScroll: true });
+	}
+
+	/** Spec 023 FR-018: the task's step type joins the open flow, which becomes unsaved. */
+	function addTaskToFlow(step: StepDraft) {
+		const lowest = editor.nodes.reduce((max, n) => Math.max(max, n.position.y), -180);
+		const node = editor.addStep(step.type, { x: 0, y: lowest + 180 });
+		if (!node) return;
+		const fields = { ...(step.namespace ? { namespace: step.namespace } : {}), ...(step.runAsUser ? { runAsUser: step.runAsUser } : {}) };
+		if (Object.keys(fields).length > 0) editor.updateStep(node.id, fields);
+		navigate('flows');
 	}
 
 	/** The catalog detail is addressable too (`task=<id>`), so back closes it. */
@@ -433,7 +450,16 @@
 {:else if phase.name === 'ready' && screen === 'catalog'}
 	<div class="app">
 		<TopBar {screen} onnavigate={navigate} user={session.user} onhelp={() => guide.openFromHelp()} onsignout={signOut} />
-		<CatalogScreen taskParam={page.url.searchParams.get('task')} {flowHref} onselect={selectTask} onopenflow={openFlow} />
+		<CatalogScreen
+			taskParam={page.url.searchParams.get('task')}
+			initialFilters={filtersFromUrl(page.url)}
+			registry={editor.registry}
+			{flowHref}
+			onselect={selectTask}
+			onopenflow={openFlow}
+			onaddtoflow={addTaskToFlow}
+			onfilters={followCatalogFilters}
+		/>
 	</div>
 	{#if session.status === 'expired'}
 		<div class="overlay"><SignIn expired /></div>

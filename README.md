@@ -770,6 +770,7 @@ exist; the single read gives `class`, `runAsUser` and `timePeriod`; the info rea
 | `status` | `"1"` means OK. After a failed run, it is the platform's own error text for its stored status, the same text as the portal and the history show |
 | `lastError` | The platform's `Error` field verbatim. It reads `"Success"` after a successful run and is empty after a failed one; the failure text is in `status` |
 | `nextRun` | Verbatim, and `""` when the platform has none (for example a run-after task; see `timePeriod`). A suspended task keeps its `nextRun` |
+| `description` | The platform's own `Description` (single read), verbatim. Absent when the platform sent none or the read failed |
 | `destructive` / `destructiveUnknown` | From the step-type catalog only. A class the catalog does not name is `destructiveUnknown: true`, never a guess. SentaiTask's own scheduled tasks take it from the step they run |
 | `origin` | `{flowId, stepId, flowExists}` on tasks named `SentaiTask: <flowId>#<stepId>` (the product's generator) |
 | `unavailable` | Lists the fields a failed per-task read would have given, with the platform's HTTP status and its `status` object verbatim |
@@ -778,9 +779,11 @@ exist; the single read gives `class`, `runAsUser` and `timePeriod`; the info rea
 `isDestructive` and `lastRun` remain as deprecated aliases of `destructive` and `lastFinished`.
 
 **Filters.** `q` (name or class, case-insensitive), `namespace`, `filter=all|scheduled|suspended`
-("scheduled" means not suspended) and `destructiveOnly=0|1|true|false`. A task whose
-destructiveness is unknown is excluded by `destructiveOnly`. Other values → 400 `INVALID_FILTER`.
-`total` and `matched` give "N of M".
+("scheduled" means not suspended), `destructiveOnly=0|1|true|false` and
+`unclassifiedOnly=0|1|true|false`. A task whose destructiveness is unknown is excluded by
+`destructiveOnly` and is exactly what `unclassifiedOnly` keeps. Other values → 400
+`INVALID_FILTER`. `total` and `matched` give "N of M"; `counts` gives `suspended`, `destructive`
+and `unclassified` over every task, before any filter, so they do not change when a filter does.
 
 **Suspend and resume.** `POST /catalog/tasks/{id}/suspend` with `{"suspended": true|false}` calls
 the platform's `task/suspend` or `task/resume`, then reads the task again.

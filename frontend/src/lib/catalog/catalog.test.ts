@@ -1,10 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import type { ApiError } from '$lib/api/client';
+import { consequence } from '$lib/flow/consequence';
+import type { StepTypeInfo } from '$lib/flow/document';
 import {
+	ageText,
 	catalogQuery,
 	createSequence,
 	DETAIL_FIELDS,
+	destructiveReason,
+	filtersFromUrl,
+	footerText,
+	NO_FILTERS,
 	originMark,
+	outsideMark,
+	stepFromTask,
+	suspendToggle,
+	withFilters,
 	reduceSuspendAction,
 	suspendActionFor,
 	fromWireCatalogPage,
@@ -68,7 +79,9 @@ describe('fromWireCatalogTask', () => {
 			status: { kind: 'value', value: '1' },
 			lastError: { kind: 'value', value: '' },
 			suspended: { kind: 'value', value: true },
-			destructive: 'no'
+			destructive: 'no',
+			// Spec 023: the item carries no description, so none is shown.
+			description: { kind: 'absent' }
 		});
 	});
 
@@ -186,10 +199,10 @@ describe('filters (US-3)', () => {
 	});
 
 	it('sends only the filters that differ from their default', () => {
-		const defaults = { q: '', namespace: 'all', state: 'all', destructiveOnly: false } as const;
+		const defaults = { q: '', namespace: 'all', state: 'all', destructiveOnly: false, unclassifiedOnly: false } as const;
 		expect(catalogQuery(defaults)).toBe('');
 		expect(catalogQuery({ ...defaults, q: '  ' })).toBe('');
-		expect(catalogQuery({ q: 'SentaiTask: 1#', namespace: '%SYS', state: 'suspended', destructiveOnly: true })).toBe(
+		expect(catalogQuery({ ...defaults, q: 'SentaiTask: 1#', namespace: '%SYS', state: 'suspended', destructiveOnly: true })).toBe(
 			'?q=SentaiTask%3A+1%23&namespace=%25SYS&filter=suspended&destructiveOnly=1'
 		);
 		expect(catalogQuery({ ...defaults, state: 'scheduled' })).toBe('?filter=scheduled');
@@ -224,9 +237,9 @@ describe('detail (US-1.4-7, US-2)', () => {
 		]);
 	});
 
-	it('shows exactly the FR-006 fields, in order', () => {
+	it('shows exactly the FR-006 fields, in order (plus the spec 023 description)', () => {
 		expect(DETAIL_FIELDS.map((f) => f.label)).toEqual([
-			'Name', 'ID', 'Namespace', 'Class', 'Run as user', 'Time period', 'Next run', 'Last started',
+			'Name', 'ID', 'Namespace', 'Class', 'Description', 'Run as user', 'Time period', 'Next run', 'Last started',
 			'Last finished', 'Status', 'Last error', 'Suspended', 'Destructiveness', 'Origin'
 		]);
 	});
@@ -255,5 +268,175 @@ describe('suspend / resume action (US-4)', () => {
 			reread: ['item', 'list']
 		});
 		expect(suspendActionFor(fromWireCatalogTask(task1003))).toBeNull();
+	});
+});
+
+// --- Spec 023 T023 (data-model §5): counts, the unclassified filter, the detail's additions -----
+
+const stepTypes: StepTypeInfo[] = [
+	{ type: 'integrity-check', className: '%SYS.Task.IntegrityCheck', category: 'verification', destructive: false, pausable: false, available: true, parameters: [] },
+	{ type: 'purge-task-history', className: '%SYS.Task.PurgeTaskHistory', category: 'purge', destructive: true, pausable: false, available: true, executor: 'in-process' },
+	{
+		type: 'purge-audit-records',
+		className: '%SYS.Task.PurgeAudit',
+		category: 'purge',
+		destructive: true,
+		pausable: true,
+		available: false,
+		parameters: [{ name: 'daysToKeep', type: 'integer', required: true, default: 30, description: 'Days' }]
+	},
+	{ type: 'custom', className: '', category: 'custom', destructive: false, pausable: false, available: false }
+];
+
+const purgeTasks: WireCatalogTask = {
+	taskId: 8, name: 'Purge Tasks', namespace: '%SYS', class: '%SYS.Task.PurgeTaskHistory', runAsUser: '_SYSTEM',
+	timePeriod: 'Daily', nextRun: '2026-10-02 01:00:00', suspended: false, destructive: true, destructiveUnknown: false,
+	description: 'Purge task history older than the retention period'
+};
+
+describe('counts and description from the API (FR-015, FR-017)', () => {
+	it('carries the counts the API computed, and says absent when an older API sends none', () => {
+		const page = fromWireCatalogPage({ total: 16, matched: 2, counts: { suspended: 2, destructive: 2, unclassified: 12 }, items: [] });
+		expect(page.counts).toEqual({ kind: 'value', value: { suspended: 2, destructive: 2, unclassified: 12 } });
+		expect(fromWireCatalogPage({ total: 16, matched: 16, items: [] }).counts).toEqual({ kind: 'absent' });
+	});
+
+	it('keeps the platform description verbatim, absent when not sent', () => {
+		expect(fromWireCatalogTask(purgeTasks).description).toEqual({ kind: 'value', value: 'Purge task history older than the retention period' });
+		expect(fromWireCatalogTask(task4).description).toEqual({ kind: 'absent' });
+	});
+
+	it('asks for the unclassified tasks only when the filter is on', () => {
+		expect(catalogQuery({ ...NO_FILTERS, unclassifiedOnly: true })).toBe('?unclassifiedOnly=1');
+		expect(catalogQuery({ ...NO_FILTERS, state: 'suspended', unclassifiedOnly: true })).toBe('?filter=suspended&unclassifiedOnly=1');
+		expect(catalogQuery(NO_FILTERS)).toBe('');
+	});
+
+	it('says how long ago the list was read', () => {
+		expect(ageText(10_000, 10_400)).toBe('updated 0 s ago');
+		expect(ageText(10_000, 13_200)).toBe('updated 3 s ago');
+		expect(ageText(10_000, 10_000 + 125_000)).toBe('updated 2 min ago');
+	});
+
+	it('repeats the order and the totals in the footer, without inventing a count', () => {
+		const page = fromWireCatalogPage({ total: 16, matched: 16, counts: { suspended: 2, destructive: 2, unclassified: 12 }, items: [] });
+		expect(footerText(page)).toBe('sorted by next run · 2 destructive · 2 suspended · 12 unclassified');
+		expect(footerText(fromWireCatalogPage({ total: 1, matched: 1, items: [] }))).toBe('sorted by next run');
+	});
+});
+
+describe('catalog filters in the address (Overview links, contracts/api-delta.md)', () => {
+	it('reads filter, destructiveOnly and unclassifiedOnly, ignoring unknown values', () => {
+		const url = new URL('http://x/csp/sentai/?view=catalog&filter=suspended&unclassifiedOnly=1');
+		expect(filtersFromUrl(url)).toEqual({ ...NO_FILTERS, state: 'suspended', unclassifiedOnly: true });
+		expect(filtersFromUrl(new URL('http://x/?view=catalog&filter=paused&destructiveOnly=yes'))).toEqual(NO_FILTERS);
+	});
+
+	it('writes only what is not a default, keeping the rest of the address', () => {
+		const url = new URL('http://x/csp/sentai/?view=catalog&task=8&filter=scheduled');
+		const next = withFilters(url, { ...NO_FILTERS, unclassifiedOnly: true });
+		expect(next.searchParams.get('view')).toBe('catalog');
+		expect(next.searchParams.get('task')).toBe('8');
+		expect(next.searchParams.has('filter')).toBe(false);
+		expect(next.searchParams.get('unclassifiedOnly')).toBe('1');
+		expect(filtersFromUrl(withFilters(url, { ...NO_FILTERS, state: 'suspended', destructiveOnly: true }))).toEqual({
+			...NO_FILTERS,
+			state: 'suspended',
+			destructiveOnly: true
+		});
+	});
+});
+
+describe('why a task is destructive (FR-017, research R-4)', () => {
+	it('uses the matched step type consequence, with its declared defaults', () => {
+		expect(destructiveReason(fromWireCatalogTask(purgeTasks), stepTypes)).toEqual({ kind: 'stepType', text: consequence('purge-task-history', {}) });
+		const audit = fromWireCatalogTask({ ...purgeTasks, class: '%SYS.Task.PurgeAudit' });
+		expect(destructiveReason(audit, stepTypes)).toEqual({ kind: 'stepType', text: consequence('purge-audit-records', { daysToKeep: 30 }) });
+	});
+
+	it('names the flow for a SentaiTask flow task destructive through one of its steps', () => {
+		const flowTask = fromWireCatalogTask({ ...task1000, destructive: true });
+		expect(destructiveReason(flowTask, stepTypes)).toEqual({ kind: 'flow', flowId: '1' });
+	});
+
+	it('has nothing to say about a task that is not destructive', () => {
+		expect(destructiveReason(fromWireCatalogTask(task4), stepTypes)).toBeNull();
+		expect(destructiveReason(fromWireCatalogTask(task1003), stepTypes)).toBeNull();
+	});
+});
+
+describe('created outside SentaiTask (FR-020a)', () => {
+	it('marks a task the API reports no SentaiTask origin for', () => {
+		expect(outsideMark(fromWireCatalogTask(task4))).toBe(true);
+		expect(outsideMark(fromWireCatalogTask(task1000))).toBe(false);
+	});
+});
+
+describe('Add to a flow (FR-018, research R-6)', () => {
+	it('drafts the matched step type with the task namespace and run-as user', () => {
+		expect(stepFromTask(fromWireCatalogTask(task4), stepTypes)).toEqual({
+			ok: true,
+			step: { type: 'integrity-check', namespace: '%SYS', runAsUser: '_SYSTEM' }
+		});
+	});
+
+	it('says why when the class is not declared, not supported in v1, or unread', () => {
+		expect(stepFromTask(fromWireCatalogTask({ ...task4, class: '%SYS.Task.InventoryScan' }), stepTypes)).toEqual({
+			ok: false,
+			reason: 'no step type declares this class'
+		});
+		expect(stepFromTask(fromWireCatalogTask({ ...purgeTasks, class: '%SYS.Task.PurgeAudit' }), stepTypes)).toEqual({
+			ok: false,
+			reason: 'this step type is not supported in v1'
+		});
+		const unread = fromWireCatalogTask({
+			...task4,
+			class: undefined,
+			unavailable: [{ read: 'single', fields: ['class', 'runAsUser', 'timePeriod'], httpStatus: 403 }]
+		});
+		expect(stepFromTask(unread, stepTypes)).toEqual({ ok: false, reason: 'the task class could not be read' });
+	});
+
+	it('leaves out a run-as user the API did not send', () => {
+		expect(stepFromTask(fromWireCatalogTask({ ...task4, runAsUser: undefined }), stepTypes)).toEqual({
+			ok: true,
+			step: { type: 'integrity-check', namespace: '%SYS' }
+		});
+	});
+});
+
+describe('Suspend / Resume toggle and its confirmation (FR-020, data-model §8)', () => {
+	it('reflects the API state and asks a simple confirmation', () => {
+		const active = suspendToggle(fromWireCatalogTask({ ...task4, suspended: false }));
+		expect(active.checked).toBe(false);
+		expect(active.confirm).toEqual({
+			action: 'suspend',
+			title: 'Suspend “Integrity Check”?',
+			body: 'The Task Manager will not run this task until it is resumed.'
+		});
+		const suspended = suspendToggle(fromWireCatalogTask(task4));
+		expect(suspended.checked).toBe(true);
+		expect(suspended.confirm.action).toBe('resume');
+	});
+
+	it('warns that a SentaiTask flow stops running on its schedule', () => {
+		const toggle = suspendToggle(fromWireCatalogTask(task1000));
+		expect(toggle.confirm.body).toBe(
+			'The Task Manager will not run this task until it is resumed. It runs flow 1 on its schedule: the scheduled runs of that flow stop until it is resumed.'
+		);
+	});
+
+	it('is disabled (checked null) when the suspended state is unavailable', () => {
+		expect(suspendToggle(fromWireCatalogTask(task1003)).checked).toBeNull();
+	});
+
+	it('confirms before sending: toggle → confirming, cancel sends nothing, confirm → pending', () => {
+		const confirming = reduceSuspendAction({ name: 'idle' }, { type: 'toggle', suspended: true });
+		expect(confirming).toEqual({ state: { name: 'confirming', suspended: true }, reread: [] });
+		expect(reduceSuspendAction(confirming.state, { type: 'cancel' })).toEqual({ state: { name: 'idle' }, reread: [] });
+		expect(reduceSuspendAction(confirming.state, { type: 'confirm' })).toEqual({ state: { name: 'pending', suspended: true }, reread: [] });
+		// A toggle while a request is in flight is ignored.
+		const pending = { name: 'pending', suspended: true } as const;
+		expect(reduceSuspendAction(pending, { type: 'toggle', suspended: false }).state).toBe(pending);
 	});
 });

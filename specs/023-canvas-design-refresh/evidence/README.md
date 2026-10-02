@@ -43,6 +43,15 @@ The 7 new failures and what was done:
 | us21 top bar | `getByRole('button', { name: 'Task catalog' })` also matched "Import from the task catalog" | scoped to the top bar, `exact: true` |
 | us16 run, us22 cancel | timing (a wave still running; a response read after disposal) | none — both passed on rerun |
 
+## US2 runs (T033, 2026-10-02)
+
+| Check | Result |
+|---|---|
+| Backend `zpm "test sentai-task -only"` | `All PASSED` — 482 methods (475 + 7 for `counts`, `unclassifiedOnly`, `description`) |
+| `npm run check` / `npm test` | 0 errors / 283 tests passed |
+| `us31-catalog-attention` + `us10-catalog-suspend` | 8 passed |
+| Full suite on the US2 bundle | 111 tests: **104 passed, 6 failed, 1 skipped** — the 5 baseline failures plus `us22-cancel-alert-notice:65`, which passed 2/2 on an isolated rerun (timing, as in the US1 run) |
+
 ## Spec 023 runs
 
 | File | Proves | Board | FR / SC |
@@ -52,3 +61,8 @@ The 7 new failures and what was done:
 | `us30-palette-dark.png` | search finds a type from a collapsed group | *Proposed — flow chrome* | FR-013 |
 | `us30-flow-chrome-1280.png` | every flow action in view at 1280 × 800, no horizontal scroll | *Proposed — flow chrome* | SC-001, spec assumption (1280 px) |
 | `a11y-us30-flows-dark.json` / `a11y-us30-flows-light.json` | axe on Flows: 0 serious/critical; 3 moderate page-level findings (`landmark-one-main`, `page-has-heading-one`, `region`) that predate this spec | — | SC-008 |
+| `us31-catalog-counts.png` | header "M of N tasks · updated N s ago", Suspended / Destructive counts, "N unclassified", footer with the API's totals | *Proposed — Task catalog* | FR-015, FR-016 |
+| `us31-counts.json` | the counts the screen showed, as the API returned them (also with `unclassifiedOnly=1`) | — | SC-005 |
+| `us31-detail-destructive.png` | Purge Tasks: DESTRUCTIVE, "Why this is destructive" from the step-type catalog, "created outside SentaiTask", the platform's description, Add to a flow, the Suspended switch | *Proposed — Task catalog* | FR-017, FR-018, FR-020, FR-020a |
+| `us31-suspend-confirm.png` | the simple confirmation for a SentaiTask flow task, naming the flow whose scheduled runs stop | *Proposed — Task catalog* | FR-020 |
+| `us31-catalog-light.png`, `a11y-us31-catalog-{dark,light}.json` | catalog with a detail open: 0 serious/critical; 1 moderate page-level finding (`landmark-one-main`) that predates this spec | — | SC-008 |
