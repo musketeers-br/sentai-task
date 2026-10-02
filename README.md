@@ -32,6 +32,22 @@ jobs, on this instance and on other IRIS servers, each one followed to a termina
 simulated — every call goes to the platform's own management API (`/api/admin`) with **your**
 credential, and when the platform refuses, its answer is shown word for word.
 
+### API-first — and beyond the API only where it stops
+
+The contest asks for a GUI powered by the IRIS management APIs, and that is the base:
+validation, dispatch, task catalog, schedules and target servers all go through `/api/admin` with
+the operator's own token. SentaiTask adds code of its own **only where the API has no answer**,
+and each addition still lets the platform decide who may do what.
+
+| Where the API stops | What SentaiTask adds |
+|---|---|
+| It starts tasks one at a time; order, dependencies and "what if one fails" live in a runbook | **Orchestration**: a validated acyclic flow, parallel waves on Work Queue Manager categories, fan-in joins, per-step cancel and rerun, live state over SSE |
+| It cannot read free disk per database directory, database sizes, or summarise security posture | **Declared steps**: compiled `%SYS.Task.Definition` classes from a closed catalog (disk via Embedded Python), run **as the dispatching operator**, so IRIS still grants or refuses |
+| It manages one instance | **Target servers** ([DPI-I-588](https://ideas.intersystems.com/ideas/DPI-I-588)): the same `/api/admin` calls against another IRIS, with the operator's credential for that server |
+| Some answers cannot be taken at face value | **Verified reads**: the list read reports suspended tasks as not suspended, so values come from the per-task reads; suspend answers 200 even when it fails, so the task is re-read and a mismatch is `502 SUSPEND_NOT_APPLIED` |
+
+Nothing here replaces a platform permission check, and no code is ever taken from input.
+
 ### Ninety seconds, Docker only
 
 ```sh
