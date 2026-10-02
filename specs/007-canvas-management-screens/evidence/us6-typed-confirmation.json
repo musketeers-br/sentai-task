@@ -1,9 +1,9 @@
 {
   "evidence_id": "us6-typed-confirmation",
-  "captured_at": "2026-09-27T04:40:10.932Z",
+  "captured_at": "2026-10-02T05:48:35.778Z",
   "request": {
     "method": "POST",
-    "path": "/csp/sentai/api/v1/flows/185/dispatch",
+    "path": "/csp/sentai/api/v1/flows/434/dispatch",
     "bodies": [
       [
         {
@@ -31,15 +31,13 @@
         "detail": "Step '01' requires a matching typed confirmation before dispatch"
       },
       {
-        "guid": "85F43F0B-BA2D-11F1-8187-464495AB33F4"
+        "guid": "E8A632AC-BE24-11F1-A4E0-EA1061ACC2C9"
       }
     ]
   },
   "notes": [
     "Gate G-C: purge-task-history was set available: true on the dev container only, uncommitted, for this run, and reverted afterwards.",
     "The dialog asked one typed value for the one destructive step; the wrong value got the 428 detail verbatim and the dialog stayed open.",
-    "Only confirmations are shown here: no password or token is recorded.",
-    "Run 85F43F0B-BA2D-11F1-8187-464495AB33F4 (flow 185) completed in about 1 s, before the test's cancel: purge-task-history ran on the dev container with its default keepDays 30 (the container is 2 days old). The run read shows confirmedBy _SYSTEM and executedAs _SYSTEM for step 01.",
-    "G-C procedure: StepType.cls edited in the working tree only, compiled on the container, us14 run, then `git checkout` of the file and a recompile; GET /catalog/step-types afterwards reported purge-task-history available: false."
+    "Only confirmations are shown here: no password or token is recorded."
   ]
 }

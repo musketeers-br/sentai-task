@@ -1,6 +1,6 @@
 {
   "evidence_id": "us22-semantic-search",
-  "captured_at": "2026-09-28T23:21:12.069Z",
+  "captured_at": "2026-10-02T05:54:56.942Z",
   "request": {
     "query": "free up disk space",
     "suggestedFirst": "storage-headroom-check"

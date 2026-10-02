@@ -35,7 +35,7 @@ export function exampleDefinition(): FlowDefinition {
 	};
 }
 
-/** FR-019: offered only if every step type is declared, available and not destructive. */
+/** FR-019 (spec 010): offered only if every step type is declared, available and not destructive. */
 export function exampleAvailable(registry: readonly StepTypeInfo[]): boolean {
 	return EXAMPLE_STEP_TYPES.every((type) => {
 		const info = registry.find((r) => r.type === type);
@@ -43,33 +43,6 @@ export function exampleAvailable(registry: readonly StepTypeInfo[]): boolean {
 	});
 }
 
-export function findExample(flows: readonly FlowSummaryView[]): FlowSummaryView | null {
-	const wanted = EXAMPLE_FLOW_NAME.toLowerCase();
-	return flows.find((f) => f.name.toLowerCase() === wanted) ?? null;
-}
-
-interface ExampleApi {
-	listFlows(): Promise<ApiResult<FlowSummaryView[]>>;
-	createFlow(def: FlowDefinition): Promise<ApiResult<FlowDocument>>;
-}
-
-/**
- * FR-017: the id of the example to open — the existing one, or a new one. A 409 on create means
- * it appeared meanwhile (another tab or operator), so the list is read again. Every refusal is
- * returned as the platform gave it.
- */
-export async function openExample(api: ExampleApi): Promise<ApiResult<string>> {
-	const listed = await api.listFlows();
-	if (!listed.ok) return listed;
-	const existing = findExample(listed.value);
-	if (existing) return { ok: true, value: existing.id };
-
-	const created = await api.createFlow(exampleDefinition());
-	if (created.ok) return { ok: true, value: created.value.id! };
-	if (created.error.kind === 'problem' && created.error.status === 409) {
-		const again = await api.listFlows();
-		const match = again.ok ? findExample(again.value) : null;
-		if (match) return { ok: true, value: match.id };
-	}
-	return created;
-}
+// The example's create-or-open lives in runbooks.ts now (spec 022 D-3): the example is the
+// seventh card of the gallery, and Use runs the same `useRunbook` machine for it as for every
+// other runbook — one path, one set of tests.

@@ -1,8 +1,8 @@
 {
   "evidence_id": "q10-token-audit",
-  "captured_at": "2026-09-26T12:59:36.564Z",
+  "captured_at": "2026-10-02T06:02:21.858Z",
   "rule": "UI-007 step 5 — a light value must never equal the channel-wise inverse of its dark value",
-  "pairs": 51,
+  "pairs": 54,
   "derived": 0,
   "rows": [
     {
@@ -241,6 +241,27 @@
       "dark": "#9AA7BC",
       "light": "#7A8296",
       "invertedDark": "#655843",
+      "derived": false
+    },
+    {
+      "token": "category.security",
+      "dark": "#B38BFF",
+      "light": "#6E3FD1",
+      "invertedDark": "#4C7400",
+      "derived": false
+    },
+    {
+      "token": "category.monitoring",
+      "dark": "#2FD3C8",
+      "light": "#0E8A82",
+      "invertedDark": "#D02C37",
+      "derived": false
+    },
+    {
+      "token": "category.suggested",
+      "dark": "#B07BFF",
+      "light": "#6B3FC4",
+      "invertedDark": "#4F8400",
       "derived": false
     },
     {

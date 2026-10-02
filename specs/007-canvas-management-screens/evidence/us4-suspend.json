@@ -1,9 +1,9 @@
 {
   "evidence_id": "us4-suspend",
-  "captured_at": "2026-09-29T09:54:59.121Z",
+  "captured_at": "2026-10-02T05:48:20.271Z",
   "request": {
     "method": "POST",
-    "path": "/csp/sentai/api/v1/catalog/tasks/2647/suspend",
+    "path": "/csp/sentai/api/v1/catalog/tasks/1283/suspend",
     "bodies": [
       {
         "suspended": true
@@ -20,11 +20,11 @@
     ],
     "bodies": [
       {
-        "taskId": 2647,
-        "name": "SentaiTask: 7397 us10 suspend 1790675696686",
+        "taskId": 1283,
+        "name": "SentaiTask: 430 us10 suspend 1790920095193",
         "namespace": "IRISAPP",
         "origin": {
-          "flowId": "7397",
+          "flowId": "430",
           "flowExists": true
         },
         "class": "sentai.dispatch.ScheduledFlowTask",
@@ -42,11 +42,11 @@
         "isDestructive": false
       },
       {
-        "taskId": 2647,
-        "name": "SentaiTask: 7397 us10 suspend 1790675696686",
+        "taskId": 1283,
+        "name": "SentaiTask: 430 us10 suspend 1790920095193",
         "namespace": "IRISAPP",
         "origin": {
-          "flowId": "7397",
+          "flowId": "430",
           "flowExists": true
         },
         "class": "sentai.dispatch.ScheduledFlowTask",
@@ -66,7 +66,7 @@
     ]
   },
   "notes": [
-    "Task 2647 was created by scheduling test flow 7397; it and the flow were deleted afterwards.",
+    "Task 1283 was created by scheduling test flow 430; it and the flow were deleted afterwards.",
     "Each button was disabled while its call was pending; detail and row then showed the state in the answer, and a fresh GET agreed."
   ]
 }

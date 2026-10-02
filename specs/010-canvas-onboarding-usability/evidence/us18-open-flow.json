@@ -1,16 +1,16 @@
 {
   "evidence_id": "us18-open-flow",
-  "captured_at": "2026-09-27T23:01:37.618Z",
+  "captured_at": "2026-10-02T05:50:05.805Z",
   "request": {
     "method": "GET",
     "path": "/flows"
   },
   "response": {
     "order": [
-      "us18-1790550095031-beta",
-      "us18-1790550095031-alpha"
+      "us18-1790920200603-beta",
+      "us18-1790920200603-alpha"
     ],
-    "picked": "5403",
+    "picked": "446",
     "actions": 3
   },
   "notes": [

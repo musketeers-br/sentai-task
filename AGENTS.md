@@ -1,7 +1,7 @@
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/017-in-process-embeddings/plan.md
+at specs/022-runbook-gallery/plan.md
 <!-- SPECKIT END -->
 
 # SentaiTask — notes for coding agents

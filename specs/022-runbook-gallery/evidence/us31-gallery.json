@@ -1,0 +1,21 @@
+{
+  "evidence_id": "us31-gallery",
+  "captured_at": "2026-10-02T05:58:51.987Z",
+  "request": {
+    "ui": "runbook gallery"
+  },
+  "response": {
+    "cards": [
+      "Nightly integrity sweep",
+      "Weekly maintenance window",
+      "Pre-upgrade checklist",
+      "Certificate expiry watch",
+      "Security review",
+      "Cross-server nightly",
+      "Example: storage health check"
+    ]
+  },
+  "notes": [
+    "FR-001–FR-004 on the empty canvas."
+  ]
+}

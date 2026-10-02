@@ -114,7 +114,30 @@ const DEV_CONTAINER = 'sentai-task-iris-1';
 export const EXAMPLE_FLOW_NAME = 'Example: storage health check';
 /** Names this feature's tests and quickstart create; nothing else may be deleted. */
 // Spec 019: flows an Overview card creates are named `Check: <label>` (spec 018 research R-8).
-const TEST_FLOW_PREFIXES = ['us17-', 'us18-', 'us19-', 'us20-', 'us21-', 'perf-', 'QS ', 'plan010-probe-', 'us28-', 'us29-', 'Check: '];
+// Spec 022: the gallery's Use creates flows under the curated runbook names (dev-instance only,
+// still double-guarded by deleteFlowWithRuns's name check in IRIS); the seeded weekly window and
+// showcase stay out of this list — Use opens them, the tests never delete them.
+export const RUNBOOK_CREATED_NAMES = [
+	'Nightly integrity sweep',
+	'Pre-upgrade checklist',
+	'Certificate expiry watch',
+	'Security review'
+];
+const TEST_FLOW_PREFIXES = [
+	'us17-',
+	'us18-',
+	'us19-',
+	'us20-',
+	'us21-',
+	'us31-',
+	'perf-',
+	'QS ',
+	'plan010-probe-',
+	'us28-',
+	'us29-',
+	'Check: ',
+	...RUNBOOK_CREATED_NAMES
+];
 
 /**
  * Throws `refused: …` unless this is the local dev instance and `expectedName` is a flow this

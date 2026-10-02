@@ -1,0 +1,13 @@
+{
+  "evidence_id": "us31-use",
+  "captured_at": "2026-10-02T05:59:00.942Z",
+  "request": {
+    "ui": "Use on the example card"
+  },
+  "response": {
+    "run": "completed"
+  },
+  "notes": [
+    "The retired us20 run guarantee, via the gallery."
+  ]
+}

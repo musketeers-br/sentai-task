@@ -3,8 +3,8 @@
 export interface GuideStep {
 	title: string;
 	body: string;
-	/** A step that can do what it describes (step 2 opens the example). */
-	action?: 'open-example';
+	/** A step that can do what it describes (step 2 opens the runbook gallery). */
+	action?: 'browse-runbooks';
 }
 
 export const GUIDE_STEPS: readonly GuideStep[] = [
@@ -13,9 +13,9 @@ export const GUIDE_STEPS: readonly GuideStep[] = [
 		body: 'SentaiTask lets you compose maintenance flows for this IRIS instance and run them now or on a schedule.'
 	},
 	{
-		title: 'Open the example',
-		body: 'Open example flow opens a small ready-made flow of safe, read-only checks. Run it to see SentaiTask working on this instance.',
-		action: 'open-example'
+		title: 'Open a runbook',
+		body: 'Browse runbooks opens a gallery of ready-made flows. Pick one, run it, and see SentaiTask working on this instance.',
+		action: 'browse-runbooks'
 	},
 	{
 		title: 'Build a flow',

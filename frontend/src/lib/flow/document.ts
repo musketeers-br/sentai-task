@@ -73,7 +73,15 @@ export interface FlowDefinition {
 	steps: Array<Partial<FlowStep> & Pick<FlowStep, 'id' | 'type' | 'taskName' | 'namespace'>>;
 	edges: EdgeRef[];
 	joins: Array<{ target: string; policy: 'ALL_MUST_SUCCEED' }>;
-	canvasGeometry: { nodes: Record<string, Position> };
+	/**
+	 * Presentation only (flow-definition.schema.json: viewport + node boxes; the dispatcher never
+	 * reads it). Spec 022 widened the nodes' type with the optional `width` the seeded definitions
+	 * and fixtures already carry.
+	 */
+	canvasGeometry: {
+		viewport?: { x: number; y: number; zoom: number };
+		nodes: Record<string, Position & { width?: number }>;
+	};
 }
 
 export interface FlowSummary {

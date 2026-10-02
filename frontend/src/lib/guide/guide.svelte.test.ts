@@ -31,15 +31,16 @@ describe('shouldAutoOpen (FR-020)', () => {
 
 describe('Guide', () => {
 	it('has the six steps of Story 5, in order', () => {
+		// Spec 022 FR-013: step 2's ready-made action is the runbook gallery, not a lone example.
 		expect(GUIDE_STEPS.map((s) => s.title)).toEqual([
 			'Welcome',
-			'Open the example',
+			'Open a runbook',
 			'Build a flow',
 			'Validate and run',
 			'Save, Save as, Open',
 			'Schedule and explore'
 		]);
-		expect(GUIDE_STEPS[1].action).toBe('open-example');
+		expect(GUIDE_STEPS[1].action).toBe('browse-runbooks');
 	});
 
 	it('autoOpen starts at step 1 and remembers it was shown in this visit (memory only)', () => {

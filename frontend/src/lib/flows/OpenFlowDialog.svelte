@@ -6,21 +6,20 @@
 	// Spec 010 FR-002: every flow the platform returns, most recently saved first, filtered by a
 	// case-insensitive name substring, with the open flow marked. Read fresh on every opening —
 	// never cached (Key Entities). A refusal is shown exactly as the platform gave it (FR-008).
+	// Spec 022 FR-013: the ready-made entry is *Browse runbooks* — it leads to the gallery.
 	let {
 		open = $bindable(false),
 		currentId,
 		onpick,
 		onnew,
-		showExample = false,
-		onexample
+		onbrowse
 	}: {
 		open: boolean;
 		currentId: string | null;
 		onpick: (flowId: string) => void;
 		onnew: () => void;
-		/** Spec 010 FR-016(b): offered when no flows exist and the example is available (FR-019). */
-		showExample?: boolean;
-		onexample?: () => void;
+		/** Spec 022 FR-013: the ready-made path — the empty-state entry leads to the gallery. */
+		onbrowse?: () => void;
 	} = $props();
 
 	type State =
@@ -57,9 +56,9 @@
 		onnew();
 	}
 
-	function startExample() {
+	function startBrowse() {
 		open = false;
-		onexample?.();
+		onbrowse?.();
 	}
 </script>
 
@@ -77,8 +76,8 @@
 		{:else if view.name === 'empty'}
 			<p class="lead">No saved flows yet.</p>
 			<div class="actions start">
-				{#if showExample}
-					<button type="button" class="primary" onclick={startExample}>Open example flow</button>
+				{#if onbrowse}
+					<button type="button" class="primary" onclick={startBrowse}>Browse runbooks</button>
 				{/if}
 				<button type="button" class="secondary" onclick={startNew}>New flow</button>
 			</div>

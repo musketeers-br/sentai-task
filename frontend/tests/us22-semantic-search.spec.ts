@@ -18,6 +18,10 @@ const suggested = (page: Page) => page.locator('[data-suggested="true"]');
 test('us22 — an intent sentence offers a SUGGESTED group first; its entry appears once; dragging it adds the step', async ({ page }) => {
 	test.slow();
 	await signIn(page);
+	// Spec 022 FR-012: the drag below targets the canvas, which the gallery now covers until
+	// *Start from scratch* starts the blank canvas.
+	await page.getByTestId('start-from-scratch').click();
+	await expect(page.getByTestId('runbook-gallery')).toHaveCount(0);
 
 	// The intent sentence from the story. The corpus may be building on the first request since
 	// the stack came up, so the wait is generous — and throughout it the palette stays today's:

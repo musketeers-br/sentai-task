@@ -12,8 +12,8 @@
 	import { FlowEditor } from '$lib/flow/editor.svelte';
 	import { afterSave, decide, needsGuard, type GuardChoice, type PendingSwitch } from '$lib/flows/guard';
 	import { defaultFlowName } from '$lib/flows/list';
-	import EmptyCanvasInvitation from '$lib/flows/EmptyCanvasInvitation.svelte';
-	import { exampleAvailable, openExample } from '$lib/flows/example';
+	import RunbookGallery from '$lib/flows/RunbookGallery.svelte';
+	import { useRunbook, type Runbook } from '$lib/flows/runbooks';
 	import OpenFlowDialog from '$lib/flows/OpenFlowDialog.svelte';
 	import GettingStartedDialog from '$lib/guide/GettingStartedDialog.svelte';
 	import { guide, shouldAutoOpen } from '$lib/guide/guide.svelte';
@@ -29,6 +29,8 @@
 	import SignIn from '$lib/shell/SignIn.svelte';
 	import StatusBar from '$lib/shell/StatusBar.svelte';
 	import TopBar from '$lib/shell/TopBar.svelte';
+	import Tour from '$lib/tour/Tour.svelte';
+	import { tour } from '$lib/tour/tour.svelte';
 	import { screenOf, urlForArea, urlForScreen, type Screen } from '$lib/shell/screen';
 	import OverviewScreen from '$lib/overview/OverviewScreen.svelte';
 	import { theme } from '$lib/shell/theme.svelte';
@@ -70,9 +72,6 @@
 		if (categories.ok) editor.wqmCategories = categories.value;
 		// Spec 009: the targets *Run on* offers; an unreadable list offers none.
 		await loadTargets();
-		// Spec 010 R-4.4: a refused list is not "no flows" — nothing is offered on a guess.
-		const flows = await api.listFlows();
-		noFlows = flows.ok && flows.value.length === 0;
 
 		const params = new URLSearchParams(location.search);
 		const flowId = params.get('flow');
@@ -226,12 +225,12 @@
 	let openListOpen = $state(false);
 	/** Spec 010 D-8: the flow the address named could not be read; the canvas offers a way on. */
 	let unreadable = $state<string | null>(null);
-	/** Spec 010 FR-016(a): the boot-time fact "this instance has no saved flows" (false if unreadable). */
-	let noFlows = $state(false);
-	let invitationDismissed = $state(false);
-	const showExample = $derived(exampleAvailable(editor.registry));
-	const showInvitation = $derived(
-		noFlows && !invitationDismissed && unreadable === null && editor.id === null && editor.steps.length === 0
+	/** Spec 022 FR-012: *Start from scratch* (and a successful Use) hide the gallery for the session. */
+	let galleryDismissed = $state(false);
+	// Spec 022 FR-001: the gallery replaces the empty canvas whenever no flow is open — also on
+	// an instance with saved flows (the old `noFlows` term is gone; that was the demo's gap).
+	const showGallery = $derived(
+		unreadable === null && editor.id === null && editor.steps.length === 0 && !galleryDismissed
 	);
 
 	// --- Spec 010 FR-006: the one unsaved-changes guard --------------------------------------
@@ -274,8 +273,8 @@
 				return newFlowNow();
 			case 'open':
 				return navigateApproved(flowHref(pending.flowId));
-			case 'example':
-				return openExampleNow();
+			case 'runbook':
+				return openRunbookNow(pending.runbook);
 			case 'address':
 				return navigateApproved(pending.url);
 		}
@@ -313,14 +312,19 @@
 		await goto(url, { keepFocus: true, noScroll: true });
 	}
 
-	/** Spec 010 FR-017: the existing example, or a new one — never a duplicate. */
-	async function openExampleNow() {
-		const result = await openExample(api);
+	/**
+	 * Spec 022 FR-006: the runbook opens as a flow — the existing one of that name, or a new one
+	 * created through the ordinary flow-creation path under the operator's own sign-in (spec 010
+	 * FR-017's machine, generalized). A refusal surfaces verbatim (FR-009); a success is a saved,
+	 * runnable flow (FR-010) — the gallery has done its job and steps aside.
+	 */
+	async function openRunbookNow(runbook: Runbook) {
+		const result = await useRunbook(api, runbook);
 		if (!result.ok) {
 			editor.notice = { tone: 'error', text: describeError(result.error) };
 			return;
 		}
-		invitationDismissed = true;
+		galleryDismissed = true;
 		unreadable = null;
 		await navigateApproved(flowHref(result.value));
 	}
@@ -377,6 +381,13 @@
 		}
 	}
 
+	// Spec 022 FR-007 (data-model §5): the card verdicts read the registered targets fresh every
+	// time the gallery is shown — data the page already keeps for *Run on* (spec 009), never a
+	// permission cache (Constitution III).
+	$effect(() => {
+		if (showGallery) untrack(() => void loadTargets());
+	});
+
 	// Spec 010 FR-020: once the canvas is ready after a sign-in typed with the password — never after
 	// a reload that kept the sign-in — unless dismissed in this browser or already shown this visit.
 	$effect(() => {
@@ -388,14 +399,33 @@
 		});
 	});
 
-	function openExampleFromGuide() {
-		guide.close();
-		void guarded({ kind: 'example' });
+	/**
+	 * Spec 022 FR-013: every ready-made path leads to the gallery. The guide's step 2 and the
+	 * *Open flow…* dialog's entry land on the empty canvas with the gallery showing — through
+	 * the guard when the open flow has unsaved edits, like *New flow*.
+	 */
+	function openRunbooks() {
+		guide.close(); // the guide's entry; the *Open flow…* dialog closes itself (startBrowse)
+		galleryDismissed = false;
+		void guarded({ kind: 'new' });
 	}
+
+	// Spec 021 FR-011: the tour closes the moment the canvas stops being editable — the four
+	// ways out (plan D-7, research R-5) — so the veil can never sit over a refusal, a run view
+	// or the sign-in overlay, and no ghost tour reappears when the canvas comes back.
+	$effect(() => {
+		if (phase.name !== 'ready' || screen !== 'flows' || watching !== null || session.status === 'expired') {
+			tour.close();
+		}
+	});
 
 	function signOut() {
 		guide.close();
 		guide.resetVisit();
+		tour.close();
+		// Spec 022 (US4 scenario 4.5): the gallery's dismissal ends with the operator's session —
+		// the next sign-in, often another visitor of the shared demo account, starts at the gallery.
+		galleryDismissed = false;
 		session.logout();
 		phase = { name: 'idle' };
 	}
@@ -535,13 +565,21 @@
 				<SvelteFlowProvider>
 					<FlowCanvas {editor} />
 				</SvelteFlowProvider>
-				{#if showInvitation}
-					<EmptyCanvasInvitation
-						{showExample}
-						onexample={() => void guarded({ kind: 'example' })}
-						ondismiss={() => (invitationDismissed = true)}
-					/>
-				{/if}
+				<!-- Spec 021 FR-001: the tour's only entry — pinned to the canvas (the top bar
+				     already fits exactly at 1440 px, plan risk R-4), visible, one action. -->
+				<button type="button" class="canvas-tour" data-testid="tour-button" onclick={() => tour.start()}>
+					Tour
+				</button>
+			{#if showGallery}
+				<!-- Spec 022 FR-001: the gallery replaces the empty canvas whenever no flow is open;
+				     the unreadable-flow panel below still wins when it applies. -->
+				<RunbookGallery
+					registry={editor.registry}
+					targets={editor.targets.map((t) => t.name)}
+					onuse={(runbook) => void guarded({ kind: 'runbook', runbook })}
+					onstartblank={() => (galleryDismissed = true)}
+				/>
+			{/if}
 				{#if unreadable !== null && editor.id === null && editor.steps.length === 0}
 					<div class="canvas-panel" data-testid="flow-unreadable">
 						<p>This flow could not be opened. The reason is in the status bar.</p>
@@ -563,8 +601,7 @@
 		currentId={editor.id}
 		onpick={(flowId) => void guarded({ kind: 'open', flowId })}
 		onnew={() => void guarded({ kind: 'new' })}
-		{showExample}
-		onexample={() => void guarded({ kind: 'example' })}
+		onbrowse={openRunbooks}
 	/>
 	<UnsavedChangesDialog
 		bind:open={guardOpen}
@@ -574,6 +611,8 @@
 		onchoose={(choice) => void onGuardChoice(choice)}
 	/>
 	<DispatchDialog {editor} bind:open={dispatchOpen} ondispatched={onDispatched} />
+	<!-- Spec 021: the coach-mark tour's overlay; the Tour button in the top bar starts it. -->
+	<Tour />
 	<datalist id="wqm-categories">
 		{#each editor.wqmCategories as name (name)}<option value={name}></option>{/each}
 	</datalist>
@@ -594,7 +633,7 @@
 {/if}
 
 {#if phase.name === 'ready' && session.status === 'signed-in'}
-	<GettingStartedDialog {showExample} onexample={openExampleFromGuide} />
+	<GettingStartedDialog onbrowse={openRunbooks} />
 {/if}
 
 <style>
@@ -614,6 +653,25 @@
 		position: relative;
 		flex-grow: 1;
 		min-width: 0;
+	}
+
+	/* Spec 021 FR-001: the tour button shares the canvas' top-right corner — free of SvelteFlow's
+	   Panels (top-left), Controls (bottom-left) and MiniMap (bottom-right).
+	   Spec 022: z-index 5 keeps it above the runbook gallery that now covers the empty canvas. */
+	.canvas-tour {
+		position: absolute;
+		top: 10px;
+		right: 12px;
+		z-index: 5;
+		font: inherit;
+		font-size: var(--size-caption);
+		font-weight: 500;
+		color: var(--color-text);
+		background: var(--color-card);
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-control);
+		padding: 5px 10px;
+		cursor: pointer;
 	}
 
 	/* Spec 010: a card over the empty canvas (the unreadable-flow panel; later the invitation). */

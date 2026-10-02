@@ -1,9 +1,11 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import { wrapTab } from './dialog-focus';
 
 	// Spec 010: the modal shell of the new dialogs. Native <dialog> + showModal() — the page behind
 	// is inert, so focus stays inside; Escape fires `cancel`. Focus goes back to whatever had it
 	// before the dialog opened (FR-025), because browsers restore it inconsistently on their own.
+	// Spec 021: the Tab-wrap rule lives in dialog-focus.ts, shared with the tour's overlay.
 	let {
 		open = $bindable(false),
 		labelledby,
@@ -33,23 +35,9 @@
 		}
 	});
 
-	const FOCUSABLE = 'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex]:not([tabindex="-1"])';
-
 	/** FR-025: Tab wraps inside the dialog instead of leaving the page for the browser's chrome. */
 	function onkeydown(event: KeyboardEvent) {
-		if (event.key !== 'Tab') return;
-		const items = [...dialog.querySelectorAll<HTMLElement>(FOCUSABLE)].filter((el) => el.offsetParent !== null);
-		if (items.length === 0) return;
-		const first = items[0];
-		const last = items[items.length - 1];
-		const inside = dialog.contains(document.activeElement);
-		if (event.shiftKey && (document.activeElement === first || !inside)) {
-			event.preventDefault();
-			last.focus();
-		} else if (!event.shiftKey && (document.activeElement === last || !inside)) {
-			event.preventDefault();
-			first.focus();
-		}
+		wrapTab(dialog, event);
 	}
 
 	function closed() {

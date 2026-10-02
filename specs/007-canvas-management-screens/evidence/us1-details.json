@@ -1,6 +1,6 @@
 {
   "evidence_id": "us1-details",
-  "captured_at": "2026-09-27T04:48:28.702Z",
+  "captured_at": "2026-10-02T06:02:32.486Z",
   "request": {
     "method": "GET",
     "path": "/csp/sentai/api/v1/catalog/tasks/{id}"
@@ -8,22 +8,6 @@
   "response": {
     "status": 200,
     "body": {
-      "2": {
-        "name": "Purge Journal",
-        "taskId": "2",
-        "namespace": "%SYS",
-        "className": "%SYS.Task.PurgeJournal",
-        "runAsUser": "_SYSTEM",
-        "timePeriod": "Daily",
-        "nextRun": "2026-09-28 00:30:00",
-        "lastStarted": "—",
-        "lastFinished": "—",
-        "status": "OK (1)",
-        "lastError": "Task Has Expired for 2026-09-26 00:30  Continuing from 2026-09-27 00:30",
-        "suspended": "no",
-        "destructive": "destructiveness unknown",
-        "origin": "—"
-      },
       "4": {
         "name": "Integrity Check",
         "taskId": "4",
@@ -31,13 +15,29 @@
         "className": "%SYS.Task.IntegrityCheck",
         "runAsUser": "_SYSTEM",
         "timePeriod": "Weekly",
-        "nextRun": "2026-09-28 02:00:00",
+        "nextRun": "2026-10-05 02:00:00",
         "lastStarted": "—",
         "lastFinished": "—",
         "status": "OK (1)",
         "lastError": "—",
         "suspended": "yes",
         "destructive": "not destructive",
+        "origin": "—"
+      },
+      "13": {
+        "name": "Feature Tracker",
+        "taskId": "13",
+        "namespace": "%SYS",
+        "className": "%SYS.Task.FeatureTracker",
+        "runAsUser": "_SYSTEM",
+        "timePeriod": "Weekly",
+        "nextRun": "2026-10-04 00:00:00",
+        "lastStarted": "—",
+        "lastFinished": "—",
+        "status": "OK (1)",
+        "lastError": "Task Has Expired for 2026-06-28 00:00  Continuing from 2026-09-27 00:00",
+        "suspended": "no",
+        "destructive": "destructiveness unknown",
         "origin": "—"
       }
     }

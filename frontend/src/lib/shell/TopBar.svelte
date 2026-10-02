@@ -128,6 +128,7 @@
 		<button
 			type="button"
 			class="secondary"
+			data-tour-target="validate"
 			disabled={editor.validating || editor.steps.length === 0}
 			onclick={onvalidate}
 		>
@@ -136,6 +137,7 @@
 		<button
 			type="button"
 			class="primary"
+			data-tour-target="run"
 			disabled={editor.scheduleBlocked || editor.steps.length === 0}
 			title={editor.scheduleBlocked ? 'Fix the validation errors listed in the status bar first' : 'Dispatch this flow now'}
 			onclick={onrun}
