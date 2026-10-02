@@ -81,7 +81,7 @@
 	>
 		<span class="entry-text">
 			<span class="entry-name">{typeLabel(t)}</span>
-			<span class="entry-class">{t.className || 'subclass of %SYS.Task.Definition'}</span>
+			<span class="entry-class">{#if t.className}{#each t.className.split('.') as part, i (i)}{#if i > 0}.<wbr />{/if}{part}{/each}{:else}subclass of %SYS.Task.Definition{/if}</span>
 			{#if !t.available}<span class="entry-unavailable">not supported in v1</span>{/if}
 		</span>
 		{#if t.destructive}
@@ -284,6 +284,8 @@
 		display: flex;
 		flex-direction: column;
 		gap: 1px;
+		/* A flex child shrinks below its content only with min-width: 0 (long class names). */
+		min-width: 0;
 	}
 
 	.entry-name {
@@ -296,6 +298,8 @@
 		font-family: var(--font-mono);
 		font-size: var(--size-micro);
 		color: var(--color-text-muted);
+		/* Long names break after a dot (<wbr>); anywhere only when one segment is still too wide. */
+		overflow-wrap: anywhere;
 	}
 
 	.hazard-swatch {

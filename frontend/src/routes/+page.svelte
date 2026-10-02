@@ -426,47 +426,51 @@
 {#if phase.name === 'ready' && screen === 'overview'}
 	<div class="app">
 		<TopBar {screen} onnavigate={navigate} user={session.user} onhelp={() => guide.openFromHelp()} onsignout={signOut} />
-		<OverviewScreen
-			areaParam={page.url.searchParams.get('area')}
-			registry={editor.registry}
-			onarea={selectArea}
-			onscheduled={scheduleCreated}
-			onlink={(query) => void goto(new URL(query, page.url), { noScroll: true })}
-		/>
-	</div>
+		<main class="main">
+			<OverviewScreen
+				areaParam={page.url.searchParams.get('area')}
+				registry={editor.registry}
+				onarea={selectArea}
+				onscheduled={scheduleCreated}
+				onlink={(query) => void goto(new URL(query, page.url), { noScroll: true })}
+			/>
+		</main>	</div>
 	{#if session.status === 'expired'}
 		<div class="overlay"><SignIn expired /></div>
 	{/if}
 {:else if phase.name === 'ready' && screen === 'targets'}
 	<div class="app">
 		<TopBar {screen} onnavigate={navigate} user={session.user} onhelp={() => guide.openFromHelp()} onsignout={signOut} />
-		<TargetsScreen targetParam={page.url.searchParams.get('target')} onselect={selectTarget} onchanged={loadTargets} />
-	</div>
+		<main class="main">
+			<TargetsScreen targetParam={page.url.searchParams.get('target')} onselect={selectTarget} onchanged={loadTargets} />
+		</main>	</div>
 	{#if session.status === 'expired'}
 		<div class="overlay"><SignIn expired /></div>
 	{/if}
 {:else if phase.name === 'ready' && screen === 'runs'}
 	<div class="app">
 		<TopBar {screen} onnavigate={navigate} user={session.user} onhelp={() => guide.openFromHelp()} onsignout={signOut} />
-		<RunsScreen query={queryFromUrl(page.url)} onquery={setRunsQuery} onopen={openRun} />
-	</div>
+		<main class="main">
+			<RunsScreen query={queryFromUrl(page.url)} onquery={setRunsQuery} onopen={openRun} />
+		</main>	</div>
 	{#if session.status === 'expired'}
 		<div class="overlay"><SignIn expired /></div>
 	{/if}
 {:else if phase.name === 'ready' && screen === 'catalog'}
 	<div class="app">
 		<TopBar {screen} onnavigate={navigate} user={session.user} onhelp={() => guide.openFromHelp()} onsignout={signOut} />
-		<CatalogScreen
-			taskParam={page.url.searchParams.get('task')}
-			initialFilters={filtersFromUrl(page.url)}
-			registry={editor.registry}
-			{flowHref}
-			onselect={selectTask}
-			onopenflow={openFlow}
-			onaddtoflow={addTaskToFlow}
-			onfilters={followCatalogFilters}
-		/>
-	</div>
+		<main class="main">
+			<CatalogScreen
+				taskParam={page.url.searchParams.get('task')}
+				initialFilters={filtersFromUrl(page.url)}
+				registry={editor.registry}
+				{flowHref}
+				onselect={selectTask}
+				onopenflow={openFlow}
+				onaddtoflow={addTaskToFlow}
+				onfilters={followCatalogFilters}
+			/>
+		</main>	</div>
 	{#if session.status === 'expired'}
 		<div class="overlay"><SignIn expired /></div>
 	{/if}
@@ -488,51 +492,53 @@
 {:else if phase.name === 'ready'}
 	<div class="app">
 		<TopBar {screen} onnavigate={navigate} user={session.user} onhelp={() => guide.openFromHelp()} onsignout={signOut} />
-		<FlowBar
-			{editor}
-			onopen={() => (openListOpen = true)}
-			onsave={save}
-			onsaveas={() => (saveAsOpen = true)}
-			onnew={() => void guarded({ kind: 'new' })}
-			onvalidate={validate}
-			onrun={() => (dispatchOpen = true)}
-			onschedule={() => (scheduling = true)}
-			onhistory={runHistory}
-		/>
-		<div class="workspace">
-			<Palette registry={editor.registry} onadd={addFromPalette} />
-			<div class="canvas-area">
-				<SvelteFlowProvider>
-					<FlowCanvas {editor} />
-				</SvelteFlowProvider>
-				{#if showInvitation}
-					<EmptyCanvasInvitation
-						{showExample}
-						onexample={() => void guarded({ kind: 'example' })}
-						ondismiss={() => (invitationDismissed = true)}
-					/>
-				{:else if unreadable === null && editor.steps.length === 0}
-					<!-- Spec 023 FR-007–FR-009: every other empty flow says how to start. -->
-					<EmptyCanvas
-						showTemplate={showExample}
-						ontemplate={() => void guarded({ kind: 'example' })}
-						onimport={() => navigate('catalog')}
-					/>
-				{/if}
-				{#if unreadable !== null && editor.id === null && editor.steps.length === 0}
-					<div class="canvas-panel" data-testid="flow-unreadable">
-						<p>This flow could not be opened. The reason is in the status bar.</p>
-						<div class="panel-actions">
-							<button type="button" onclick={() => (openListOpen = true)}>Open flow…</button>
-							<button type="button" onclick={() => void guarded({ kind: 'new' })}>New flow</button>
+		<main class="main">
+			<h1 class="visually-hidden">Flows — {editor.name}</h1>
+			<FlowBar
+				{editor}
+				onopen={() => (openListOpen = true)}
+				onsave={save}
+				onsaveas={() => (saveAsOpen = true)}
+				onnew={() => void guarded({ kind: 'new' })}
+				onvalidate={validate}
+				onrun={() => (dispatchOpen = true)}
+				onschedule={() => (scheduling = true)}
+				onhistory={runHistory}
+			/>
+			<div class="workspace">
+				<Palette registry={editor.registry} onadd={addFromPalette} />
+				<div class="canvas-area">
+					<SvelteFlowProvider>
+						<FlowCanvas {editor} />
+					</SvelteFlowProvider>
+					{#if showInvitation}
+						<EmptyCanvasInvitation
+							{showExample}
+							onexample={() => void guarded({ kind: 'example' })}
+							ondismiss={() => (invitationDismissed = true)}
+						/>
+					{:else if unreadable === null && editor.steps.length === 0}
+						<!-- Spec 023 FR-007–FR-009: every other empty flow says how to start. -->
+						<EmptyCanvas
+							showTemplate={showExample}
+							ontemplate={() => void guarded({ kind: 'example' })}
+							onimport={() => navigate('catalog')}
+						/>
+					{/if}
+					{#if unreadable !== null && editor.id === null && editor.steps.length === 0}
+						<div class="canvas-panel" data-testid="flow-unreadable">
+							<p>This flow could not be opened. The reason is in the status bar.</p>
+							<div class="panel-actions">
+								<button type="button" onclick={() => (openListOpen = true)}>Open flow…</button>
+								<button type="button" onclick={() => void guarded({ kind: 'new' })}>New flow</button>
+							</div>
 						</div>
-					</div>
-				{/if}
+					{/if}
+				</div>
+				<Inspector {editor} />
 			</div>
-			<Inspector {editor} />
-		</div>
-		<StatusBar {editor} />
-	</div>
+			<StatusBar {editor} />
+		</main>	</div>
 	<ScheduleDialog {editor} bind:open={scheduling} />
 	<SaveAsDialog {editor} bind:open={saveAsOpen} onsaved={onSavedAs} />
 	<OpenFlowDialog
@@ -579,6 +585,23 @@
 		display: flex;
 		flex-direction: column;
 		height: 100%;
+	}
+
+	/* Spec 023 follow-up (axe landmark-one-main, region): each screen's content is the page's main. */
+	.main {
+		display: flex;
+		flex-direction: column;
+		flex: 1 1 auto;
+		min-height: 0;
+	}
+
+	.visually-hidden {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip: rect(0 0 0 0);
+		white-space: nowrap;
 	}
 
 	.workspace {
