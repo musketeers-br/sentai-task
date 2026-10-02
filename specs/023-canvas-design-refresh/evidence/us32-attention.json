@@ -1,0 +1,24 @@
+{
+  "evidence_id": "us32-attention",
+  "captured_at": "2026-10-02T08:37:42.898Z",
+  "request": {
+    "method": "GET",
+    "url_paths": [
+      "/csp/sentai/api/v1/overview",
+      "/csp/sentai/api/v1/catalog/tasks"
+    ]
+  },
+  "response": {
+    "lastBackup": "Never",
+    "counts": {
+      "suspended": 2,
+      "destructive": 2,
+      "unclassified": 12
+    },
+    "total": 16,
+    "shownInMs": 1831
+  },
+  "notes": [
+    "The bands showed these values as the API sent them; the time includes signing in (SC-007 budget 3 s from opening)."
+  ]
+}

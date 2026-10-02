@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { hexToRgb, seedFlow, signIn } from './support';
+import { hexToRgb, paletteEntry, seedFlow, signIn } from './support';
 
 // spec 007 User Story 6 (T010): a declared destructive type carries the three destructive signals
 // (the typed confirmation is us14); a legacy `custom` step is read-only and not supported.
@@ -25,7 +25,7 @@ test('us12 — purge-task-history from Custom is destructive on the canvas; lega
 
 	// A declared destructive type dropped from the Custom group.
 	const pane = page.locator('.svelte-flow__pane');
-	await page.locator('section[aria-labelledby="cat-custom"] [data-step-type="purge-task-history"]').dragTo(pane, { targetPosition: { x: 420, y: 120 } });
+	await (await paletteEntry(page, 'purge-task-history')).dragTo(pane, { targetPosition: { x: 420, y: 120 } });
 	const purge = page.locator('.svelte-flow__node').filter({ hasText: 'Purge task history' });
 	await expect(purge.getByTestId('hazard-band')).toBeVisible();
 	await expect(purge.getByTestId('destructive-seal')).toHaveText('DESTRUCTIVE');

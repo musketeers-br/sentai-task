@@ -65,7 +65,7 @@ export async function expectDetail(page: Page, view: CatalogTaskView): Promise<R
 	if (view.recentRuns === undefined) {
 		await expect(pane.getByRole('heading', { name: 'Recent runs' })).toHaveCount(0);
 	} else if (view.recentRuns.length === 0) {
-		await expect(pane.getByTestId('recent-runs')).toHaveText(/No runs reported/);
+		await expect(pane.getByTestId('recent-runs')).toHaveText(/No run recorded\. This task has never executed on this instance\./);
 	} else {
 		await expect(pane.getByTestId('recent-run')).toHaveCount(view.recentRuns.length);
 		for (const [i, run] of view.recentRuns.entries()) {

@@ -69,7 +69,7 @@ test('us9-catalog-filters — search, namespace, state and destructive-only are 
 	await search.fill('purge');
 	await page.getByLabel('Namespace').selectOption('%SYS');
 	await page.getByRole('radio', { name: 'Scheduled' }).check();
-	await expectApiAnswer(page, { q: 'purge', namespace: '%SYS', state: 'scheduled', destructiveOnly: true });
+	await expectApiAnswer(page, { q: 'purge', namespace: '%SYS', state: 'scheduled', destructiveOnly: true, unclassifiedOnly: false });
 });
 
 test('us9-catalog-filters SC-003 — with about 150 tasks, first rows < 3 s and a filter update < 2 s', async ({ page }) => {

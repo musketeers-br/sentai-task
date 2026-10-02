@@ -21,6 +21,49 @@ export type StepSearchOutcome =
 /** A palette section widens a category group with the one group the ranking adds. */
 export type PaletteSection = { id: StepCategory | 'suggested'; types: StepTypeInfo[] };
 
+/** Spec 023 (data-model §4): a section as the palette draws it — the first entries and a count. */
+export interface PaletteGroupView {
+	id: PaletteSection['id'];
+	/** Entries the section holds in this view (unsupported ones excluded when not searching). */
+	total: number;
+	shown: StepTypeInfo[];
+	/** How many are behind "Show N more". */
+	hidden: number;
+}
+
+export interface PaletteView {
+	groups: PaletteGroupView[];
+	/** Every step type not supported in v1, gathered at the end (spec 004 D-1: still listed). */
+	unsupported: StepTypeInfo[];
+}
+
+export const COLLAPSED_LIMIT = 3;
+
+/**
+ * Spec 023 FR-013: long categories show their first entries and "Show N more"; unsupported types
+ * move to one trailing group. Only hides — never drops, adds or changes an entry. While searching
+ * nothing is restructured, so a search finds exactly what it found before (and collapsed entries).
+ */
+export function collapseSections(
+	sections: PaletteSection[],
+	options: { limit?: number; expanded: ReadonlySet<string>; searching: boolean }
+): PaletteView {
+	if (options.searching) {
+		return { groups: sections.map((s) => ({ id: s.id, total: s.types.length, shown: s.types, hidden: 0 })), unsupported: [] };
+	}
+	const limit = options.limit ?? COLLAPSED_LIMIT;
+	const unsupported = sections.flatMap((s) => s.types.filter((t) => !t.available));
+	const groups = sections
+		.map((s) => {
+			const types = s.types.filter((t) => t.available);
+			const open = options.expanded.has(s.id) || types.length <= limit;
+			const shown = open ? types : types.slice(0, limit);
+			return { id: s.id, total: types.length, shown, hidden: types.length - shown.length };
+		})
+		.filter((g) => g.total > 0);
+	return { groups, unsupported };
+}
+
 /**
  * Today's substring rule, extracted from `Palette.svelte` as it stood (FR-003).
  *

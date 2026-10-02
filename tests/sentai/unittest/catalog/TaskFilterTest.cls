@@ -13,9 +13,9 @@ ClassMethod Task(name As %String, class As %String = "", namespace As %String = 
     Quit t
 }
 
-ClassMethod M(task As %DynamicObject, q As %String = "", namespace As %String = "", filter As %String = "all", destructiveOnly As %String = "0") As %Boolean
+ClassMethod M(task As %DynamicObject, q As %String = "", namespace As %String = "", filter As %String = "all", destructiveOnly As %String = "0", unclassifiedOnly As %String = "0") As %Boolean
 {
-    Quit ##class(sentai.catalog.TaskFilter).Matches(task, q, namespace, filter, destructiveOnly)
+    Quit ##class(sentai.catalog.TaskFilter).Matches(task, q, namespace, filter, destructiveOnly, unclassifiedOnly)
 }
 
 Method TestTextMatchesName()
@@ -77,15 +77,45 @@ Method TestCombinedFiltersAreAnded()
 
 Method TestValidateRefusesUnknownValues()
 {
-    Do $$$AssertNotTrue(##class(sentai.catalog.TaskFilter).Validate("", "", "paused", "0", .problem))
+    Do $$$AssertNotTrue(##class(sentai.catalog.TaskFilter).Validate("", "", "paused", "0", "0", .problem))
     Do $$$AssertTrue(problem [ "INVALID_FILTER: ", problem)
-    Do $$$AssertNotTrue(##class(sentai.catalog.TaskFilter).Validate("", "", "all", "maybe", .problem))
+    Do $$$AssertNotTrue(##class(sentai.catalog.TaskFilter).Validate("", "", "all", "maybe", "0", .problem))
     Do $$$AssertTrue(problem [ "INVALID_FILTER: ", problem)
     For filter = "all", "scheduled", "suspended" {
         For flag = "0", "1", "true", "false" {
-            Do $$$AssertTrue(##class(sentai.catalog.TaskFilter).Validate("x", "%SYS", filter, flag, .problem), filter_"/"_flag)
+            Do $$$AssertTrue(##class(sentai.catalog.TaskFilter).Validate("x", "%SYS", filter, flag, flag, .problem), filter_"/"_flag)
         }
     }
+}
+
+// --- Spec 023 T021: unclassifiedOnly (contracts/api-delta.md) ---
+
+Method TestValidateUnclassifiedOnlyAcceptsTheSameValuesAsDestructiveOnly()
+{
+    Do $$$AssertNotTrue(##class(sentai.catalog.TaskFilter).Validate("", "", "all", "0", "maybe", .problem))
+    Do $$$AssertEquals(problem, "INVALID_FILTER: unclassifiedOnly must be one of 0, 1, true, false")
+    For flag = "0", "1", "true", "false" {
+        Do $$$AssertTrue(##class(sentai.catalog.TaskFilter).Validate("", "", "all", "0", flag, .problem), flag)
+    }
+}
+
+Method TestUnclassifiedOnlyKeepsOnlyUnknownDestructiveness()
+{
+    Do $$$AssertTrue(..M(..Task("U", "", "%SYS", 0, 0, 1), "", "", "all", "0", "1"))
+    Do $$$AssertTrue(..M(..Task("U", "", "%SYS", 0, 0, 1), "", "", "all", "0", "true"))
+    Do $$$AssertNotTrue(..M(..Task("D", "", "%SYS", 0, 1, 0), "", "", "all", "0", "1"), "destructive is classified")
+    Do $$$AssertNotTrue(..M(..Task("N", "", "%SYS", 0, 0, 0), "", "", "all", "0", "1"), "not destructive is classified")
+    Do $$$AssertTrue(..M(..Task("N", "", "%SYS", 0, 0, 0), "", "", "all", "0", "false"))
+}
+
+Method TestUnclassifiedOnlyIsAndedWithTheOtherFilters()
+{
+    Set hit = ..Task("Inventory Scan", "%SYS.Task.InventoryScan", "%SYS", 1, 0, 1)
+    Do $$$AssertTrue(..M(hit, "inventory", "%sys", "suspended", "0", "1"))
+    Do $$$AssertNotTrue(..M(hit, "journal", "%SYS", "suspended", "0", "1"))
+    Do $$$AssertNotTrue(..M(hit, "inventory", "IRISAPP", "suspended", "0", "1"))
+    Do $$$AssertNotTrue(..M(hit, "inventory", "%SYS", "scheduled", "0", "1"))
+    Do $$$AssertNotTrue(..M(hit, "inventory", "%SYS", "suspended", "1", "1"), "destructive-only and unclassified-only exclude each other")
 }
 
 Method TestInvalidFilterIs400WithoutAPlatformCall()
@@ -98,6 +128,17 @@ Method TestInvalidFilterIs400WithoutAPlatformCall()
     Do $$$AssertEquals($D(^sentaiTestDouble("gets")), 0, "no platform GET")
     Set out = ##class(sentai.catalog.TaskService).List("fake-token", "", "", "paused")
     Do $$$AssertTrue(out.problem.detail [ "INVALID_FILTER")
+}
+
+/// Spec 023 T022: the route passes unclassifiedOnly; a bad value is a 400 before any platform read.
+Method TestInvalidUnclassifiedOnlyIs400WithoutAPlatformCall()
+{
+    Set %request = ##class(%CSP.Request).%New()
+    Set %response = ##class(%CSP.Response).%New()
+    Do %request.Set("unclassifiedOnly", "maybe")
+    Do ##class(sentai.rest.Dispatcher).ListCatalogTasks()
+    Do $$$AssertEquals(%response.Status, 400)
+    Do $$$AssertEquals($D(^sentaiTestDouble("gets")), 0, "no platform GET")
 }
 
 }

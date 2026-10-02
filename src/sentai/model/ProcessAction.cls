@@ -35,4 +35,40 @@ ClassMethod Record(operator As %String, pid As %Integer, action As %String, http
     Quit sc
 }
 
+Storage Default
+{
+<Data name="ProcessActionDefaultData">
+<Value name="1">
+<Value>%%CLASSNAME</Value>
+</Value>
+<Value name="2">
+<Value>at</Value>
+</Value>
+<Value name="3">
+<Value>operator</Value>
+</Value>
+<Value name="4">
+<Value>pid</Value>
+</Value>
+<Value name="5">
+<Value>action</Value>
+</Value>
+<Value name="6">
+<Value>httpStatus</Value>
+</Value>
+<Value name="7">
+<Value>accepted</Value>
+</Value>
+<Value name="8">
+<Value>platformStatus</Value>
+</Value>
+</Data>
+<DataLocation>^sentai.model.ProcessActionD</DataLocation>
+<DefaultData>ProcessActionDefaultData</DefaultData>
+<IdLocation>^sentai.model.ProcessActionD</IdLocation>
+<IndexLocation>^sentai.model.ProcessActionI</IndexLocation>
+<StreamLocation>^sentai.model.ProcessActionS</StreamLocation>
+<Type>%Storage.Persistent</Type>
+}
+
 }

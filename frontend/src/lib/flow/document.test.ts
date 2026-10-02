@@ -90,6 +90,7 @@ describe('summarize (status bar, FR-009)', () => {
 	});
 });
 
+
 describe('toDefinition', () => {
 	it('derives one ALL_MUST_SUCCEED join per fan-in target and keeps geometry separate', () => {
 		const def = toDefinition(canonical());

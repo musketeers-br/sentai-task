@@ -1,7 +1,7 @@
 import { expect, test, type APIRequestContext } from '@playwright/test';
 import { createTestCertificate, deleteFlowWithRuns, deleteTestCertificate } from './iris';
 import { readRun, runToEnd } from './runs-support';
-import { seedFlow, signIn, signInAt, token } from './support';
+import { flowButton, paletteEntry, seedFlow, signIn, signInAt, token } from './support';
 
 // spec 020 — security inventory: certificate expiry check, permissions inventory, OAuth
 // inventory, on the primary and on iris-target; results readable in the canvas.
@@ -120,10 +120,10 @@ test('us29 D — the three types are in the Security group; warnDays out of rang
 		await signIn(page, `?flow=${id}`);
 		const palette = page.getByLabel('Step types');
 		for (const type of ['certificate-expiry-check', 'permissions-inventory', 'oauth-inventory']) {
-			await expect(palette.locator(`[data-step-type="${type}"]`)).toBeEnabled();
+			await expect(await paletteEntry(page, type)).toBeEnabled();
 		}
 		await page.locator('.svelte-flow__node[data-id="01"] h3').click();
-		await page.getByRole('button', { name: 'Validate flow' }).click();
+		await flowButton(page, 'validate').click();
 		await expect(page.getByLabel('Inspector', { exact: true }).getByTestId('param-error-warnDays')).toContainText('between 1 and 365');
 	} finally {
 		deleteFlowWithRuns(id, name);

@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
-import { envelope, seedFlow, signIn, signInAt, token } from './support';
+import { envelope, flowButton, paletteEntry, seedFlow, signIn, signInAt, token } from './support';
 
 // spec 010 User Story 2 — Open a saved flow (FR-001…FR-003, FR-006, FR-008, SC-002).
 
@@ -23,7 +23,7 @@ const rows = (page: Page) => dialog(page).getByTestId('flow-row');
 const flowIdIn = (page: Page) => new URL(page.url()).searchParams.get('flow');
 
 async function openList(page: Page) {
-	await page.getByRole('banner').getByRole('button', { name: 'Open flow…' }).click();
+	await flowButton(page, 'open').click();
 	await expect(dialog(page)).toBeVisible();
 }
 
@@ -99,7 +99,7 @@ test('us18 list — newest first, filter ignores case, pick opens and addresses 
 test('us18 guard — picking another flow over unsaved edits asks first (FR-006)', async ({ page }) => {
 	const { ts, older, newer, olderId } = await seedPair(page);
 	await signIn(page, `?flow=${olderId}`);
-	await page.locator('[data-step-type="db-size-report"]').click();
+	await (await paletteEntry(page, 'db-size-report')).click();
 	await openList(page);
 	await dialog(page).getByLabel('Filter by name').fill(`us18-${ts}`);
 	await rows(page).filter({ hasText: newer }).click();
@@ -183,7 +183,7 @@ test('us18 performance — 5,000 flows open within 1 s and filter within 150 ms,
 		}).observe({ type: 'longtask' });
 		performance.clearResourceTimings();
 		const frame = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-		const button = [...document.querySelectorAll<HTMLButtonElement>('header button')].find((b) => b.textContent?.trim() === 'Open flow…')!;
+		const button = [...document.querySelectorAll<HTMLButtonElement>('[role="toolbar"] button')].find((b) => b.textContent?.trim() === 'Open…')!;
 		const clicked = performance.now();
 		button.click();
 		while (!document.querySelector('[data-testid="flow-row"]')) await frame();

@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
-import { envelope, seedFlow, signIn, token } from './support';
+import { envelope, expandPalette, flowButton, seedFlow, signIn, token } from './support';
 
 // spec 007 User Story 5 — declared custom steps in the canvas (Part B, T007/T008), built in the
 // existing visual system (spec 009 Clarifications Q1, which also unblocks this part).
@@ -18,18 +18,23 @@ async function catalog(page: Page) {
 test('us11 custom group — the in-process types from the API plus legacy custom, with the API labels', async ({ page }) => {
 	await signIn(page);
 	const types = await catalog(page);
-	const expected = types.filter((t) => t.executor === 'in-process' || t.type === 'custom');
+	const declared = types.filter((t) => t.executor === 'in-process' || t.type === 'custom');
+	// Spec 023 FR-013: the group lists its available types (collapsed past three until opened);
+	// the unsupported ones, legacy custom included, are gathered in the trailing group.
+	await expandPalette(page);
+	const expected = declared.filter((t) => t.available);
 	const entries = customGroup(page).locator('[data-step-type]');
 	await expect(entries).toHaveCount(expected.length);
 	for (const [i, t] of expected.entries()) {
 		await expect(entries.nth(i)).toHaveAttribute('data-step-type', t.type);
 		await expect(entries.nth(i).locator('.entry-name')).toHaveText(t.label);
-		if (!t.available) {
-			await expect(entries.nth(i)).toBeDisabled();
-			await expect(entries.nth(i)).toContainText('not supported in v1');
-		}
 	}
-	await expect(customGroup(page).locator('[data-step-type="custom"]')).toBeDisabled();
+	const unsupported = page.locator('section[aria-labelledby="cat-unsupported"]');
+	for (const t of declared.filter((d) => !d.available)) {
+		await expect(unsupported.locator(`[data-step-type="${t.type}"]`)).toBeDisabled();
+		await expect(unsupported.locator(`[data-step-type="${t.type}"]`)).toContainText('not supported in v1');
+	}
+	await expect(unsupported.locator('[data-step-type="custom"]')).toBeDisabled();
 });
 
 test('us11 parameter form — fields from the schema; an out-of-range value is reported on its field', async ({ page }) => {
@@ -60,10 +65,10 @@ test('us11 parameter form — fields from the schema; an out-of-range value is r
 	await expect(fields.first()).toContainText('Fail when any database or journal location has less free space than this percentage');
 
 	await input.fill('150');
-	await page.getByRole('button', { name: 'Save flow' }).click();
+	await flowButton(page, 'save').click();
 	await expect(page.getByTestId('flow-meta')).toContainText('rev 2');
 	const validated = page.waitForResponse((r) => r.url().endsWith(`/flows/${id}/validate`));
-	await page.getByRole('button', { name: 'Validate flow' }).click();
+	await flowButton(page, 'validate').click();
 	const report = await (await validated).json();
 	const finding = report.errors.find((f: { code: string }) => f.code === 'PARAM_OUT_OF_RANGE');
 	expect(finding?.parameter).toBe('minFreePercent');
@@ -72,7 +77,7 @@ test('us11 parameter form — fields from the schema; an out-of-range value is r
 
 	// Cleared: the key is removed and the backend applies the default (R-7).
 	await input.fill('');
-	await page.getByRole('button', { name: 'Save flow' }).click();
+	await flowButton(page, 'save').click();
 	await expect(page.getByTestId('flow-meta')).toContainText('rev 3');
 	const res = await page.request.get(`/csp/sentai/api/v1/flows/${id}`, { headers: { Authorization: `Bearer ${await token(page.request)}` } });
 	expect((await res.json()).steps.find((s: { id: string }) => s.id === '01').parameters).toEqual({});

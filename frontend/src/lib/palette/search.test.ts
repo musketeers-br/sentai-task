@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+	collapseSections,
 	filterLocally,
 	paletteSections,
 	suggestionsFor,
@@ -217,5 +218,61 @@ describe('invariants, over every input above', () => {
 				}
 			}
 		}
+	});
+});
+
+// Spec 023 T009 (FR-013, data-model §4): long categories collapse behind "Show N more" and every
+// step type not supported in v1 is gathered in one trailing group. Collapsing only hides — it
+// never drops, adds or changes an entry — and a search shows everything as before.
+describe('collapseSections', () => {
+	const many = (n: number) =>
+		Array.from({ length: n }, (_, i) => entry(`report-${i + 1}`, { category: 'security' }));
+	const sectionsOf = (registry: StepTypeInfo[]) => paletteSections(registry, '', null);
+	const NONE = new Set<string>();
+
+	it('shows the first three available entries of a long category and counts the rest', () => {
+		const view = collapseSections(sectionsOf(many(7)), { expanded: NONE, searching: false });
+		expect(view.groups).toHaveLength(1);
+		expect(view.groups[0]).toMatchObject({ id: 'security', total: 7, hidden: 4 });
+		expect(view.groups[0].shown.map((t) => t.type)).toEqual(['report-1', 'report-2', 'report-3']);
+	});
+
+	it('shows a whole category once it is expanded', () => {
+		const view = collapseSections(sectionsOf(many(7)), { expanded: new Set(['security']), searching: false });
+		expect(view.groups[0]).toMatchObject({ total: 7, hidden: 0 });
+		expect(view.groups[0].shown).toHaveLength(7);
+	});
+
+	it('leaves a short category alone', () => {
+		const view = collapseSections(sectionsOf(many(3)), { expanded: NONE, searching: false });
+		expect(view.groups[0]).toMatchObject({ total: 3, hidden: 0 });
+	});
+
+	it('moves every unsupported entry to the trailing group and drops categories left empty', () => {
+		const view = collapseSections(sectionsOf(REGISTRY), { expanded: NONE, searching: false });
+		expect(view.unsupported.map((t) => t.type)).toEqual(['compact-globals', 'custom']);
+		for (const g of view.groups) for (const t of g.shown) expect(t.available).toBe(true);
+
+		const onlyUnsupported = [entry('purge-audit-records', { category: 'purge', available: false }), ...many(1)];
+		const v2 = collapseSections(sectionsOf(onlyUnsupported), { expanded: NONE, searching: false });
+		expect(v2.groups.map((g) => g.id)).toEqual(['security']);
+		expect(v2.unsupported.map((t) => t.type)).toEqual(['purge-audit-records']);
+	});
+
+	it('changes nothing while searching: same sections, nothing hidden, unsupported kept inline', () => {
+		const sections = paletteSections(REGISTRY, 'globals', null);
+		const view = collapseSections(sections, { expanded: NONE, searching: true });
+		expect(view.unsupported).toEqual([]);
+		expect(view.groups.map((g) => ({ id: g.id, types: g.shown }))).toEqual(sections.map((s) => ({ id: s.id, types: s.types })));
+		for (const g of view.groups) expect(g.hidden).toBe(0);
+	});
+
+	it('keeps every entry exactly once across shown, hidden and unsupported', () => {
+		const registry = [...REGISTRY, ...many(6)];
+		const view = collapseSections(sectionsOf(registry), { expanded: NONE, searching: false });
+		const shown = view.groups.flatMap((g) => g.shown.map((t) => t.type));
+		const hidden = view.groups.reduce((n, g) => n + g.hidden, 0);
+		expect(new Set(shown).size).toBe(shown.length);
+		expect(shown.length + hidden + view.unsupported.length).toBe(registry.length);
 	});
 });

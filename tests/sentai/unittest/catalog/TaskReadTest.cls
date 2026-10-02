@@ -88,7 +88,59 @@ Method TestFailedInfoReadIsFlaggedWithTheEmpty403Status()
     Do $$$AssertEquals(u.platformStatus.%ToJSON(), "{""errors"":[],""summary"":""""}")
 }
 
+/// Spec 023 T022 (research R-3): the platform's own Description, verbatim; absent when it is
+/// empty or the single read failed — never filled in.
+Method TestDescriptionIsTheSingleReadsOwnTextOrAbsent()
+{
+    Set entry = ##class(sentai.unittest.catalog.CatalogFixtures).ListEntry(8, "Inventory Scan")
+    Set info = ##class(sentai.unittest.catalog.CatalogFixtures).Read(200, ##class(sentai.unittest.catalog.CatalogFixtures).InfoResult())
+    Set text = "Run a scan of the system inventory on install or upgrade and on demand thereafter"
+    Set single = ##class(sentai.unittest.catalog.CatalogFixtures).Read(200, {"TaskClass": "%SYS.Task.InventoryScan", "Description": (text)})
+    Do $$$AssertEquals(##class(sentai.catalog.TaskShape).Build(8, entry, single, info).description, text)
+
+    Set single = ##class(sentai.unittest.catalog.CatalogFixtures).Read(200, {"TaskClass": "%SYS.Task.InventoryScan", "Description": ""})
+    Do $$$AssertNotTrue(##class(sentai.catalog.TaskShape).Build(8, entry, single, info).%IsDefined("description"), "empty")
+
+    Set single = ##class(sentai.unittest.catalog.CatalogFixtures).Read(403)
+    Do $$$AssertNotTrue(##class(sentai.catalog.TaskShape).Build(8, entry, single, info).%IsDefined("description"), "single refused")
+}
+
 // --- Service and REST, using the double ---
+
+/// Spec 023 T022 (research R-2): counts over every task the list read enumerated, before any
+/// filter — so they do not change when a filter does. A task whose info read failed has no
+/// suspended value and is counted in no suspended total.
+Method TestCountsCoverEveryTaskAndIgnoreFilters()
+{
+    Do ##class(sentai.unittest.catalog.CatalogFixtures).ScriptList([(##class(sentai.unittest.catalog.CatalogFixtures).ListEntry(4, "Integrity Check")), (##class(sentai.unittest.catalog.CatalogFixtures).ListEntry(5, "Purge Tasks")), (##class(sentai.unittest.catalog.CatalogFixtures).ListEntry(6, "Inventory Scan")), (##class(sentai.unittest.catalog.CatalogFixtures).ListEntry(7, "Unread"))])
+    Do ##class(sentai.unittest.catalog.CatalogFixtures).ScriptTask(4, "Integrity Check", "%SYS.Task.IntegrityCheck", ##class(sentai.unittest.catalog.CatalogFixtures).InfoResult(1))
+    Do ##class(sentai.unittest.catalog.CatalogFixtures).ScriptTask(5, "Purge Tasks", "%SYS.Task.PurgeTaskHistory")
+    Do ##class(sentai.unittest.catalog.CatalogFixtures).ScriptTask(6, "Inventory Scan", "%SYS.Task.InventoryScan", ##class(sentai.unittest.catalog.CatalogFixtures).InfoResult(1))
+    Do ##class(sentai.unittest.catalog.CatalogFixtures).ScriptSingle(7, "%SYS.Task.IntegrityCheck", "_SYSTEM", "Weekly", "Unread")
+    Do ##class(sentai.unittest.AdminApiDouble).Script("/api/admin/v2/task/info?id=7", "GET", 403, "", ##class(sentai.unittest.catalog.CatalogFixtures).Envelope({}))
+
+    For args = $LB("all", "0", "0"), $LB("suspended", "0", "0"), $LB("all", "0", "1"), $LB("all", "1", "0") {
+        Set out = ##class(sentai.catalog.TaskService).List("fake-token", "", "", $LG(args, 1), $LG(args, 2), $LG(args, 3))
+        Do $$$AssertEquals(out.httpStatus, 200, $LTS(args))
+        Do $$$AssertEquals(out.body.total, 4, $LTS(args))
+        Do $$$AssertEquals(out.body.counts.%ToJSON(), "{""suspended"":2,""destructive"":1,""unclassified"":1}", $LTS(args))
+        Do $$$AssertEquals(out.body.counts.%GetTypeOf("suspended"), "number")
+    }
+    Set out = ##class(sentai.catalog.TaskService).List("fake-token", "", "", "all", "0", "1")
+    Do $$$AssertEquals(out.body.matched, 1)
+    Do $$$AssertEquals(out.body.items.%Get(0).name, "Inventory Scan")
+}
+
+/// Spec 023 T022: description reaches both the list and the item read.
+Method TestDescriptionReachesListAndItem()
+{
+    Do ##class(sentai.unittest.catalog.CatalogFixtures).ScriptList([(##class(sentai.unittest.catalog.CatalogFixtures).ListEntry(8, "Inventory Scan"))])
+    Do ##class(sentai.unittest.catalog.CatalogFixtures).ScriptSingle(8, "%SYS.Task.InventoryScan", "_SYSTEM", "On Demand", "Inventory Scan", "%SYS", "Scan the inventory")
+    Do ##class(sentai.unittest.catalog.CatalogFixtures).ScriptInfo(8, ##class(sentai.unittest.catalog.CatalogFixtures).InfoResult())
+    Do ##class(sentai.unittest.AdminApiDouble).Script("/api/admin/v2/task/history?taskId=8", "GET", 200, "", ##class(sentai.unittest.catalog.CatalogFixtures).Envelope([]))
+    Do $$$AssertEquals(##class(sentai.catalog.TaskService).List("fake-token").body.items.%Get(0).description, "Scan the inventory")
+    Do $$$AssertEquals(##class(sentai.catalog.TaskService).Read(8, "fake-token").body.description, "Scan the inventory")
+}
 
 Method TestSuspendedComesFromInfoNotFromTheLossyList()
 {

@@ -1,0 +1,22 @@
+{
+  "evidence_id": "us31-counts",
+  "captured_at": "2026-10-02T08:37:32.511Z",
+  "request": {
+    "method": "GET",
+    "url_path": "/csp/sentai/api/v1/catalog/tasks",
+    "also": "?unclassifiedOnly=1"
+  },
+  "response": {
+    "total": 17,
+    "matched": 17,
+    "counts": {
+      "suspended": 2,
+      "destructive": 2,
+      "unclassified": 12
+    },
+    "unclassifiedMatched": 12
+  },
+  "notes": [
+    "The screen showed these numbers as the API sent them (SC-005)."
+  ]
+}

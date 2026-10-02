@@ -3,7 +3,7 @@
 	import { STEP_TYPE_MIME } from '$lib/canvas/dnd';
 	import { createSequence } from '$lib/catalog/catalog';
 	import { typeLabel, type StepTypeInfo } from '$lib/flow/document';
-	import { paletteSections, type StepSearchOutcome } from '$lib/palette/search';
+	import { collapseSections, paletteSections, type StepSearchOutcome } from '$lib/palette/search';
 
 	let { registry, onadd }: { registry: StepTypeInfo[]; onadd: (type: string) => void } = $props();
 
@@ -13,15 +13,23 @@
 	// Latest-wins for the debounced search request only; the filtering itself stays synchronous.
 	const sequence = createSequence();
 
-	const groups = $derived.by(() =>
+	/** Spec 023 FR-013: categories the operator opened with "Show N more" (component-local). */
+	let expanded = $state<Set<string>>(new Set());
+	const UNSUPPORTED = 'unsupported';
+
+	const view = $derived(
 		// Spec 011: the filtering logic left the component — this widens a category group with
-		// the one group the ranking adds (contracts/palette-search.md).
-		paletteSections(registry, query, outcome).map((section) => ({
-			category: section.id,
-			suggested: section.id === 'suggested',
-			types: section.types
-		}))
+		// the one group the ranking adds (contracts/palette-search.md). Spec 023: long groups
+		// collapse and unsupported types gather at the end, except while searching.
+		collapseSections(paletteSections(registry, query, outcome), { expanded, searching: query.trim() !== '' })
 	);
+	const groups = $derived(
+		view.groups.map((g) => ({ category: g.id, suggested: g.id === 'suggested', types: g.shown, total: g.total, hidden: g.hidden }))
+	);
+
+	function expand(id: string) {
+		expanded = new Set([...expanded, id]);
+	}
 
 	// Spec 011 input timing: the same effect-debounce as CatalogScreen's search box — the cleanup
 	// clears the previous timer, so only the final keystroke within 150 ms asks (R-012). The
@@ -53,6 +61,35 @@
 	}
 </script>
 
+{#snippet stepEntry(t: StepTypeInfo, suggested: boolean)}
+	<!-- Spec 004 D-1: unavailable types stay listed (saved flows still use them) but
+	     cannot be placed, because the target platform cannot run them in v1. -->
+	<button
+		type="button"
+		class="entry"
+		class:unavailable={!t.available}
+		disabled={!t.available}
+		draggable={t.available ? 'true' : 'false'}
+		style:--entry-category={`var(--category-${t.category})`}
+		data-step-type={t.type}
+		data-suggested={suggested ? 'true' : undefined}
+		title={t.available
+			? 'Drag onto the canvas, or press Enter to add'
+			: 'Not supported on the target platform in v1'}
+		ondragstart={(e) => ondragstart(e, t.type)}
+		onclick={() => onadd(t.type)}
+	>
+		<span class="entry-text">
+			<span class="entry-name">{typeLabel(t)}</span>
+			<span class="entry-class">{t.className || 'subclass of %SYS.Task.Definition'}</span>
+			{#if !t.available}<span class="entry-unavailable">not supported in v1</span>{/if}
+		</span>
+		{#if t.destructive}
+			<span class="hazard-swatch" title="Destructive step" aria-label="Destructive step"></span>
+		{/if}
+	</button>
+{/snippet}
+
 <aside class="palette" aria-label="Step types">
 	<div class="head">
 		<h2 class="label">STEP TYPES</h2>
@@ -71,43 +108,66 @@
 				<h3 class="group-title" id={`cat-${group.category}`}>
 					<span class="swatch" style:background={`var(--category-${group.category})`}></span>
 					{group.category.toUpperCase()}
+					{#if !group.suggested}<span class="count">{group.total}</span>{/if}
 				</h3>
 				{#each group.types as t (t.type)}
-					<!-- Spec 004 D-1: unavailable types stay listed (saved flows still use them) but
-					     cannot be placed, because the target platform cannot run them in v1. -->
-					<button
-						type="button"
-						class="entry"
-						class:unavailable={!t.available}
-						disabled={!t.available}
-						draggable={t.available ? 'true' : 'false'}
-						style:--entry-category={`var(--category-${t.category})`}
-						data-step-type={t.type}
-						data-suggested={group.suggested ? 'true' : undefined}
-						title={t.available
-							? 'Drag onto the canvas, or press Enter to add'
-							: 'Not supported on the target platform in v1'}
-						ondragstart={(e) => ondragstart(e, t.type)}
-						onclick={() => onadd(t.type)}
-					>
-						<span class="entry-text">
-							<span class="entry-name">{typeLabel(t)}</span>
-							<span class="entry-class">{t.className || 'subclass of %SYS.Task.Definition'}</span>
-							{#if !t.available}<span class="entry-unavailable">not supported in v1</span>{/if}
-						</span>
-						{#if t.destructive}
-							<span class="hazard-swatch" title="Destructive step" aria-label="Destructive step"></span>
-						{/if}
-					</button>
+					{@render stepEntry(t, group.suggested)}
 				{/each}
+				{#if group.hidden > 0}
+					<button type="button" class="more" aria-expanded="false" onclick={() => expand(group.category)}>
+						Show {group.hidden} more
+					</button>
+				{/if}
 			</section>
 		{:else}
 			<p class="empty">No step type matches “{query}”.</p>
 		{/each}
+		{#if view.unsupported.length > 0}
+			<!-- Spec 004 D-1 / spec 023 FR-013: still listed (saved flows use them), gathered here. -->
+			<section class="group unsupported" aria-labelledby="cat-unsupported">
+				<h3 class="group-title" id="cat-unsupported">
+					{view.unsupported.length} types not supported in v1
+					{#if !expanded.has(UNSUPPORTED)}
+						<button type="button" class="more inline" aria-expanded="false" onclick={() => expand(UNSUPPORTED)}>Show</button>
+					{/if}
+				</h3>
+				{#if expanded.has(UNSUPPORTED)}
+					{#each view.unsupported as t (t.type)}
+						{@render stepEntry(t, false)}
+					{/each}
+				{/if}
+			</section>
+		{/if}
 	</div>
 </aside>
 
 <style>
+	.count {
+		margin-left: auto;
+		font-family: var(--font-mono);
+		font-weight: 500;
+		letter-spacing: 0;
+		color: var(--color-text-muted);
+	}
+
+	.more {
+		align-self: flex-start;
+		font: inherit;
+		font-size: var(--size-caption);
+		color: var(--color-text-muted);
+		background: transparent;
+		border: 1px dashed var(--color-border);
+		border-radius: var(--radius-control);
+		padding: 3px 8px;
+		cursor: pointer;
+	}
+
+	.more.inline {
+		margin-left: auto;
+		padding: 1px 6px;
+		letter-spacing: 0;
+	}
+
 	.palette {
 		display: flex;
 		flex-direction: column;

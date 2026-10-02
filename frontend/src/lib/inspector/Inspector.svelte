@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { consequence } from '$lib/flow/consequence';
 	import type { FlowEditor } from '$lib/flow/editor.svelte';
 	import { targetChoices } from '$lib/targets/targets';
 	import ParameterForm from './ParameterForm.svelte';
@@ -30,15 +31,6 @@
 		if (node) editor.updateStep(node.id, { target: name === '' ? undefined : name });
 	}
 
-	function consequence(type: string, parameters: Record<string, unknown>): string {
-		const noRollback = 'There is no rollback: it requires a valid backup taken today.';
-		if (type === 'purge-audit-records') {
-			return `Permanently removes audit records older than ${parameters.daysToKeep ?? '?'} days. ${noRollback}`;
-		}
-		if (type === 'purge-task-history') return `Permanently removes task history records. ${noRollback}`;
-		return `Permanently changes data on the instance. ${noRollback}`;
-	}
-
 	function integerOrNull(value: string): number | null {
 		const n = Number.parseInt(value, 10);
 		return Number.isFinite(n) && n > 0 ? n : null;
@@ -60,16 +52,39 @@
 </script>
 
 <aside class="inspector" aria-label="Inspector">
+	{#if !step}
+		<!-- Spec 023 FR-010: with nothing selected, the flow's own properties. -->
+		<section class="head" data-testid="inspector-flow">
+			<h2 class="label display">FLOW</h2>
+			<div class="field">
+				<span class="label-text">Name</span>
+				<span class="value">{editor.name}</span>
+			</div>
+			<div class="field">
+				<label for="insp-flow-category">WQM category</label>
+				<input
+					id="insp-flow-category"
+					class="mono"
+					list="wqm-categories"
+					value={editor.defaultCategory}
+					oninput={(e) => {
+						editor.defaultCategory = e.currentTarget.value;
+						editor.touch();
+					}}
+				/>
+			</div>
+		</section>
+	{/if}
 	<section class="head">
 		<h2 class="label display">SELECTED STEP</h2>
 		{#if step}
 			<div class="step-title">{step.taskName}</div>
 			<div class="mono faint">{info?.className || step.customClass || 'subclass of %SYS.Task.Definition'}</div>
 		{:else}
-			<p class="empty">
+			<p class="empty" data-testid="inspector-nothing-selected">
 				{selectedCount > 1
 					? `${selectedCount} steps selected — select one to edit it.`
-					: 'Select a step on the canvas to edit it.'}
+					: 'Nothing selected. Click a step on the canvas and its parameters appear here.'}
 			</p>
 		{/if}
 	</section>
@@ -296,9 +311,16 @@
 		gap: 8px;
 	}
 
-	label {
+	label,
+	.label-text {
 		font-size: var(--size-caption);
 		color: var(--color-text-muted);
+	}
+
+	.value {
+		font-size: var(--size-body);
+		font-weight: 600;
+		overflow-wrap: anywhere;
 	}
 
 	.row label {
