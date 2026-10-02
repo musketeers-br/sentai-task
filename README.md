@@ -20,9 +20,6 @@ instance and on other IRIS servers, and watch every step live.
   <img src="./assets/media/sentai-run.gif" alt="SentaiTask running a flow: three integrity checks, one of them on a second IRIS server, and two security reports run in parallel, converge on a join, and the final report opens with its findings; then the run log and the run history" width="880">
 </p>
 
-<p align="center">
-  <img src="./assets/media/stills/overview.png" alt="The Overview screen: eleven cards — processes, locks, shared memory, activity, devices, licenses, web sessions, security posture, web applications, system alerts and secrets — each with its headline read now from the instance" width="880">
-</p>
 
 ## ⚖️ For judges: two minutes
 
