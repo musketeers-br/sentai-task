@@ -426,7 +426,13 @@
 {#if phase.name === 'ready' && screen === 'overview'}
 	<div class="app">
 		<TopBar {screen} onnavigate={navigate} user={session.user} onhelp={() => guide.openFromHelp()} onsignout={signOut} />
-		<OverviewScreen areaParam={page.url.searchParams.get('area')} registry={editor.registry} onarea={selectArea} onscheduled={scheduleCreated} />
+		<OverviewScreen
+			areaParam={page.url.searchParams.get('area')}
+			registry={editor.registry}
+			onarea={selectArea}
+			onscheduled={scheduleCreated}
+			onlink={(query) => void goto(new URL(query, page.url), { noScroll: true })}
+		/>
 	</div>
 	{#if session.status === 'expired'}
 		<div class="overlay"><SignIn expired /></div>

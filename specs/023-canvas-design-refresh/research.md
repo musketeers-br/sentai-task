@@ -129,15 +129,18 @@ behaviours for one action would confuse operators.
 
 ## R-10 — Next 24 hours
 
-**Decision**: a pure `scheduleSlots(items, now)` buckets tasks whose `nextRun` falls in
-`[now, now + 24 h)` into half-hour slots (platform-local times as the API reports them, compared as
-the same `YYYY-MM-DD HH:MM:SS` strings the catalog already orders by), marks destructive and
-suspended, counts them, and returns the first `nextRun` after the window. Suspended tasks have no
-next run on the platform, so the strip lists them separately ("2 suspended") rather than in a slot.
-"Flow scheduled" = any item with `origin`.
+**Decision** (corrected during implementation, 2026-10-02): a pure `scheduleStrip(items, now)`
+buckets tasks whose `nextRun` falls in `[now, now + 24 h)` into half-hour slots, marks destructive
+and suspended per slot, counts them, and returns the first `nextRun` after the window. `now` is the
+**instance clock** — the summary's `readAt` (`2026-10-02 08:18:35`, the same clock and format as
+`nextRun`) — never the browser's (the dev browser ran at UTC−3, the container at UTC). Without a
+summary the strip says it cannot place the schedule. "Flow scheduled" = an item with `origin`
+that is not suspended.
 
-**Rationale**: no new read; the board's "1 susp." at 02:00 cannot be derived (the platform blanks
-`NextScheduled` for a suspended task), so it is shown as a count instead of being guessed.
+**Rationale**: no new read. Probed on the dev stack: a suspended task **keeps** its `nextRun`
+(*Automatic Table Statistic Collection*, suspended, next run 02:00 — README: "A suspended task
+keeps its nextRun"), so the board's "1 susp." in a slot is derived, not guessed; the first draft of
+this decision assumed the opposite.
 
 ## R-11 — Palette collapse
 

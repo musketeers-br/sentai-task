@@ -97,7 +97,7 @@ UnreadReason  =
   | { kind: "unreachable"; text: string }
 AttentionItem { id: "backup" | "suspended" | "unclassified"; text: string; detail: string;
                 action: { label: string; to: ScreenLink } | { label: string; disabledReason: string } }
-ScheduleStrip { slots: { start: "HH:MM"; count: number; destructive: number }[];
+ScheduleStrip { slots: { start: "HH:MM"; count: number; destructive: number; suspended: number }[];
                 total: number; destructive: number; suspended: number;
                 flowScheduled: boolean; nextAfter: string | null }
 ```

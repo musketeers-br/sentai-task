@@ -52,6 +52,21 @@ The 7 new failures and what was done:
 | `us31-catalog-attention` + `us10-catalog-suspend` | 8 passed |
 | Full suite on the US2 bundle | 111 tests: **104 passed, 6 failed, 1 skipped** — the 5 baseline failures plus `us22-cancel-alert-notice:65`, which passed 2/2 on an isolated rerun (timing, as in the US1 run) |
 
+## US3 and final runs (T040, T044, 2026-10-02)
+
+| Check | Result |
+|---|---|
+| Backend `zpm "test sentai-task -only"` | `All PASSED` — 482 methods, 3418 assertions |
+| `npm run check` / `npm test` | 0 errors (585 files) / 294 tests passed |
+| `us32-overview-attention` + `us29-overview` (spec 019, unchanged) | 13 passed |
+| Full suite on the final bundle | 117 tests: **111 passed, 5 failed, 1 skipped** — exactly the 5 baseline failures of `master`; no new one |
+
+Accessibility (SC-008): every axe run of this spec (Flows, Task catalog with a detail open,
+Overview; dark and light) has 0 serious or critical violations. The moderate page-level findings
+(`landmark-one-main`, `page-has-heading-one`, `region`) are the app shell's and predate this spec.
+
+SC-002 and SC-003 need the moderated usability run (task T042, `[external]`).
+
 ## Spec 023 runs
 
 | File | Proves | Board | FR / SC |
@@ -66,3 +81,7 @@ The 7 new failures and what was done:
 | `us31-detail-destructive.png` | Purge Tasks: DESTRUCTIVE, "Why this is destructive" from the step-type catalog, "created outside SentaiTask", the platform's description, Add to a flow, the Suspended switch | *Proposed — Task catalog* | FR-017, FR-018, FR-020, FR-020a |
 | `us31-suspend-confirm.png` | the simple confirmation for a SentaiTask flow task, naming the flow whose scheduled runs stop | *Proposed — Task catalog* | FR-020 |
 | `us31-catalog-light.png`, `a11y-us31-catalog-{dark,light}.json` | catalog with a detail open: 0 serious/critical; 1 moderate page-level finding (`landmark-one-main`) that predates this spec | — | SC-008 |
+| `us32-overview-attention.png` | Overview: Needs attention (backup never taken, 2 suspended, 12 of 16 unclassified, each with its action), Next 24 hours by half hour with destructive / suspended marks and "then nothing until …", spec 019's cards below | *Proposed — Overview* | FR-022, FR-023 |
+| `us32-attention.json` | the values the bands showed as the API sent them; bands visible 1.3 s after opening the address, sign-in included | — | SC-005, SC-007 |
+| `us32-catalog-refused.png` | catalog read refused (route mock): "Could not read 1 reading — Task catalog HTTP 403 — …" at the top, Needs attention keeps the backup item and says what it could not check, Next 24 hours says why, the 11 cards render | *Proposed — Overview* | FR-026, FR-029, SC-006, SC-010 |
+| `us32-overview-light.png`, `a11y-us32-overview-{dark,light}.json` | 0 serious/critical; 1 moderate page-level finding (`landmark-one-main`) that predates this spec | — | SC-008 |

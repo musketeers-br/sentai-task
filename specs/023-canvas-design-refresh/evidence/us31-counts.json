@@ -1,6 +1,6 @@
 {
   "evidence_id": "us31-counts",
-  "captured_at": "2026-10-02T08:06:35.205Z",
+  "captured_at": "2026-10-02T08:37:32.511Z",
   "request": {
     "method": "GET",
     "url_path": "/csp/sentai/api/v1/catalog/tasks",

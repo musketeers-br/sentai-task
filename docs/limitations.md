@@ -144,5 +144,14 @@ SentaiTask v1 only promises what was proven on IRIS 2026.2 (spec `004-backend-ha
   platform settings reachable through the management API, such as WQM categories; on a
   disposable demo this is accepted, and the daily reset does not restore platform settings
   (it resets the product's flows and runs, the demo password and the alert state).
+- **Canvas design refresh (spec 023).** Parts of the design board were left out on purpose. The
+  task detail has no *WQM category* or *privilege* rows: the platform reports neither for a Task
+  Manager task, and a fixed privilege would be the canvas stating an authorization outcome
+  (research R-3). *Start from a template* opens the one spec 010 example flow; there is no template
+  gallery. *Add to a flow* uses the step type's default parameters, because the catalog carries no
+  task settings (R-6). The Overview keeps spec 019's cards and *Run report* viewer rather than the
+  board's resource table and "Run once" cards (R-9). *Add a backup step* stays disabled while no
+  backup step type is declared. The next-24-hours strip needs the summary's clock; without it, it
+  says so instead of guessing (R-10).
 
 ---

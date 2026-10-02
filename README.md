@@ -326,7 +326,16 @@ scripts/demo/up.sh
 
 After sign-in the canvas opens on **Overview** (spec 019): eleven cards, one per management area,
 read now with your own credential through the [instance overview API](#instance-overview).
+Above the cards (spec 023):
 
+- **Could not read …** — listed at the top only when some reading failed: each refused or
+  unreachable area, or the task catalog, with the platform's answer, so a refused card is never
+  found only by scanning.
+- **Needs attention** — no backup ever taken (from *Activity*), suspended scheduled tasks
+  (**Show in catalog**) and tasks the step-type catalog cannot classify (**Show them**), each with
+  one action. "Nothing needs attention" appears only when both reads succeeded.
+- **Next 24 hours** — the Task Manager's next runs by half hour on the instance's own clock, with
+  destructive and suspended ones marked and the next run after the window.
 - **Instance resources** — *Processes*, *Locks*, *Shared memory*, *Activity*, *Devices*,
   *Licenses*, *Web sessions*. **Open** shows every row the platform returned as a table you can sort
   and filter, with an optional *Auto-refresh every 10 s* that pauses while the tab is hidden. On

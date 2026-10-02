@@ -4,17 +4,14 @@
 
 **Created**: 2026-10-01
 
-**Status**: In Progress <!-- Draft | Planned | In Progress | Implemented | Merged | Superseded by NNN — see "Spec status" in AGENTS.md -->
+**Status**: Implemented <!-- Draft | Planned | In Progress | Implemented | Merged | Superseded by NNN — see "Spec status" in AGENTS.md -->
 
-**Status note**: Source is the Claude Design board "SentaiTask", section *05 · Proposal — spec 002 and
-catalog amendment A1* (boards *Proposed — Overview*, *Proposed — flow chrome*, *Proposed — Task
-catalog*). User Story 3 amends spec 019's Overview (merged): it adds what the board shows beyond
-019 — *Needs attention*, *Next 24 hours* and an unread summary — and leaves 019's cards, reading
-view, on-demand reports and *Schedule this check* as they are. Clarified 2026-10-01 (2 questions, see
-Clarifications). Planned 2026-10-01: FR-017 and FR-018 amended to what the platform answers
-(plan research R-3, R-6). Re-based on `master` (specs 018 and 019 merged) after
-`/speckit-analyze` 2026-10-01: US3 reduced to an amendment of spec 019 (FR-002, FR-021, FR-024, FR-025, FR-027, FR-028 withdrawn); 44 tasks
-in tasks.md (T042 `[external]`); T001 done (branch from master). Next: `/speckit-implement` from T002.
+**Status note**: Implemented 2026-10-02 on branch `023-canvas-design-refresh` (based on `master`
+with specs 018 and 019): 43 of 44 tasks; T042 (moderated usability run for SC-002/SC-003) is
+`[external]`, owned by the product owner. Source: the Claude Design board "SentaiTask", section 05.
+Clarified 2026-10-01 (2 questions); re-based after `/speckit-analyze` — US3 amends spec 019's
+Overview (FR-002, FR-021, FR-024, FR-025, FR-027, FR-028 withdrawn). Full e2e suite: only the five
+failures `master` already has (evidence/README.md).
 
 **Input**: User description: "crie a spec 23 e gere o plano de melhorias do frontend sugerido pelo
 claude design neste projeto. https://claude.ai/artifact/N68ws3dAuE8S9i1zf1esBG"
