@@ -100,7 +100,8 @@ test('us19 sign-out and a new tab — both need a sign-in; nothing usable is lef
 });
 
 test('us19 duplicated tab — the copy never replays the copied token and signs in on its own (FR-013)', async ({ page, context }) => {
-	test.slow();
+	// Two sign-ins, a 70 s wait for both tabs to renew, then two dialogs: more than test.slow()'s 90 s.
+	test.setTimeout(180_000);
 	const id = await seedFlow(page.request, oneStepFlow(`us19-dup-${Date.now()}`));
 	await signIn(page, `?flow=${id}`);
 	const copied = await kept(page);
