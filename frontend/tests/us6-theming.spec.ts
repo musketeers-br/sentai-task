@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { auditTokens } from '../src/lib/design/audit';
-import { canonicalFlow, EVIDENCE_DIR, seedFlow, signIn } from './support';
+import { canonicalFlow, EVIDENCE_DIR, flowButton, seedFlow, signIn } from './support';
 import { contrastFailures } from './theming';
 
 // spec.md User Story 6 / UI-007 — the light theme is designed, not derived (Q10). Differential:
@@ -34,7 +34,7 @@ test('Q10 — both themes render the same screen, each with its own palette and 
 	const id = await seedFlow(request, canonicalFlow(`Q10 theming ${Date.now()}`));
 	await signIn(page, `?flow=${id}`);
 	await page.locator('.svelte-flow__node[data-id="04"] h3').click();
-	await page.getByRole('button', { name: 'Validate flow' }).click();
+	await flowButton(page, 'validate').click();
 	await expect(page.getByTestId('status-errors')).toBeVisible();
 
 	const shots: Record<string, Awaited<ReturnType<typeof structure>>> = {};
@@ -50,7 +50,7 @@ test('Q10 — both themes render the same screen, each with its own palette and 
 	// UI-007: identical except colour, elevation and selection treatment.
 	expect(shots.Light).toEqual(shots.Dark);
 	expect(shots.Dark.inspectorSections).toEqual(['SELECTED STEP', 'IDENTIFICATION', 'PARAMETERS', 'DESTRUCTIVE STEP', 'OUTPUT']);
-	for (const s of ['STEP TYPES', 'Validate flow', 'Schedule in Task Manager', 'Dark', 'Light', 'sequence', 'join (fan-in)']) {
+	for (const s of ['STEP TYPES', 'Validate', 'Schedule', 'Dark', 'Light', 'sequence', 'join (fan-in)']) {
 		expect(shots.Dark.texts.join('\n'), s).toContain(s);
 	}
 

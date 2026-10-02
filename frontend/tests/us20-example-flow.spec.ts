@@ -2,7 +2,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { expect, test, type APIRequestContext, type Page, type Route } from '@playwright/test';
 import { assertDevInstance, deleteFlowWithRuns, EXAMPLE_FLOW_NAME } from './iris';
-import { envelope, PASSWORD, seedFlow, signIn, token, USER } from './support';
+import { envelope, flowButton, flowMoreButton, paletteEntry, PASSWORD, seedFlow, signIn, token, USER } from './support';
 
 // spec 010 User Story 4 — Run a ready-made example flow (FR-015…FR-019, SC-004, SC-005).
 
@@ -75,7 +75,7 @@ test('us20 example — offered on the empty canvas, opened, validated with 0 err
 	await expect(inspector(page).getByLabel('MinFreePercent')).toHaveValue('10');
 
 	// Scenario 4.3.
-	await page.getByRole('button', { name: 'Validate flow' }).click();
+	await flowButton(page, 'validate').click();
 	await expect(page.getByRole('status').filter({ hasText: 'Flow is valid — no errors, no warnings.' })).toBeVisible();
 
 	// Scenario 4.4: the normal run sign-in, no destructive confirmation, followed to the end.
@@ -119,15 +119,15 @@ test('us20 idempotent — opening the example again opens the same flow; never a
 	await page.mouse.down();
 	await page.mouse.move(box.x + 30, box.y + 172, { steps: 8 });
 	await page.mouse.up();
-	await page.getByRole('button', { name: 'Save flow' }).click();
+	await flowButton(page, 'save').click();
 	await expect(page.getByTestId('flow-meta')).toContainText('rev 2');
 
 	// New flow, then the example again from Open flow… with no flows listed: the same id.
-	await page.getByRole('banner').getByRole('button', { name: 'More' }).click();
+	await flowMoreButton(page).click();
 	await page.getByRole('menuitem', { name: 'New flow' }).click();
 	await expect.poll(() => new URL(page.url()).searchParams.get('flow')).toBeNull();
 	await emptyListFor(page, 1);
-	await page.getByRole('banner').getByRole('button', { name: 'Open flow…' }).click();
+	await flowButton(page, 'open').click();
 	const dialog = page.getByRole('dialog', { name: 'Open flow' });
 	await dialog.getByRole('button', { name: 'Open example flow' }).click();
 	await expect(page.getByLabel('Flow name')).toHaveValue(EXAMPLE_FLOW_NAME);
@@ -136,7 +136,7 @@ test('us20 idempotent — opening the example again opens the same flow; never a
 	expect((await examples(page.request)).map((f) => f.id)).toEqual([id]);
 
 	// It is listed like any other flow.
-	await page.getByRole('banner').getByRole('button', { name: 'Open flow…' }).click();
+	await flowButton(page, 'open').click();
 	await dialog.getByLabel('Filter by name').fill(EXAMPLE_FLOW_NAME);
 	await expect(dialog.getByTestId('flow-row')).toHaveCount(1);
 	await expect(dialog.getByTestId('flow-row')).toHaveAttribute('aria-current', 'true');
@@ -152,9 +152,9 @@ test('us20 guard — opening the example over unsaved edits asks first (FR-006)'
 		canvasGeometry: { nodes: { '01': { x: 40, y: 40 } } }
 	});
 	await signIn(page, `?flow=${id}`);
-	await page.locator('[data-step-type="db-size-report"]').click();
+	await (await paletteEntry(page, 'db-size-report')).click();
 	await emptyListFor(page, 1);
-	await page.getByRole('banner').getByRole('button', { name: 'Open flow…' }).click();
+	await flowButton(page, 'open').click();
 	await page.getByRole('dialog', { name: 'Open flow' }).getByRole('button', { name: 'Open example flow' }).click();
 	const guard = page.getByRole('dialog', { name: /^Save changes to / });
 	await expect(guard).toBeVisible();
@@ -182,7 +182,7 @@ test('us20 not offered — a missing, unavailable or destructive step type, or a
 		await expect(invitation(page), change).toBeVisible();
 		await expect(invitation(page).getByRole('button', { name: 'Open example flow' }), change).toHaveCount(0);
 		await expect(invitation(page).getByRole('button', { name: 'Start from scratch' }), change).toBeVisible();
-		await page.getByRole('banner').getByRole('button', { name: 'Open flow…' }).click();
+		await flowButton(page, 'open').click();
 		const dialog = page.getByRole('dialog', { name: 'Open flow' });
 		await expect(dialog.getByRole('button', { name: 'New flow' }), change).toBeVisible();
 		await expect(dialog.getByRole('button', { name: 'Open example flow' }), change).toHaveCount(0);

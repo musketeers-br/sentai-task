@@ -12,7 +12,9 @@
 	import { FlowEditor } from '$lib/flow/editor.svelte';
 	import { afterSave, decide, needsGuard, type GuardChoice, type PendingSwitch } from '$lib/flows/guard';
 	import { defaultFlowName } from '$lib/flows/list';
+	import EmptyCanvas from '$lib/flows/EmptyCanvas.svelte';
 	import EmptyCanvasInvitation from '$lib/flows/EmptyCanvasInvitation.svelte';
+	import FlowBar from '$lib/flow/FlowBar.svelte';
 	import { exampleAvailable, openExample } from '$lib/flows/example';
 	import OpenFlowDialog from '$lib/flows/OpenFlowDialog.svelte';
 	import GettingStartedDialog from '$lib/guide/GettingStartedDialog.svelte';
@@ -406,22 +408,7 @@
 
 {#if phase.name === 'ready' && screen === 'overview'}
 	<div class="app">
-		<TopBar
-			{editor}
-			{screen}
-			onnavigate={navigate}
-			user={session.user}
-			onsave={save}
-			onsaveas={() => (saveAsOpen = true)}
-			onnew={() => void guarded({ kind: 'new' })}
-			onopen={() => (openListOpen = true)}
-			onvalidate={validate}
-			onrun={() => (dispatchOpen = true)}
-			onschedule={() => (scheduling = true)}
-			onhelp={() => guide.openFromHelp()}
-			onsignout={signOut}
-			onhistory={runHistory}
-		/>
+		<TopBar {screen} onnavigate={navigate} user={session.user} onhelp={() => guide.openFromHelp()} onsignout={signOut} />
 		<OverviewScreen areaParam={page.url.searchParams.get('area')} registry={editor.registry} onarea={selectArea} onscheduled={scheduleCreated} />
 	</div>
 	{#if session.status === 'expired'}
@@ -429,22 +416,7 @@
 	{/if}
 {:else if phase.name === 'ready' && screen === 'targets'}
 	<div class="app">
-		<TopBar
-			{editor}
-			{screen}
-			onnavigate={navigate}
-			user={session.user}
-			onsave={save}
-			onsaveas={() => (saveAsOpen = true)}
-			onnew={() => void guarded({ kind: 'new' })}
-			onopen={() => (openListOpen = true)}
-			onvalidate={validate}
-			onrun={() => (dispatchOpen = true)}
-			onschedule={() => (scheduling = true)}
-			onhelp={() => guide.openFromHelp()}
-			onsignout={signOut}
-			onhistory={runHistory}
-		/>
+		<TopBar {screen} onnavigate={navigate} user={session.user} onhelp={() => guide.openFromHelp()} onsignout={signOut} />
 		<TargetsScreen targetParam={page.url.searchParams.get('target')} onselect={selectTarget} onchanged={loadTargets} />
 	</div>
 	{#if session.status === 'expired'}
@@ -452,22 +424,7 @@
 	{/if}
 {:else if phase.name === 'ready' && screen === 'runs'}
 	<div class="app">
-		<TopBar
-			{editor}
-			{screen}
-			onnavigate={navigate}
-			user={session.user}
-			onsave={save}
-			onsaveas={() => (saveAsOpen = true)}
-			onnew={() => void guarded({ kind: 'new' })}
-			onopen={() => (openListOpen = true)}
-			onvalidate={validate}
-			onrun={() => (dispatchOpen = true)}
-			onschedule={() => (scheduling = true)}
-			onhelp={() => guide.openFromHelp()}
-			onsignout={signOut}
-			onhistory={runHistory}
-		/>
+		<TopBar {screen} onnavigate={navigate} user={session.user} onhelp={() => guide.openFromHelp()} onsignout={signOut} />
 		<RunsScreen query={queryFromUrl(page.url)} onquery={setRunsQuery} onopen={openRun} />
 	</div>
 	{#if session.status === 'expired'}
@@ -475,22 +432,7 @@
 	{/if}
 {:else if phase.name === 'ready' && screen === 'catalog'}
 	<div class="app">
-		<TopBar
-			{editor}
-			{screen}
-			onnavigate={navigate}
-			user={session.user}
-			onsave={save}
-			onsaveas={() => (saveAsOpen = true)}
-			onnew={() => void guarded({ kind: 'new' })}
-			onopen={() => (openListOpen = true)}
-			onvalidate={validate}
-			onrun={() => (dispatchOpen = true)}
-			onschedule={() => (scheduling = true)}
-			onhelp={() => guide.openFromHelp()}
-			onsignout={signOut}
-			onhistory={runHistory}
-		/>
+		<TopBar {screen} onnavigate={navigate} user={session.user} onhelp={() => guide.openFromHelp()} onsignout={signOut} />
 		<CatalogScreen taskParam={page.url.searchParams.get('task')} {flowHref} onselect={selectTask} onopenflow={openFlow} />
 	</div>
 	{#if session.status === 'expired'}
@@ -513,20 +455,16 @@
 	{/if}
 {:else if phase.name === 'ready'}
 	<div class="app">
-		<TopBar
+		<TopBar {screen} onnavigate={navigate} user={session.user} onhelp={() => guide.openFromHelp()} onsignout={signOut} />
+		<FlowBar
 			{editor}
-			{screen}
-			onnavigate={navigate}
-			user={session.user}
+			onopen={() => (openListOpen = true)}
 			onsave={save}
 			onsaveas={() => (saveAsOpen = true)}
 			onnew={() => void guarded({ kind: 'new' })}
-			onopen={() => (openListOpen = true)}
 			onvalidate={validate}
 			onrun={() => (dispatchOpen = true)}
 			onschedule={() => (scheduling = true)}
-			onhelp={() => guide.openFromHelp()}
-			onsignout={signOut}
 			onhistory={runHistory}
 		/>
 		<div class="workspace">
@@ -540,6 +478,13 @@
 						{showExample}
 						onexample={() => void guarded({ kind: 'example' })}
 						ondismiss={() => (invitationDismissed = true)}
+					/>
+				{:else if unreadable === null && editor.steps.length === 0}
+					<!-- Spec 023 FR-007–FR-009: every other empty flow says how to start. -->
+					<EmptyCanvas
+						showTemplate={showExample}
+						ontemplate={() => void guarded({ kind: 'example' })}
+						onimport={() => navigate('catalog')}
 					/>
 				{/if}
 				{#if unreadable !== null && editor.id === null && editor.steps.length === 0}

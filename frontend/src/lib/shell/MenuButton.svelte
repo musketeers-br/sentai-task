@@ -13,7 +13,20 @@
 	// open it on the first item, ArrowUp on the last; arrows move, Home/End jump, Escape closes and
 	// returns focus to the button; Tab or a click elsewhere closes it.
 
-	let { label, items, id }: { label: string; items: MenuItem[]; id: string } = $props();
+	let {
+		label,
+		items,
+		id,
+		ariaLabel,
+		caret = true
+	}: {
+		label: string;
+		items: MenuItem[];
+		id: string;
+		/** Spec 023: the name when the visible label is a symbol (the flow bar's "⋯"). */
+		ariaLabel?: string;
+		caret?: boolean;
+	} = $props();
 
 	let open = $state(false);
 	let button: HTMLButtonElement;
@@ -75,13 +88,14 @@
 		type="button"
 		class="trigger"
 		id={`${id}-button`}
+		aria-label={ariaLabel}
 		aria-haspopup="menu"
 		aria-expanded={open}
 		aria-controls={`${id}-menu`}
 		onclick={() => (open ? hide(false) : void show('first'))}
 		onkeydown={onbuttonkey}
 	>
-		{label}<span class="caret" aria-hidden="true">▾</span>
+		{label}{#if caret}<span class="caret" aria-hidden="true">▾</span>{/if}
 	</button>
 	{#if open}
 		<div bind:this={menu} class="menu" role="menu" id={`${id}-menu`} aria-labelledby={`${id}-button`} tabindex="-1" onkeydown={onmenukey}>

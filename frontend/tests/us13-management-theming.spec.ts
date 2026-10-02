@@ -2,7 +2,7 @@
 import { mkdirSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { catalog, detail } from './catalog-support';
-import { seedFlow, signIn, signInAt, token } from './support';
+import { flowButton, seedFlow, signIn, signInAt, token } from './support';
 import { contrastFailures } from './theming';
 
 // spec 007 SC-008 / FR-020 — the catalog screen in both themes, with the same assertions as spec
@@ -66,7 +66,7 @@ test('us13-management-theming — the parameter form with a field in error reads
 	});
 	await signIn(page, `?flow=${id}`);
 	await page.locator('.svelte-flow__node[data-id="01"] h3').click();
-	await page.getByRole('button', { name: 'Validate flow' }).click();
+	await flowButton(page, 'validate').click();
 	const inspector = page.getByLabel('Inspector', { exact: true });
 	await expect(inspector.getByTestId('param-error-minFreePercent')).toBeVisible();
 

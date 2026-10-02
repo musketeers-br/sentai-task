@@ -2,7 +2,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { EXAMPLE_FLOW_NAME } from './iris';
-import { envelope, signInAt, submitSignIn } from './support';
+import { envelope, flowButton, flowMoreButton, paletteEntry, signInAt, submitSignIn } from './support';
 import { contrastFailures } from './theming';
 
 // spec 010 User Story 5 — Getting-started guide (FR-020…FR-025, SC-006).
@@ -194,7 +194,7 @@ test('us21 top bar — with Help, every control still fits at 1440 px', async ({
 	});
 	expect(fits).toEqual({ clipped: [], overflow: 0 });
 	for (const screen of ['Task catalog', 'Targets']) {
-		await page.getByRole('button', { name: screen }).click();
+		await page.getByRole('banner').getByRole('button', { name: screen, exact: true }).click();
 		await expect(page.getByRole('banner').getByRole('button', { name: 'Help' })).toBeVisible();
 	}
 });
@@ -217,7 +217,7 @@ test('us21 theming — the new dialogs and the invitation read in both themes (T
 		await expect(page.getByTestId('example-invitation')).toBeVisible();
 		await shot('invitation');
 
-		await page.getByRole('banner').getByRole('button', { name: 'Open flow…' }).click();
+		await flowButton(page, 'open').click();
 		await expect(page.getByRole('dialog', { name: 'Open flow' })).toBeVisible();
 		await shot('open-flow');
 		await page.keyboard.press('Escape');
@@ -226,14 +226,14 @@ test('us21 theming — the new dialogs and the invitation read in both themes (T
 		await shot('guide');
 		await page.keyboard.press('Escape');
 
-		await page.locator('[data-step-type="db-size-report"]').click();
-		await page.getByRole('banner').getByRole('button', { name: 'More' }).click();
+		await (await paletteEntry(page, 'db-size-report')).click();
+		await flowMoreButton(page).click();
 		await page.getByRole('menuitem', { name: 'Save as…' }).click();
 		await expect(page.getByRole('dialog', { name: 'Save as a new flow' })).toBeVisible();
 		await shot('save-as');
 		await page.keyboard.press('Escape');
 
-		await page.getByRole('banner').getByRole('button', { name: 'More' }).click();
+		await flowMoreButton(page).click();
 		await page.getByRole('menuitem', { name: 'New flow' }).click();
 		await expect(page.getByRole('dialog', { name: /^Save changes to / })).toBeVisible();
 		await shot('unsaved-changes');

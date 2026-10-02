@@ -1,6 +1,6 @@
 import { writeFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
-import { canonicalFlow, envelope, EVIDENCE_DIR, nativeTaskIds, PASSWORD, seedFlow, signIn, unscheduleFlow, USER, v1Flow } from './support';
+import { canonicalFlow, envelope, EVIDENCE_DIR, flowButton, nativeTaskIds, PASSWORD, seedFlow, signIn, unscheduleFlow, USER, v1Flow } from './support';
 
 // spec.md User Story 3 — Schedule (Q5). Spec 015: one native Task Manager task per flow, running as
 // a run-as account whose password is checked and kept only in the IRIS Wallet; scheduled runs run.
@@ -10,10 +10,10 @@ test('Q5 — a valid flow is scheduled as one native Task Manager task', async (
 	try {
 		await signIn(page, `?flow=${id}`);
 
-		await page.getByRole('button', { name: 'Validate flow' }).click();
+		await flowButton(page, 'validate').click();
 		await expect(page.getByRole('status')).toContainText('Flow is valid');
 
-		await page.getByRole('button', { name: 'Schedule in Task Manager' }).click();
+		await flowButton(page, 'schedule').click();
 		const dialog = page.getByRole('dialog', { name: 'Schedule in Task Manager' });
 		await expect(dialog.getByTestId('schedule-none')).toBeVisible();
 		await expect(dialog.getByText('cannot authenticate')).toHaveCount(0);
@@ -52,7 +52,7 @@ test('Q5 — a flow with a destructive step is refused and no native task is cre
 	const id = await seedFlow(request, canonicalFlow(`Q5 destructive ${Date.now()}`));
 	await signIn(page, `?flow=${id}`);
 
-	await page.getByRole('button', { name: 'Schedule in Task Manager' }).click();
+	await flowButton(page, 'schedule').click();
 	const dialog = page.getByRole('dialog', { name: 'Schedule in Task Manager' });
 	await dialog.getByLabel(`Password for ${USER}`, { exact: true }).fill(PASSWORD);
 	await dialog.getByRole('button', { name: 'Schedule', exact: true }).click();
@@ -61,6 +61,6 @@ test('Q5 — a flow with a destructive step is refused and no native task is cre
 	await expect(dialog.getByTestId('schedule-result')).toContainText("#04 · Step type 'purge-audit-records' is destructive");
 	await dialog.getByRole('button', { name: 'Close' }).click();
 	await expect(page.locator('.svelte-flow__node[data-id="04"]').getByTestId('validation-error')).toContainText('not schedulable in v1');
-	await expect(page.getByRole('button', { name: 'Schedule in Task Manager' })).toBeDisabled();
+	await expect(flowButton(page, 'schedule')).toBeDisabled();
 	expect(await nativeTaskIds(request, id)).toEqual([]);
 });

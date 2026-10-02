@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
-import { envelope, seedFlow, signIn, token } from './support';
+import { envelope, flowButton, flowMoreButton, paletteEntry, seedFlow, signIn, token } from './support';
 
 // spec 010 User Story 1 — Save as a new flow, never overwrite by accident (FR-001, FR-004…FR-008).
 
@@ -36,14 +36,14 @@ async function readFlow(request: APIRequestContext, id: string) {
 const flowIdIn = (page: Page) => new URL(page.url()).searchParams.get('flow');
 const guard = (page: Page) => page.getByRole('dialog', { name: /^Save changes to / });
 
-/** *New flow* and *Save as…* live in the top bar's *More ▾* menu (plan D-7 fallback at 1440 px). */
+/** *New flow* and *Save as…* live in the flow bar's ⋯ menu (spec 023; spec 010 plan D-7 put them in a menu). */
 async function flowCommand(page: Page, name: 'New flow' | 'Save as…') {
-	await page.getByRole('banner').getByRole('button', { name: 'More' }).click();
+	await flowMoreButton(page).click();
 	await page.getByRole('menuitem', { name }).click();
 }
 
 async function addUnsavedStep(page: Page) {
-	await page.locator('[data-step-type="db-size-report"]').click();
+	await (await paletteEntry(page, 'db-size-report')).click();
 	await expect(page.getByTestId('flow-meta')).toContainText('edited');
 }
 
@@ -141,7 +141,7 @@ test('us17 New flow — the unsaved-changes guard (Cancel / Discard / Save), the
 	await guard(page).getByRole('button', { name: 'Discard' }).click();
 	await expect(page.locator('.svelte-flow__node')).toHaveCount(0);
 	await expect(page.getByLabel('Flow name')).toHaveValue(/^Untitled flow \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/);
-	await expect(page.getByTestId('flow-meta')).toHaveText('not saved yet');
+	await expect(page.getByTestId('flow-meta')).toHaveText('unsaved');
 	await expect.poll(() => flowIdIn(page)).toBeNull();
 	await page.goBack();
 	await expect(page.getByLabel('Flow name')).toHaveValue(name);
@@ -166,7 +166,7 @@ test('us17 New flow — the unsaved-changes guard (Cancel / Discard / Save), the
 test('us17 Save as on a draft — the first save under the entered name (edge case)', async ({ page }) => {
 	const name = `us17-D-${Date.now()}`;
 	await signIn(page);
-	await page.locator('[data-step-type="db-size-report"]').click();
+	await (await paletteEntry(page, 'db-size-report')).click();
 	await flowCommand(page, 'Save as…');
 	const dialog = page.getByRole('dialog', { name: 'Save as a new flow' });
 	await dialog.getByLabel('Name').fill(name);
@@ -191,7 +191,7 @@ test('us17 revision conflict — the platform\'s words, then a Save as… hint (
 	expect(put.status(), await put.text()).toBe(200);
 
 	await addUnsavedStep(page);
-	await page.getByRole('button', { name: 'Save flow' }).click();
+	await flowButton(page, 'save').click();
 	await expect(page.getByRole('status').filter({ hasText: 'Flow was saved by someone else since it was loaded' })).toBeVisible();
 	await expect(page.getByText('Use Save as… to keep your version.')).toBeVisible();
 });
@@ -209,12 +209,12 @@ test('us17 top bar — every control fits at 1440 px', async ({ page }) => {
 	});
 	expect(fits.clipped).toEqual([]);
 	expect(fits.overflow).toBeLessThanOrEqual(0);
-	await expect(page.getByRole('banner').getByRole('button', { name: 'Save flow', exact: true })).toBeVisible();
-	await page.getByRole('banner').getByRole('button', { name: 'More' }).click();
+	await expect(flowButton(page, 'save')).toBeVisible();
+	await flowMoreButton(page).click();
 	await expect(page.getByRole('menu')).toBeVisible();
 	// Spec 012 FR-010 adds Run history to the same menu.
 	await expect(page.getByRole('menuitem')).toHaveText(['New flow', 'Save as…', 'Run history']);
 	await page.keyboard.press('Escape');
 	await expect(page.getByRole('menu')).toHaveCount(0);
-	await expect(page.getByRole('banner').getByRole('button', { name: 'More' })).toBeFocused();
+	await expect(flowMoreButton(page)).toBeFocused();
 });

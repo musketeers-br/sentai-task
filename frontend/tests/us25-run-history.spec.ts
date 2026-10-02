@@ -1,6 +1,6 @@
 import { expect, test, type Page, type Route } from '@playwright/test';
 import { runToEnd, seedQuickFlow } from './runs-support';
-import { signIn, signInAt } from './support';
+import { flowMoreButton, signIn, signInAt } from './support';
 
 // spec 012 User Story 2 — find and open past runs (FR-006…FR-012).
 
@@ -50,7 +50,7 @@ test('us25 — Run history from a flow, paging without duplicates, and the top b
 	for (let i = 0; i < 3; i++) guids.push((await runToEnd(request, a)).guid);
 
 	await signIn(page, `?flow=${a}`);
-	await page.getByRole('button', { name: 'More' }).click();
+	await flowMoreButton(page).click();
 	await page.getByRole('menuitem', { name: 'Run history' }).click();
 	await expect(page.getByLabel('Flow', { exact: true })).toHaveValue(a);
 	await expect(rows(page)).toHaveCount(3);

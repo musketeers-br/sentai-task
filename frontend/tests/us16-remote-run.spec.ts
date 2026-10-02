@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
-import { envelope, PASSWORD, seedFlow, signIn, token, USER } from './support';
+import { envelope, flowButton, PASSWORD, seedFlow, signIn, token, USER } from './support';
 
 // spec 009 User Stories 2–5 over the spec 008 API, on the compose stack's iris-target.
 
@@ -62,7 +62,7 @@ test('us16 place — Run on is offered for remote-capable types only, saved, and
 	await runOn.selectOption(TARGET);
 	await expect(node(page, '01').getByTestId('target-badge')).toHaveText(TARGET);
 	await expect(node(page, '02').getByTestId('target-badge')).toHaveCount(0);
-	await page.getByRole('button', { name: 'Save flow' }).click();
+	await flowButton(page, 'save').click();
 	await expect(page.getByTestId('flow-meta')).toContainText('rev 2');
 
 	const saved = (await api(page, 'GET', `/flows/${id}`)).body;
@@ -71,7 +71,7 @@ test('us16 place — Run on is offered for remote-capable types only, saved, and
 
 	// Back to Local removes it.
 	await runOn.selectOption({ label: 'Local (this instance)' });
-	await page.getByRole('button', { name: 'Save flow' }).click();
+	await flowButton(page, 'save').click();
 	await expect(page.getByTestId('flow-meta')).toContainText('rev 3');
 	expect('target' in (await api(page, 'GET', `/flows/${id}`)).body.steps.find((s: { id: string }) => s.id === '01')).toBe(false);
 });
@@ -86,7 +86,7 @@ test('us16 findings — an unknown target is an error on its node; an unverified
 		canvasGeometry: { nodes: { '01': { x: 40, y: 40 }, '02': { x: 40, y: 260 } } }
 	});
 	await signIn(page, `?flow=${id}`);
-	await page.getByRole('button', { name: 'Validate flow' }).click();
+	await flowButton(page, 'validate').click();
 	await expect(node(page, '01')).toContainText("names target 'no-such-target', which is not registered");
 	await expect(node(page, '02')).toContainText(`Target '${TARGET}' was not checked`);
 	await expect(page.getByTestId('status-errors')).toContainText('#01');
