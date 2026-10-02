@@ -186,3 +186,40 @@ describe('Session keeps and erases the record', () => {
 		session.logout();
 	});
 });
+
+// A /refresh revokes the previous access token, so a request sent just before a renewal can come
+// back 401 after the session already holds the new token. That 401 is not this session's expiry
+// (found by us22-cancel-alert-notice: the live run view froze after a proactive renewal).
+describe('Session.rejected', () => {
+	it('keeps the session when the rejected token was already replaced by a renewal', async () => {
+		const session = new Session(() => fakeStorage());
+		respond = () => json(200, pair(1));
+		await session.login('_SYSTEM', 'SYS');
+		const sent = session.authorization()!;
+		respond = () => json(200, pair(2));
+		await session.login('_SYSTEM', 'SYS');
+
+		expect(session.rejected(sent)).toBe('renewed');
+		expect(session.status).toBe('signed-in');
+		expect(session.authorization()).toBe('Bearer access-2');
+		session.logout();
+	});
+
+	it('expires the session when the rejected token is the current one', async () => {
+		const storage = fakeStorage();
+		const session = new Session(() => storage);
+		respond = () => json(200, pair(1));
+		await session.login('_SYSTEM', 'SYS');
+
+		expect(session.rejected(session.authorization()!)).toBe('expired');
+		expect(session.status).toBe('expired');
+		expect(session.authorization()).toBeNull();
+		expect(stored(storage)).toBeNull();
+	});
+
+	it('expires the session when there is no current token to compare with', () => {
+		const session = new Session(() => fakeStorage());
+		expect(session.rejected('Bearer whatever')).toBe('expired');
+		expect(session.status).toBe('expired');
+	});
+});
