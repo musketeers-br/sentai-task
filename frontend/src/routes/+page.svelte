@@ -543,20 +543,29 @@
 				<SvelteFlowProvider>
 					<FlowCanvas {editor} />
 				</SvelteFlowProvider>
-				{#if showInvitation}
-					<EmptyCanvasInvitation
-						{showExample}
-						onexample={() => void guarded({ kind: 'example' })}
-						ondismiss={() => (invitationDismissed = true)}
-					/>
-				{:else if unreadable === null && editor.steps.length === 0}
-					<!-- Spec 023 FR-007–FR-009: every other empty flow says how to start. -->
-					<EmptyCanvas
-						showTemplate={showExample}
-						ontemplate={() => void guarded({ kind: 'example' })}
-						onimport={() => navigate('catalog')}
-					/>
-				{/if}
+				<!-- Spec 021 FR-001: the tour's only entry — pinned to the canvas (the top bar
+				     already fits exactly at 1440 px, plan risk R-4), visible, one action. -->
+				<button type="button" class="canvas-tour" data-testid="tour-button" onclick={() => tour.start()}>
+					Tour
+				</button>
+			{#if showGallery}
+				<!-- Spec 022 FR-001: the gallery replaces the empty canvas whenever no flow is open;
+				     the unreadable-flow panel below still wins when it applies. -->
+				<RunbookGallery
+					registry={editor.registry}
+					targets={editor.targets.map((t) => t.name)}
+					onuse={(runbook) => void guarded({ kind: 'runbook', runbook })}
+					onstartblank={() => (galleryDismissed = true)}
+				/>
+			{:else if unreadable === null && editor.steps.length === 0}
+				<!-- Spec 023 FR-007–FR-009: every other empty flow says how to start — the blank
+				     canvas after *Start from scratch*, or an open flow with no steps. -->
+				<EmptyCanvas
+					showTemplate={showExample}
+					ontemplate={() => void guarded({ kind: 'runbook', runbook: EXAMPLE_RUNBOOK })}
+					onimport={() => navigate('catalog')}
+				/>
+			{/if}
 				{#if unreadable !== null && editor.id === null && editor.steps.length === 0}
 					<div class="canvas-panel" data-testid="flow-unreadable">
 						<p>This flow could not be opened. The reason is in the status bar.</p>
