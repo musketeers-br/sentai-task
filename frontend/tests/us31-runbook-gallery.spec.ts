@@ -136,6 +136,23 @@ test('us31 keyboard — the gallery is a labelled region, operable by keyboard a
 	expect(focusedScratch, 'Tab reaches Start from scratch').toBe(true);
 });
 
+// --- Layout regression: the header clears the Tour button ------------------------------------
+// spec 021 pins the Tour control to the canvas' top-right corner and keeps it visible over the
+// gallery (FR-001, its z-index 5); the header must reserve that footprint so *Start from
+// scratch* (FR-012) never renders underneath it.
+
+test('us31 layout — Start from scratch and Tour never overlap (021 FR-001, 022 FR-012)', async ({ page }) => {
+	await signIn(page);
+	const tour = (await page.getByTestId('tour-button').boundingBox())!;
+	const scratch = (await gallery(page).getByTestId('start-from-scratch').boundingBox())!;
+	const overlaps =
+		tour.x < scratch.x + scratch.width &&
+		scratch.x < tour.x + tour.width &&
+		tour.y < scratch.y + scratch.height &&
+		scratch.y < tour.y + tour.height;
+	expect(overlaps, 'the Tour and Start from scratch boxes do not intersect').toBe(false);
+});
+
 // --- User Story 2: Use puts a runnable flow on the canvas in one action (FR-006…FR-010) -------
 // These own us20's retired guarantees 1:1 (plan D-9): run-to-completion, idempotence, guard.
 

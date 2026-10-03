@@ -85,9 +85,14 @@
 	.head {
 		display: flex;
 		align-items: baseline;
+		flex-wrap: wrap;
 		gap: 12px;
 		justify-content: space-between;
-		padding: 4px 4px 0;
+		/* Spec 021's Tour control is pinned to the canvas' top-right corner (offset 12px +
+		   ~60px wide) and stays above the gallery (z-index 5); the header reserves that
+		   footprint so *Start from scratch* never renders underneath it. On the smallest
+		   viewport the row wraps instead of sliding back under the Tour button. */
+		padding: 4px 72px 0 4px;
 	}
 
 	h2 {
