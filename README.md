@@ -261,8 +261,11 @@ Off the run path shown above:
 - [Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
 - [Docker Desktop](https://www.docker.com/products/docker-desktop) with Docker Compose
 - **InterSystems IRIS 2026.2**. The container image built by this repo is the verified target.
-- **Disk and memory:** about 10 GB for the two images (`iris` 5.9 GB, `iris-target` 3.7 GB), and
-  about 450 MB of memory for the search worker inside `iris`. No GPU is used or needed.
+- **Disk and memory:** about 6 GB on disk. The two images share the stock IRIS base layer (3.5 GB,
+  stored once): `iris` adds 2.3 GB on top of it (the canvas, and the CPU-only search model — no Ollama,
+  no model store) and `iris-target` adds 250 MB. Docker shows 5.8 GB + 3.7 GB because it
+  counts the shared layer for each image; `docker system df -v` shows the real total. About 450 MB of
+  memory for the search worker inside `iris`. No GPU is used or needed.
 
 ---
 
