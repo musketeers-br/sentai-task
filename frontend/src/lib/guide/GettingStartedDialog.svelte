@@ -4,7 +4,8 @@
 
 	// Spec 010 FR-021/FR-025: six steps, one at a time, as a modal dialog announced with its title.
 	// Modal.svelte keeps focus inside, closes on Escape and returns focus to where it was.
-	let { showExample, onexample }: { showExample: boolean; onexample: () => void } = $props();
+	// Spec 022 FR-013: the ready-made entry is *Browse runbooks* — the gallery, not a lone example.
+	let { onbrowse }: { onbrowse: () => void } = $props();
 
 	const current = $derived(guide.steps[guide.step - 1]);
 	const last = $derived(guide.step === guide.steps.length);
@@ -17,9 +18,9 @@
 		<!-- svelte-ignore a11y_autofocus -->
 		<h3 class="step-title" data-testid="guide-step-title" tabindex="-1" autofocus>{current.title}</h3>
 		<p class="lead" id="guide-step-body" data-testid="guide-step-body">{current.body}</p>
-		{#if current.action === 'open-example' && showExample}
+		{#if current.action === 'browse-runbooks'}
 			<div class="step-action">
-				<button type="button" class="secondary" onclick={onexample}>Open example flow</button>
+				<button type="button" class="secondary" onclick={onbrowse}>Browse runbooks</button>
 			</div>
 		{/if}
 

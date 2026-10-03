@@ -1,0 +1,17 @@
+{
+  "evidence_id": "us30-tour",
+  "captured_at": "2026-10-02T14:21:43.226Z",
+  "request": {
+    "ui": "Canvas tour"
+  },
+  "response": {
+    "marks": [
+      "This is the palette — drag a step onto the canvas.",
+      "Connect two steps to create a dependency.",
+      "Validate the flow, then run it."
+    ]
+  },
+  "notes": [
+    "The three marks, in the order contracts/tour.md §3 declares them."
+  ]
+}

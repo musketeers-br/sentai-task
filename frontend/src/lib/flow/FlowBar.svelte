@@ -81,12 +81,20 @@
 	{#if state.reason}
 		<span class="reason" role="status" data-testid="flow-actions-reason">{state.reason}</span>
 	{/if}
-	<button type="button" class="secondary" disabled={!state.actions.validate.enabled} onclick={onvalidate}>
+	<!-- Spec 021 FR-002: the tour's third mark anchors to these two controls. -->
+	<button
+		type="button"
+		class="secondary"
+		data-tour-target="validate"
+		disabled={!state.actions.validate.enabled}
+		onclick={onvalidate}
+	>
 		{editor.validating ? 'Validating…' : 'Validate'}
 	</button>
 	<button
 		type="button"
 		class="primary"
+		data-tour-target="run"
 		disabled={!state.actions.run.enabled}
 		title={state.actions.run.enabled ? 'Dispatch this flow now' : undefined}
 		onclick={onrun}

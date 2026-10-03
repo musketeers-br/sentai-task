@@ -5,6 +5,10 @@ import { canonicalFlow, connect, edge, EVIDENCE_DIR, flowButton, hexToRgb, palet
 
 test('Q1 — composes the canonical graph from the palette, with one shared fan-in junction', async ({ page }) => {
 	await signIn(page);
+	// Spec 022 FR-012: the gallery is the empty canvas now — authoring starts from *Start from
+	// scratch*, exactly as an operator does.
+	await page.getByTestId('start-from-scratch').click();
+	await expect(page.getByTestId('runbook-gallery')).toHaveCount(0);
 	await page.getByLabel('Flow name').fill(`Q1 composition ${Date.now()}`);
 
 	// Scenario 1: dragging a step type onto the canvas creates a node.

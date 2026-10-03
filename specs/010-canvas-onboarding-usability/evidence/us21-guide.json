@@ -1,13 +1,13 @@
 {
   "evidence_id": "us21-guide",
-  "captured_at": "2026-09-27T23:05:17.154Z",
+  "captured_at": "2026-10-02T14:16:57.411Z",
   "request": {
     "ui": "Getting started"
   },
   "response": {
     "steps": [
       "Welcome",
-      "Open the example",
+      "Open a runbook",
       "Build a flow",
       "Validate and run",
       "Save, Save as, Open",

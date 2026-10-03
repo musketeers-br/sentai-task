@@ -7,13 +7,13 @@
     "name": "axe"
   },
   "testEnvironment": {
-    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.12 Safari/537.36",
+    "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.12 Safari/537.36",
     "windowWidth": 1440,
     "windowHeight": 900,
     "orientationAngle": 0,
     "orientationType": "landscape-primary"
   },
-  "timestamp": "2026-10-02T08:37:54.725Z",
+  "timestamp": "2026-10-02T14:23:41.171Z",
   "url": "http://localhost:52773/csp/sentai/index.html",
   "toolOptions": {
     "reporter": "v1"
@@ -5068,7 +5068,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<span class=\"detail svelte-zj4af6\">last backup: Never · uptime 0d  8h 31m</span>",
+          "html": "<span class=\"detail svelte-zj4af6\">last backup: Never · uptime 0d  1h 58m</span>",
           "target": [
             "li[data-testid=\"attention-backup\"] > .text.svelte-zj4af6 > .detail.svelte-zj4af6"
           ]
@@ -5718,7 +5718,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<span class=\"read mono svelte-1x5dhba\">08:37:53</span>",
+          "html": "<span class=\"read mono svelte-1x5dhba\">14:23:38</span>",
           "target": [
             "article[data-area=\"processes\"] > header > .read.mono"
           ]
@@ -5743,7 +5743,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<p class=\"headline svelte-1x5dhba\">202 processes</p>",
+          "html": "<p class=\"headline svelte-1x5dhba\">154 processes</p>",
           "target": [
             "article[data-area=\"processes\"] > .headline"
           ]
@@ -5768,7 +5768,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<p class=\"sub svelte-1x5dhba\">Busiest: %Net.HttpRequest.1 (pid 38,143) · 107,324,481 commands</p>",
+          "html": "<p class=\"sub svelte-1x5dhba\">Busiest: %Net.HttpRequest.1 (pid 1,362) · 100,901,655 commands</p>",
           "target": [
             "article[data-area=\"processes\"] > .sub"
           ]
@@ -5843,7 +5843,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<span class=\"read mono svelte-1x5dhba\">08:37:54</span>",
+          "html": "<span class=\"read mono svelte-1x5dhba\">14:23:39</span>",
           "target": [
             "article[data-area=\"locks\"] > header > .read.mono"
           ]
@@ -5868,7 +5868,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<p class=\"headline svelte-1x5dhba\">346 locks</p>",
+          "html": "<p class=\"headline svelte-1x5dhba\">245 locks</p>",
           "target": [
             "article[data-area=\"locks\"] > .headline"
           ]
@@ -5943,7 +5943,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<span class=\"read mono svelte-1x5dhba\">08:37:54</span>",
+          "html": "<span class=\"read mono svelte-1x5dhba\">14:23:39</span>",
           "target": [
             "article[data-area=\"memory\"] > header > .read.mono"
           ]
@@ -5968,7 +5968,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<p class=\"headline svelte-1x5dhba\">80.5% of shared memory used</p>",
+          "html": "<p class=\"headline svelte-1x5dhba\">82.7% of shared memory used</p>",
           "target": [
             "article[data-area=\"memory\"] > .headline"
           ]
@@ -6068,7 +6068,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<span class=\"read mono svelte-1x5dhba\">08:37:54</span>",
+          "html": "<span class=\"read mono svelte-1x5dhba\">14:23:39</span>",
           "target": [
             "article[data-area=\"activity\"] > header > .read.mono"
           ]
@@ -6093,7 +6093,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<p class=\"headline svelte-1x5dhba\">Up 0d  8h 31m · last backup Never</p>",
+          "html": "<p class=\"headline svelte-1x5dhba\">Up 0d  1h 58m · last backup Never</p>",
           "target": [
             "article[data-area=\"activity\"] > .headline"
           ]
@@ -6118,7 +6118,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<p class=\"sub svelte-1x5dhba\">40,851 global refs/s · 8 busy processes</p>",
+          "html": "<p class=\"sub svelte-1x5dhba\">5,532 global refs/s · 7 busy processes</p>",
           "target": [
             "article[data-area=\"activity\"] > .sub"
           ]
@@ -6193,7 +6193,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<span class=\"read mono svelte-1x5dhba\">08:37:54</span>",
+          "html": "<span class=\"read mono svelte-1x5dhba\">14:23:39</span>",
           "target": [
             "article[data-area=\"devices\"] > header > .read.mono"
           ]
@@ -6293,7 +6293,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<span class=\"read mono svelte-1x5dhba\">08:37:54</span>",
+          "html": "<span class=\"read mono svelte-1x5dhba\">14:23:39</span>",
           "target": [
             "article[data-area=\"licenses\"] > header > .read.mono"
           ]
@@ -6318,7 +6318,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<p class=\"headline svelte-1x5dhba\">0 of 8 license units in use</p>",
+          "html": "<p class=\"headline svelte-1x5dhba\">1 of 8 license units in use</p>",
           "target": [
             "article[data-area=\"licenses\"] > .headline"
           ]
@@ -6393,7 +6393,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<span class=\"read mono svelte-1x5dhba\">08:37:54</span>",
+          "html": "<span class=\"read mono svelte-1x5dhba\">14:23:39</span>",
           "target": [
             "article[data-area=\"web-sessions\"] > header > .read.mono"
           ]
@@ -6418,7 +6418,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<p class=\"headline svelte-1x5dhba\">4 web sessions</p>",
+          "html": "<p class=\"headline svelte-1x5dhba\">0 web sessions</p>",
           "target": [
             "article[data-area=\"web-sessions\"] > .headline"
           ]
@@ -6518,7 +6518,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<span class=\"read mono svelte-1x5dhba\">08:37:54</span>",
+          "html": "<span class=\"read mono svelte-1x5dhba\">14:23:39</span>",
           "target": [
             "article[data-area=\"security\"] > header > .read.mono"
           ]
@@ -6643,7 +6643,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<span class=\"read mono svelte-1x5dhba\">08:37:54</span>",
+          "html": "<span class=\"read mono svelte-1x5dhba\">14:23:39</span>",
           "target": [
             "article[data-area=\"web-apps\"] > header > .read.mono"
           ]
@@ -6768,7 +6768,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<span class=\"read mono svelte-1x5dhba\">08:37:54</span>",
+          "html": "<span class=\"read mono svelte-1x5dhba\">14:23:39</span>",
           "target": [
             "article[data-area=\"alerts\"] > header > .read.mono"
           ]
@@ -6793,7 +6793,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<p class=\"headline svelte-1x5dhba\">29 serious alerts · 0 application errors</p>",
+          "html": "<p class=\"headline svelte-1x5dhba\">13 serious alerts · 0 application errors</p>",
           "target": [
             "article[data-area=\"alerts\"] > .headline"
           ]
@@ -6933,7 +6933,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<span class=\"read mono svelte-1x5dhba\">08:37:54</span>",
+          "html": "<span class=\"read mono svelte-1x5dhba\">14:23:39</span>",
           "target": [
             "article[data-area=\"secrets\"] > header > .read.mono"
           ]
@@ -9758,7 +9758,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<div class=\"text svelte-zj4af6\"><span class=\"title svelte-zj4af6\">No backup has ever been taken on this instance</span> <span class=\"detail svelte-zj4af6\">last backup: Never · uptime 0d  8h 31m</span></div>",
+          "html": "<div class=\"text svelte-zj4af6\"><span class=\"title svelte-zj4af6\">No backup has ever been taken on this instance</span> <span class=\"detail svelte-zj4af6\">last backup: Never · uptime 0d  1h 58m</span></div>",
           "target": [
             "li[data-testid=\"attention-backup\"] > .text.svelte-zj4af6"
           ]
@@ -9798,7 +9798,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<span class=\"detail svelte-zj4af6\">last backup: Never · uptime 0d  8h 31m</span>",
+          "html": "<span class=\"detail svelte-zj4af6\">last backup: Never · uptime 0d  1h 58m</span>",
           "target": [
             "li[data-testid=\"attention-backup\"] > .text.svelte-zj4af6 > .detail.svelte-zj4af6"
           ]
@@ -10618,7 +10618,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<header class=\"svelte-1x5dhba\"><h2 class=\"svelte-1x5dhba\">Processes</h2> <span class=\"read mono svelte-1x5dhba\">08:37:53</span></header>",
+          "html": "<header class=\"svelte-1x5dhba\"><h2 class=\"svelte-1x5dhba\">Processes</h2> <span class=\"read mono svelte-1x5dhba\">14:23:38</span></header>",
           "target": [
             "article[data-area=\"processes\"] > header"
           ]
@@ -10658,7 +10658,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<span class=\"read mono svelte-1x5dhba\">08:37:53</span>",
+          "html": "<span class=\"read mono svelte-1x5dhba\">14:23:38</span>",
           "target": [
             "article[data-area=\"processes\"] > header > .read.mono"
           ]
@@ -10678,7 +10678,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<p class=\"headline svelte-1x5dhba\">202 processes</p>",
+          "html": "<p class=\"headline svelte-1x5dhba\">154 processes</p>",
           "target": [
             "article[data-area=\"processes\"] > .headline"
           ]
@@ -10698,7 +10698,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<p class=\"sub svelte-1x5dhba\">Busiest: %Net.HttpRequest.1 (pid 38,143) · 107,324,481 commands</p>",
+          "html": "<p class=\"sub svelte-1x5dhba\">Busiest: %Net.HttpRequest.1 (pid 1,362) · 100,901,655 commands</p>",
           "target": [
             "article[data-area=\"processes\"] > .sub"
           ]
@@ -10778,7 +10778,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<header class=\"svelte-1x5dhba\"><h2 class=\"svelte-1x5dhba\">Locks</h2> <span class=\"read mono svelte-1x5dhba\">08:37:54</span></header>",
+          "html": "<header class=\"svelte-1x5dhba\"><h2 class=\"svelte-1x5dhba\">Locks</h2> <span class=\"read mono svelte-1x5dhba\">14:23:39</span></header>",
           "target": [
             "article[data-area=\"locks\"] > header"
           ]
@@ -10818,7 +10818,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<span class=\"read mono svelte-1x5dhba\">08:37:54</span>",
+          "html": "<span class=\"read mono svelte-1x5dhba\">14:23:39</span>",
           "target": [
             "article[data-area=\"locks\"] > header > .read.mono"
           ]
@@ -10838,7 +10838,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<p class=\"headline svelte-1x5dhba\">346 locks</p>",
+          "html": "<p class=\"headline svelte-1x5dhba\">245 locks</p>",
           "target": [
             "article[data-area=\"locks\"] > .headline"
           ]
@@ -10918,7 +10918,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<header class=\"svelte-1x5dhba\"><h2 class=\"svelte-1x5dhba\">Shared memory</h2> <span class=\"read mono svelte-1x5dhba\">08:37:54</span></header>",
+          "html": "<header class=\"svelte-1x5dhba\"><h2 class=\"svelte-1x5dhba\">Shared memory</h2> <span class=\"read mono svelte-1x5dhba\">14:23:39</span></header>",
           "target": [
             "article[data-area=\"memory\"] > header"
           ]
@@ -10958,7 +10958,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<span class=\"read mono svelte-1x5dhba\">08:37:54</span>",
+          "html": "<span class=\"read mono svelte-1x5dhba\">14:23:39</span>",
           "target": [
             "article[data-area=\"memory\"] > header > .read.mono"
           ]
@@ -10978,7 +10978,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<p class=\"headline svelte-1x5dhba\">80.5% of shared memory used</p>",
+          "html": "<p class=\"headline svelte-1x5dhba\">82.7% of shared memory used</p>",
           "target": [
             "article[data-area=\"memory\"] > .headline"
           ]
@@ -11078,7 +11078,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<header class=\"svelte-1x5dhba\"><h2 class=\"svelte-1x5dhba\">Activity</h2> <span class=\"read mono svelte-1x5dhba\">08:37:54</span></header>",
+          "html": "<header class=\"svelte-1x5dhba\"><h2 class=\"svelte-1x5dhba\">Activity</h2> <span class=\"read mono svelte-1x5dhba\">14:23:39</span></header>",
           "target": [
             "article[data-area=\"activity\"] > header"
           ]
@@ -11118,7 +11118,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<span class=\"read mono svelte-1x5dhba\">08:37:54</span>",
+          "html": "<span class=\"read mono svelte-1x5dhba\">14:23:39</span>",
           "target": [
             "article[data-area=\"activity\"] > header > .read.mono"
           ]
@@ -11138,7 +11138,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<p class=\"headline svelte-1x5dhba\">Up 0d  8h 31m · last backup Never</p>",
+          "html": "<p class=\"headline svelte-1x5dhba\">Up 0d  1h 58m · last backup Never</p>",
           "target": [
             "article[data-area=\"activity\"] > .headline"
           ]
@@ -11158,7 +11158,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<p class=\"sub svelte-1x5dhba\">40,851 global refs/s · 8 busy processes</p>",
+          "html": "<p class=\"sub svelte-1x5dhba\">5,532 global refs/s · 7 busy processes</p>",
           "target": [
             "article[data-area=\"activity\"] > .sub"
           ]
@@ -11238,7 +11238,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<header class=\"svelte-1x5dhba\"><h2 class=\"svelte-1x5dhba\">Devices</h2> <span class=\"read mono svelte-1x5dhba\">08:37:54</span></header>",
+          "html": "<header class=\"svelte-1x5dhba\"><h2 class=\"svelte-1x5dhba\">Devices</h2> <span class=\"read mono svelte-1x5dhba\">14:23:39</span></header>",
           "target": [
             "article[data-area=\"devices\"] > header"
           ]
@@ -11278,7 +11278,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<span class=\"read mono svelte-1x5dhba\">08:37:54</span>",
+          "html": "<span class=\"read mono svelte-1x5dhba\">14:23:39</span>",
           "target": [
             "article[data-area=\"devices\"] > header > .read.mono"
           ]
@@ -11378,7 +11378,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<header class=\"svelte-1x5dhba\"><h2 class=\"svelte-1x5dhba\">Licenses</h2> <span class=\"read mono svelte-1x5dhba\">08:37:54</span></header>",
+          "html": "<header class=\"svelte-1x5dhba\"><h2 class=\"svelte-1x5dhba\">Licenses</h2> <span class=\"read mono svelte-1x5dhba\">14:23:39</span></header>",
           "target": [
             "article[data-area=\"licenses\"] > header"
           ]
@@ -11418,7 +11418,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<span class=\"read mono svelte-1x5dhba\">08:37:54</span>",
+          "html": "<span class=\"read mono svelte-1x5dhba\">14:23:39</span>",
           "target": [
             "article[data-area=\"licenses\"] > header > .read.mono"
           ]
@@ -11438,7 +11438,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<p class=\"headline svelte-1x5dhba\">0 of 8 license units in use</p>",
+          "html": "<p class=\"headline svelte-1x5dhba\">1 of 8 license units in use</p>",
           "target": [
             "article[data-area=\"licenses\"] > .headline"
           ]
@@ -11518,7 +11518,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<header class=\"svelte-1x5dhba\"><h2 class=\"svelte-1x5dhba\">Web sessions</h2> <span class=\"read mono svelte-1x5dhba\">08:37:54</span></header>",
+          "html": "<header class=\"svelte-1x5dhba\"><h2 class=\"svelte-1x5dhba\">Web sessions</h2> <span class=\"read mono svelte-1x5dhba\">14:23:39</span></header>",
           "target": [
             "article[data-area=\"web-sessions\"] > header"
           ]
@@ -11558,7 +11558,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<span class=\"read mono svelte-1x5dhba\">08:37:54</span>",
+          "html": "<span class=\"read mono svelte-1x5dhba\">14:23:39</span>",
           "target": [
             "article[data-area=\"web-sessions\"] > header > .read.mono"
           ]
@@ -11578,7 +11578,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<p class=\"headline svelte-1x5dhba\">4 web sessions</p>",
+          "html": "<p class=\"headline svelte-1x5dhba\">0 web sessions</p>",
           "target": [
             "article[data-area=\"web-sessions\"] > .headline"
           ]
@@ -11718,7 +11718,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<header class=\"svelte-1x5dhba\"><h2 class=\"svelte-1x5dhba\">Security posture</h2> <span class=\"read mono svelte-1x5dhba\">08:37:54</span></header>",
+          "html": "<header class=\"svelte-1x5dhba\"><h2 class=\"svelte-1x5dhba\">Security posture</h2> <span class=\"read mono svelte-1x5dhba\">14:23:39</span></header>",
           "target": [
             "article[data-area=\"security\"] > header"
           ]
@@ -11758,7 +11758,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<span class=\"read mono svelte-1x5dhba\">08:37:54</span>",
+          "html": "<span class=\"read mono svelte-1x5dhba\">14:23:39</span>",
           "target": [
             "article[data-area=\"security\"] > header > .read.mono"
           ]
@@ -11938,7 +11938,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<header class=\"svelte-1x5dhba\"><h2 class=\"svelte-1x5dhba\">Web applications</h2> <span class=\"read mono svelte-1x5dhba\">08:37:54</span></header>",
+          "html": "<header class=\"svelte-1x5dhba\"><h2 class=\"svelte-1x5dhba\">Web applications</h2> <span class=\"read mono svelte-1x5dhba\">14:23:39</span></header>",
           "target": [
             "article[data-area=\"web-apps\"] > header"
           ]
@@ -11978,7 +11978,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<span class=\"read mono svelte-1x5dhba\">08:37:54</span>",
+          "html": "<span class=\"read mono svelte-1x5dhba\">14:23:39</span>",
           "target": [
             "article[data-area=\"web-apps\"] > header > .read.mono"
           ]
@@ -12158,7 +12158,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<header class=\"svelte-1x5dhba\"><h2 class=\"svelte-1x5dhba\">System alerts</h2> <span class=\"read mono svelte-1x5dhba\">08:37:54</span></header>",
+          "html": "<header class=\"svelte-1x5dhba\"><h2 class=\"svelte-1x5dhba\">System alerts</h2> <span class=\"read mono svelte-1x5dhba\">14:23:39</span></header>",
           "target": [
             "article[data-area=\"alerts\"] > header"
           ]
@@ -12198,7 +12198,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<span class=\"read mono svelte-1x5dhba\">08:37:54</span>",
+          "html": "<span class=\"read mono svelte-1x5dhba\">14:23:39</span>",
           "target": [
             "article[data-area=\"alerts\"] > header > .read.mono"
           ]
@@ -12218,7 +12218,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<p class=\"headline svelte-1x5dhba\">29 serious alerts · 0 application errors</p>",
+          "html": "<p class=\"headline svelte-1x5dhba\">13 serious alerts · 0 application errors</p>",
           "target": [
             "article[data-area=\"alerts\"] > .headline"
           ]
@@ -12378,7 +12378,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<header class=\"svelte-1x5dhba\"><h2 class=\"svelte-1x5dhba\">Secrets</h2> <span class=\"read mono svelte-1x5dhba\">08:37:54</span></header>",
+          "html": "<header class=\"svelte-1x5dhba\"><h2 class=\"svelte-1x5dhba\">Secrets</h2> <span class=\"read mono svelte-1x5dhba\">14:23:39</span></header>",
           "target": [
             "article[data-area=\"secrets\"] > header"
           ]
@@ -12418,7 +12418,7 @@
           "all": [],
           "none": [],
           "impact": null,
-          "html": "<span class=\"read mono svelte-1x5dhba\">08:37:54</span>",
+          "html": "<span class=\"read mono svelte-1x5dhba\">14:23:39</span>",
           "target": [
             "article[data-area=\"secrets\"] > header > .read.mono"
           ]

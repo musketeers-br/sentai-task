@@ -1,8 +1,8 @@
 <script lang="ts">
 	// Spec 023 FR-007–FR-009: what an empty canvas says on any instance; the canvas keeps its own
-	// sequence / join legend. The spec 010 first-run invitation (no saved flows yet) still takes
-	// precedence; this is every other empty flow. The card lets pointer events through, so a step
-	// dragged over it still lands on the canvas.
+	// sequence / join legend. The runbook gallery (spec 022 FR-001) takes precedence while no
+	// flow is open; this is every other empty flow. The card lets pointer events through, so a
+	// step dragged over it still lands on the canvas.
 	let {
 		showTemplate,
 		ontemplate,

@@ -1,6 +1,6 @@
 {
   "evidence_id": "us1-details",
-  "captured_at": "2026-09-27T04:48:28.702Z",
+  "captured_at": "2026-10-02T14:26:50.224Z",
   "request": {
     "method": "GET",
     "path": "/csp/sentai/api/v1/catalog/tasks/{id}"
@@ -15,11 +15,11 @@
         "className": "%SYS.Task.PurgeJournal",
         "runAsUser": "_SYSTEM",
         "timePeriod": "Daily",
-        "nextRun": "2026-09-28 00:30:00",
+        "nextRun": "2026-10-03 00:30:00",
         "lastStarted": "—",
         "lastFinished": "—",
         "status": "OK (1)",
-        "lastError": "Task Has Expired for 2026-09-26 00:30  Continuing from 2026-09-27 00:30",
+        "lastError": "Task Has Expired for 2026-06-27 00:30  Continuing from 2026-10-02 00:30",
         "suspended": "no",
         "destructive": "destructiveness unknown",
         "origin": "—"
@@ -31,7 +31,7 @@
         "className": "%SYS.Task.IntegrityCheck",
         "runAsUser": "_SYSTEM",
         "timePeriod": "Weekly",
-        "nextRun": "2026-09-28 02:00:00",
+        "nextRun": "2026-10-05 02:00:00",
         "lastStarted": "—",
         "lastFinished": "—",
         "status": "OK (1)",

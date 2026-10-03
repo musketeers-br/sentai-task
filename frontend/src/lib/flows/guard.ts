@@ -1,11 +1,14 @@
-// Spec 010 FR-006: the one unsaved-changes guard. New flow, Open flow…, Open example flow and any
-// navigation that changes the open flow ask Save / Discard / Cancel over unsaved edits.
-// Pure — the dialog (UnsavedChangesDialog.svelte) and the page's `guarded()` act on these values.
+// Spec 010 FR-006, spec 022 D-7: the one unsaved-changes guard. New flow, Open flow…, Use (a
+// runbook — the example included, as a card) and any navigation that changes the open flow ask
+// Save / Discard / Cancel over unsaved edits. Pure — the dialog (UnsavedChangesDialog.svelte)
+// and the page's `guarded()` act on these values.
+
+import type { Runbook } from './runbooks';
 
 export type PendingSwitch =
 	| { kind: 'new' }
 	| { kind: 'open'; flowId: string }
-	| { kind: 'example' }
+	| { kind: 'runbook'; runbook: Runbook }
 	/** Back/forward or a link that changes the `flow` in the address. */
 	| { kind: 'address'; url: URL };
 

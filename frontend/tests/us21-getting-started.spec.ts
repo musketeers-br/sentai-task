@@ -1,14 +1,13 @@
 /// <reference types="node" />
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
-import { EXAMPLE_FLOW_NAME } from './iris';
 import { envelope, flowButton, flowMoreButton, paletteEntry, signInAt, submitSignIn } from './support';
 import { contrastFailures } from './theming';
 
 // spec 010 User Story 5 — Getting-started guide (FR-020…FR-025, SC-006).
 
 const EVIDENCE = '../specs/010-canvas-onboarding-usability/evidence';
-const TITLES = ['Welcome', 'Open the example', 'Build a flow', 'Validate and run', 'Save, Save as, Open', 'Schedule and explore'];
+const TITLES = ['Welcome', 'Open a runbook', 'Build a flow', 'Validate and run', 'Save, Save as, Open', 'Schedule and explore'];
 
 const guide = (page: Page) => page.getByRole('dialog', { name: 'Getting started' });
 const dontShow = (page: Page) => guide(page).getByLabel("Don't show this again");
@@ -147,14 +146,16 @@ test('us21 storage blocked — the guide still opens and closes, with no error, 
 	expect(errors).toEqual([]);
 });
 
-test('us21 example step — opens the example; hidden when the example is not available (FR-016c, FR-019)', async ({ page }) => {
+test('us21 runbook step — the guide offers the gallery; the entry is always there (spec 022 FR-013)', async ({ page }) => {
 	await freshSignIn(page);
 	await guide(page).getByRole('button', { name: 'Next' }).click();
-	await expect(guide(page).getByTestId('guide-step-title')).toHaveText('Open the example');
-	await guide(page).getByRole('button', { name: 'Open example flow' }).click();
+	await expect(guide(page).getByTestId('guide-step-title')).toHaveText('Open a runbook');
+	await guide(page).getByRole('button', { name: 'Browse runbooks' }).click();
 	await expect(guide(page)).toHaveCount(0);
-	await expect(page.getByLabel('Flow name')).toHaveValue(EXAMPLE_FLOW_NAME);
+	await expect(page.getByTestId('runbook-gallery')).toBeVisible();
 
+	// The old "hide when unavailable" rule retired with the lone example (spec 010 FR-019's button
+	// half): the entry is always offered, and the per-card verdicts carry the honesty instead.
 	await page.route('**/csp/sentai/api/v1/catalog/step-types', async (route) => {
 		const types = (await (await route.fetch()).json()) as Array<Record<string, unknown>>;
 		return route.fulfill({ status: 200, json: types.map((t) => (t.type === 'db-size-report' ? { ...t, available: false } : t)) });
@@ -163,21 +164,17 @@ test('us21 example step — opens the example; hidden when the example is not av
 	await expect(page.getByRole('heading', { name: 'STEP TYPES' })).toBeVisible();
 	await openFromHelp(page);
 	await guide(page).getByRole('button', { name: 'Next' }).click();
-	await expect(guide(page).getByTestId('guide-step-title')).toHaveText('Open the example');
-	await expect(guide(page).getByTestId('guide-step-body')).not.toBeEmpty();
-	await expect(guide(page).getByRole('button', { name: 'Open example flow' })).toHaveCount(0);
+	await expect(guide(page).getByTestId('guide-step-title')).toHaveText('Open a runbook');
+	await expect(guide(page).getByRole('button', { name: 'Browse runbooks' })).toBeVisible();
 });
 
-test('us21 on first use — the guide is above the empty-canvas invitation, which stays once it closes (edge case)', async ({ page }) => {
-	await page.route('**/csp/sentai/api/v1/flows', (route) =>
-		route.request().method() === 'GET' ? route.fulfill({ status: 200, json: [] }) : route.continue()
-	);
+test('us21 on first use — the guide is above the runbook gallery, which stays once it closes (edge case, spec 022)', async ({ page }) => {
 	await freshSignIn(page);
 	await expect(guide(page)).toBeVisible();
 	expect(await page.evaluate(() => document.querySelector('dialog[open]')?.matches(':modal'))).toBe(true);
-	await expect(page.getByTestId('example-invitation')).toBeAttached();
+	await expect(page.getByTestId('runbook-gallery')).toBeAttached();
 	await guide(page).getByRole('button', { name: 'Close' }).click();
-	await expect(page.getByTestId('example-invitation')).toBeVisible();
+	await expect(page.getByTestId('runbook-gallery')).toBeVisible();
 });
 
 test('us21 top bar — with Help, every control still fits at 1440 px', async ({ page }) => {
@@ -199,10 +196,7 @@ test('us21 top bar — with Help, every control still fits at 1440 px', async ({
 	}
 });
 
-test('us21 theming — the new dialogs and the invitation read in both themes (T054)', async ({ page }) => {
-	await page.route('**/csp/sentai/api/v1/flows', (route) =>
-		route.request().method() === 'GET' ? route.fulfill({ status: 200, json: [] }) : route.continue()
-	);
+test('us21 theming — the new dialogs and the gallery read in both themes (T054, spec 022)', async ({ page }) => {
 	await signInAt(page);
 	await expect(page.getByRole('heading', { name: 'STEP TYPES' })).toBeVisible();
 	const failures: Record<string, unknown> = {};
@@ -214,8 +208,8 @@ test('us21 theming — the new dialogs and the invitation read in both themes (T
 			if (found.length > 0) failures[`${theme}/${what}`] = found;
 			await page.screenshot({ path: `${EVIDENCE}/theming-${what}-${theme.toLowerCase()}.png` });
 		};
-		await expect(page.getByTestId('example-invitation')).toBeVisible();
-		await shot('invitation');
+		await expect(page.getByTestId('runbook-gallery')).toBeVisible();
+		await shot('gallery');
 
 		await flowButton(page, 'open').click();
 		await expect(page.getByRole('dialog', { name: 'Open flow' })).toBeVisible();

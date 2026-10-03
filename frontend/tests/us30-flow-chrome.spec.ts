@@ -74,6 +74,9 @@ test('flow bar — save state, actions and the visible reason they are disabled 
 
 test('empty canvas, inspector and status bar say how to start (FR-007–FR-012)', async ({ page }) => {
 	await signIn(page);
+	// Spec 022 FR-001: with no flow open the gallery is the empty canvas; *Start from scratch*
+	// (FR-012) opens the blank canvas this scenario reads.
+	await page.getByTestId('start-from-scratch').click();
 	const empty = page.getByTestId('empty-canvas');
 	await expect(empty.getByRole('heading', { name: 'This flow is empty' })).toBeVisible();
 	await expect(empty).toContainText('Drag a step type from the left onto the canvas');
@@ -116,6 +119,9 @@ test('empty canvas, inspector and status bar say how to start (FR-007–FR-012)'
 
 test('empty canvas — template and catalog import lead where they say (FR-008, FR-009)', async ({ page }) => {
 	await signIn(page);
+	// Spec 022 FR-001: the gallery is the empty canvas with no flow open; *Start from scratch*
+	// (FR-012) opens the blank canvas this scenario reads.
+	await page.getByTestId('start-from-scratch').click();
 	await page.getByTestId('empty-canvas').getByRole('button', { name: 'Import from the task catalog' }).click();
 	await expect(page).toHaveURL(/view=catalog/);
 	await expect(page.getByRole('heading', { name: 'Task catalog' })).toBeVisible();

@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
+import { RUNBOOKS } from './runbooks';
 import { afterSave, decide, needsGuard, type PendingSwitch } from './guard';
 
-// spec 010 FR-006: New flow, Open and Open example ask Save / Discard / Cancel over unsaved edits.
+// spec 010 FR-006, spec 022 D-7: New flow, Open, Use a runbook and any address change all ask
+// Save / Discard / Cancel over unsaved edits — the one guard, the same decisions.
 
-describe('unsaved-changes guard (spec 010 data-model §3)', () => {
+describe('unsaved-changes guard (spec 010 data-model §3, spec 022 D-7)', () => {
 	it('asks only when the open flow has unsaved edits', () => {
 		expect(needsGuard(false)).toBe(false);
 		expect(needsGuard(true)).toBe(true);
@@ -24,7 +26,7 @@ describe('unsaved-changes guard (spec 010 data-model §3)', () => {
 		const pending: PendingSwitch[] = [
 			{ kind: 'new' },
 			{ kind: 'open', flowId: '7' },
-			{ kind: 'example' },
+			{ kind: 'runbook', runbook: RUNBOOKS[0] },
 			{ kind: 'address', url: new URL('http://x/?flow=9') }
 		];
 		for (const p of pending) {

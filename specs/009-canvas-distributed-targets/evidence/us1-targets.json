@@ -1,32 +1,32 @@
 {
   "evidence_id": "us1-targets",
-  "captured_at": "2026-09-27T17:27:47.214Z",
+  "captured_at": "2026-10-02T14:11:46.001Z",
   "request": {
     "method": "GET",
-    "path": "/targets/e2e-t-muk3d5ya/status"
+    "path": "/targets/e2e-t-mur1kdlb/status"
   },
   "response": {
     "status": 200,
     "body": {
-      "target": "e2e-t-muk3d5ya",
-      "readAt": "2026-09-27 17:27:37",
+      "target": "e2e-t-mur1kdlb",
+      "readAt": "2026-10-02 14:11:39",
       "reachable": true,
       "version": "IRIS for UNIX (Ubuntu Server LTS for x86-64 Containers) 2026.2 (Build 221U) Fri Jun 26 2026 09:58:52 EDT",
       "user": "_SYSTEM",
       "categories": [
         {
           "Name": "Default",
-          "MaxActiveWorkers": "Dynamic (40)",
-          "DefaultWorkers": "Dynamic (20)",
-          "MaxWorkers": "Dynamic (40)",
+          "MaxActiveWorkers": "Dynamic (16)",
+          "DefaultWorkers": "Dynamic (8)",
+          "MaxWorkers": "Dynamic (16)",
           "MaxTotalWorkers": 0,
           "AlwaysQueue": false
         },
         {
           "Name": "SQL",
-          "MaxActiveWorkers": "Dynamic (40)",
-          "DefaultWorkers": "Dynamic (20)",
-          "MaxWorkers": "Dynamic (40)",
+          "MaxActiveWorkers": "Dynamic (16)",
+          "DefaultWorkers": "Dynamic (8)",
+          "MaxWorkers": "Dynamic (16)",
           "MaxTotalWorkers": 0,
           "AlwaysQueue": false
         },
@@ -34,7 +34,7 @@
           "Name": "Utility",
           "MaxActiveWorkers": "8",
           "DefaultWorkers": "8",
-          "MaxWorkers": "Dynamic (40)",
+          "MaxWorkers": "Dynamic (16)",
           "MaxTotalWorkers": 0,
           "AlwaysQueue": true
         }

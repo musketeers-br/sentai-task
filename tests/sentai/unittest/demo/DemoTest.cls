@@ -75,6 +75,18 @@ Method TestShowcaseMatchesFixture()
     Do $$$AssertEquals(def.canvasGeometry.%ToJSON(), fixture.canvasGeometry.%ToJSON())
 }
 
+/// Spec 022 (research R-2): the weekly window — the third definition shared with the canvas —
+/// completes the two-sided fixture sync; the gallery card's bundled definition is compared with
+/// the same fixture by vitest (frontend/src/lib/flows/runbooks.test.ts), so neither can drift.
+Method TestWeeklyWindowMatchesFixture()
+{
+    Set def = ##class(sentai.demo.DemoFlows).Payload()
+    Set fixture = ..Fixture("weekly-window-flow.json")
+    Do $$$AssertEquals(##class(sentai.demo.Demo).Fingerprint(def), ##class(sentai.demo.Demo).Fingerprint(fixture))
+    Do $$$AssertEquals(def.name, fixture.name)
+    Do $$$AssertEquals(def.canvasGeometry.%ToJSON(), fixture.canvasGeometry.%ToJSON())
+}
+
 /// Data-model §5: three parallel integrity checks (one on iris-target) → ALL_MUST_SUCCEED join →
 /// db-size-report; validates with no errors against a registered target.
 Method TestSeedCreatesShowcase()
