@@ -20,17 +20,30 @@ instance and on other IRIS servers, and watch every step live.
   <img src="./assets/media/sentai-run.gif" alt="SentaiTask running a flow: three integrity checks, one of them on a second IRIS server, and two security reports run in parallel, converge on a join, and the final report opens with its findings; then the run log and the run history" width="880">
 </p>
 
-<p align="center">
-  <img src="./assets/media/stills/overview.png" alt="The Overview screen: eleven cards — processes, locks, shared memory, activity, devices, licenses, web sessions, security posture, web applications, system alerts and secrets — each with its headline read now from the instance" width="880">
-</p>
 
 ## ⚖️ For judges: two minutes
 
 **What is different here.** The other portals *show* you the instance. SentaiTask *runs work on
 it*: maintenance steps composed as a flow, dispatched several at a time as real Work Queue Manager
-jobs, on this instance and on other IRIS servers, each one followed to a terminal state. Nothing is
-simulated — every call goes to the platform's own management API (`/api/admin`) with **your**
-credential, and when the platform refuses, its answer is shown word for word.
+jobs, on this instance and on other IRIS servers, each one followed to a terminal state. Nothing
+is simulated — the work runs on the platform itself, as **you**, and when the platform refuses, its
+answer is shown word for word.
+
+### API-first — and beyond it only where it stops
+
+The contest asks for a GUI powered by the IRIS management APIs, and that is the foundation
+here: validation, dispatch, the task catalog, schedules and target servers all go through
+`/api/admin` with the operator's own token. SentaiTask adds code of its own **only where the API has no answer**,
+and even then the platform still decides who may do what.
+
+| Where the API stops | What SentaiTask adds |
+|---|---|
+| It starts tasks one at a time; order, dependencies and "what if one fails" live in a runbook | **Orchestration**: a validated acyclic flow, parallel waves on Work Queue Manager categories, fan-in joins, per-step cancel and rerun, live state over SSE |
+| It cannot read free disk per database directory, database sizes, or summarise security posture | **Declared steps**: compiled `%SYS.Task.Definition` classes from a closed catalog (disk via Embedded Python), run **as the dispatching operator**, so IRIS still grants or refuses |
+| It manages one instance | **Target servers** ([DPI-I-588](https://ideas.intersystems.com/ideas/DPI-I-588)): the same `/api/admin` calls against another IRIS, with the operator's credential for that server |
+| Some answers cannot be taken at face value | **Verified reads**: the list read reports suspended tasks as not suspended, so values come from the per-task reads; suspend answers 200 even when it fails, so the task is re-read and a mismatch is `502 SUSPEND_NOT_APPLIED` |
+
+Nothing here replaces a platform permission check, and no code is ever taken from input.
 
 ### Ninety seconds, Docker only
 
@@ -145,53 +158,101 @@ Authorization*).
 ### Core pieces
 
 1. **Flow model** (`sentai.model`): Flow, Step, Edge, Join, Run, StepRun and LogEntry, persisted
-   in IRIS. Edges are acyclic and fan-in joins use `ALL_MUST_SUCCEED`.
+   in IRIS. Edges are acyclic and fan-in joins use `ALL_MUST_SUCCEED`. Schedule and Target hold
+   no credential of any kind; ProcessAction is an append-only record of process actions with the
+   platform's answer, and Category is a read-side mirror of the WQM categories, never their source.
 2. **Step-type registry** (`sentai.registry.StepType`): a closed, compiled catalog. No code is ever
    taken from input. Each type declares whether it is destructive, pausable and **available on the
    target platform**.
 3. **Validator** (`sentai.validation.FlowValidator`): a single gate shared by validate, dispatch
    and schedule, so a flow that fails `/validate` can never be run.
 4. **Wave dispatcher** (`sentai.dispatch.WaveDispatcher`): creates the Run and one StepRun per
-   step in a single transaction, enqueues eligible steps on the step's WQM category, starts the
-   platform job and follows it to a terminal state.
-5. **REST API + SSE** (`sentai.rest.Dispatcher`): `/csp/sentai/api/v1`, with password + JWT
-   authentication and no unauthenticated access.
+   step in a single transaction, enqueues eligible steps on the step's WQM category and follows
+   each one to a terminal state. A step runs one of three ways: a platform job through
+   `/api/admin` (async start, then `async-result`), a declared step in `InProcessExecutor`, or a
+   report in `ReadExecutor`. On a target server the same calls go to that server's `/api/admin`.
+5. **Run log** (`sentai.dispatch.RunNarrator`): the only writer of a run's log — dispatch, each
+   state change with its duration, a join that kept a step from starting, cancel and rerun
+   requests, targets that stopped answering, the outcome — with the platform's words verbatim. An
+   entry is a record, never a gate.
 6. **Declared steps** (`sentai.steps`): in-process step types, compiled classes extending
    `%SYS.Task.Definition`; disk readings use Embedded Python (see
-   [below](#-where-sentaitask-uses-embedded-python-and-why)).
-7. **Canvas UI** (`frontend/`): SvelteKit + Svelte Flow, compiled to static files in a Node stage
-   of the `Dockerfile` and served by IRIS's own web server at `/csp/sentai/` through
-   `sentai.web.StaticFiles`, behind the IRIS password (no unauthenticated web app). No Node
-   process runs in the shipped container; the page talks only to the two APIs above.
+   [below](#-where-sentaitask-uses-embedded-python-and-why)). The report steps in
+   `sentai.steps.reports` (security posture, permissions, web applications, system alerts,
+   secrets, certificate expiry, OAuth) build their findings from platform reads.
+7. **Schedules** (`sentai.schedule`): one native Task Manager task per flow, created through
+   `/api/admin` with the operator's token. The run-as password is kept only in the IRIS Wallet
+   (collection `SentaiTask`, resource `SentaiSchedule`); when the task fires, `ScheduledStart`
+   dispatches the flow exactly as *Run now* does.
+8. **Target servers** (`sentai.targets.TargetService`): other IRIS instances a step can run on, a
+   name and an address only; every call to one carries the operator's own credential for it.
+9. **Read side** (`sentai.overview`, `sentai.catalog`, `sentai.wqm`): the eleven Overview areas,
+   each with its own outcome, and process suspend, resume and terminate; the platform's Task
+   Manager with verified reads; WQM categories, read and written straight through to the platform.
+10. **Intent search** (`sentai.search`): ranks the step-type catalog by meaning with
+    `all-MiniLM-L6-v2` through `%Embedding.Config`, held by one IRIS process (`EmbeddingWorker`),
+    offline. Without the configuration row the palette keeps its local filter.
+11. **REST API + SSE** (`sentai.rest.Dispatcher`): `/csp/sentai/api/v1`, with password + JWT
+    authentication and no unauthenticated access.
+12. **Canvas UI** (`frontend/`): SvelteKit + Svelte Flow, compiled to static files in a Node stage
+    of the `Dockerfile` and served by IRIS's own web server at `/csp/sentai/` through
+    `sentai.web.StaticFiles`. No Node process runs in the shipped container; the page talks only
+    to the SentaiTask REST API and to `/api/admin` for sign-in and token renewal.
 
 ### Architecture overview
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                 Operator (curl / canvas UI)                 │
-└─────────────────────────┬───────────────────────────────────┘
-                          │ Bearer token from /api/admin/login
-                          ▼
-┌─────────────────────────────────────────────────────────────┐
-│            REST  /csp/sentai/api/v1  (sentai.rest)          │
-│   flows · validate · dispatch · runs · events (SSE) · wqm   │
-└──────────┬──────────────────────────────┬───────────────────┘
-           │                              │
-           ▼                              ▼
-┌──────────────────────┐      ┌───────────────────────────────┐
-│   FlowValidator      │◀─────│   WaveDispatcher              │
-│   one gate for       │      │   Run + StepRuns (1 tx)       │
-│   validate/dispatch/ │      │   waves → %SYSTEM.WorkMgr     │
-│   schedule           │      │   (per WQM category)          │
-└──────────┬───────────┘      └──────────────┬────────────────┘
-           │ categories                      │ start / poll / pause
-           ▼                                 ▼
-┌─────────────────────────────────────────────────────────────┐
-│          IRIS management API  /api/admin  (platform)        │
-│   wqm-categories · database-dir/integrity-check ·           │
-│   async-result                                              │
-└─────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────────────┐
+│               Operator: canvas UI (SvelteKit + Svelte Flow) or curl                │
+│        static build served by IRIS at /csp/sentai/ (sentai.web.StaticFiles)        │
+└────────────────────────────────────────────────────────────────────────────────────┘
+                                           │ password → /api/admin/login → JWT
+                                           │ Bearer <operator's own token>
+                                           ▼
+┌────────────────────────────────────────────────────────────────────────────────────┐
+│                 REST  /csp/sentai/api/v1  (sentai.rest.Dispatcher)                 │
+│     flows · validate · dispatch · runs · events (SSE) · cancel / pause / rerun     │
+│     schedule · targets · wqm · catalog (step types, search, tasks) · overview      │
+└────────────────────────────────────────────────────────────────────────────────────┘
+                                           │
+                                           ▼
+┌─────────────────────────┐  ┌─────────────────────────┐  ┌──────────────────────────┐
+│ FlowValidator           │  │ WaveDispatcher          │  │ ScheduleService          │
+│ the one gate shared by  │  │ Run + StepRuns in one   │  │ one native task per flow │
+│ validate, dispatch and  │  │ tx; steps run in waves  │  │ run-as password kept in  │
+│ schedule                │  │ RunNarrator → run log   │  │ the IRIS Wallet only     │
+└─────────────────────────┘  └─────────────────────────┘  └──────────────────────────┘
+                                           │ %SYSTEM.WorkMgr, per WQM category
+                                           ▼
+┌─────────────────────────┐  ┌─────────────────────────┐  ┌──────────────────────────┐
+│ Platform job            │  │ InProcessExecutor       │  │ ReadExecutor             │
+│ /api/admin async start  │  │ declared %SYS.Task.     │  │ platform-read reports    │
+│ + async-result polled   │  │ Definition steps; disk  │  │ (security posture, web   │
+│ to a terminal state     │  │ via Embedded Python     │  │ apps, alerts, secrets,   │
+│ (integrity check, …)    │  │ (headroom, db size, …)  │  │ certificates, OAuth)     │
+└─────────────────────────┘  └─────────────────────────┘  └──────────────────────────┘
+                                           │ operator's token for that server
+                                           ▼
+┌────────────────────────────────────────┐  ┌────────────────────────────────────────┐
+│ IRIS management API  /api/admin        │  │ Target servers  (DPI-I-588)            │
+│ this instance: jobs, WQM, tasks,       │  │ other IRIS instances, same /api/admin, │
+│ monitor, processes, security, wallet   │  │ nothing installed on the far side      │
+└────────────────────────────────────────┘  └────────────────────────────────────────┘
 ```
+
+Off the run path shown above:
+
+- **Read side.** The Overview, Task catalog, Targets and WQM screens go from the REST layer straight
+  to `/api/admin` through `OverviewService`, `TaskService`, `TargetService` and `CategoryService`,
+  with the operator's token; a refusal comes back as the platform worded it.
+- **Scheduled runs.** When a flow's native task fires, `ScheduledFlowTask` hands over to
+  `ScheduledStart`, which signs in as the run-as account (the platform applies the Wallet secret)
+  and dispatches through the same validator and dispatcher as *Run now*; the run is marked
+  `scheduled`.
+- **Intent search.** `StepSearchService` ranks the closed step-type catalog by meaning; the vectors
+  come from `EmbeddingWorker`, one IRIS process holding `all-MiniLM-L6-v2` through
+  `%Embedding.Config`, offline. Without that configuration row the palette keeps its local filter.
+- **State.** Flows, runs, step runs, the run log, schedules and targets persist in `sentai.model`.
 
 ---
 

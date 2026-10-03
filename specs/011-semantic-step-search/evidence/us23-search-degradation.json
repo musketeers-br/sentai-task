@@ -1,8 +1,8 @@
 {
   "evidence_id": "us23-search-degradation",
-  "captured_at": "2026-10-02T14:18:06.512Z",
+  "captured_at": "2026-10-02T09:08:51.718Z",
   "request": {
-    "provider": "sentai-steps row → EmbeddingService at an unreachable host"
+    "provider": "unavailable — the search API answered {available: false, reason: \"unreachable\"} (planted with a route; a transport failure is checked too)"
   },
   "response": {
     "suggestedGroups": 0,

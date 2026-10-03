@@ -45,6 +45,11 @@ async function seedAndRun(request: import('@playwright/test').APIRequestContext)
 const node = (page: Page, id: string) => page.locator(`.svelte-flow__node[data-id="${id}"]`);
 const detail = (page: Page) => page.getByTestId('step-detail');
 
+/** The clipboard as the product wrote it: Windows hands text back with CRLF line ends. */
+async function clipboardText(page: Page): Promise<string> {
+	return (await page.evaluate(() => navigator.clipboard.readText())).replace(/\r\n/g, '\n');
+}
+
 test('us29 — a step\'s full account: facts, whole verbatim reason, result, copy, address', async ({
 	page,
 	request
@@ -69,7 +74,7 @@ test('us29 — a step\'s full account: facts, whole verbatim reason, result, cop
 	await expect(detail(page).getByTestId('result-panel')).toBeVisible();
 	await expect(detail(page).getByTestId('result-panel')).toContainText('sizeMB');
 	await detail(page).getByTestId('copy-result').click();
-	expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+	expect(await clipboardText(page)).toBe(
 		JSON.stringify(byId['01'].result, null, 2)
 	);
 
@@ -79,7 +84,7 @@ test('us29 — a step\'s full account: facts, whole verbatim reason, result, cop
 	expect(reason.length, 'a long reason, kept whole').toBeGreaterThan(100);
 	await expect(detail(page).getByTestId('failure-reason')).toHaveText(reason);
 	await detail(page).getByTestId('copy-reason').click();
-	expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(reason);
+	expect(await clipboardText(page)).toBe(reason);
 
 	// --- the address is the selection: reload keeps it, back and Close release it ------------
 	expect(new URL(page.url()).searchParams.get('step')).toBe('02');

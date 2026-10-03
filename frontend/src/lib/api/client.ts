@@ -104,7 +104,9 @@ async function request<T>(
 	path: string,
 	body?: unknown,
 	authorizationOverride?: string,
-	extraHeaders: Record<string, string> = {}
+	extraHeaders: Record<string, string> = {},
+	/** Internal: this is the one repeat after a 401 that predated a renewal. */
+	repeated = false
 ): Promise<ApiResult<T>> {
 	const authorization = authorizationOverride ?? session.authorization();
 	if (!authorization) return { ok: false, error: { kind: 'unauthorized' } };
@@ -136,7 +138,13 @@ async function request<T>(
 	// spec 008 passes through with the target's own `httpStatus` (a wrong target password must never
 	// sign the operator out of the canvas; spec 009 us15 finding).
 	if (res.status === 401 && json.httpStatus === undefined) {
-		session.expire();
+		// A call sent with a token the session has since renewed was refused for that reason only; a
+		// 401 means nothing was done, so it is repeated once with the current token (the live run
+		// view froze when this 401 wiped the freshly renewed token — us22-cancel-alert-notice).
+		if (authorizationOverride === undefined && !repeated && session.rejected(authorization) === 'renewed') {
+			return request<T>(method, path, body, undefined, extraHeaders, true);
+		}
+		if (authorizationOverride !== undefined || repeated) session.expire();
 		return { ok: false, error: { kind: 'unauthorized' } };
 	}
 

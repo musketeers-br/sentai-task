@@ -148,6 +148,19 @@ export class Session {
 		this.status = 'signed-out';
 	}
 
+	/**
+	 * The platform answered 401 to a call made with `authorization`. A /refresh revokes the previous
+	 * access token, so a call sent just before a renewal is refused after the session already holds
+	 * the new token: that is not this session's expiry (`renewed` — the caller may repeat the call).
+	 * A refusal of the current token expires the session.
+	 */
+	rejected(authorization: string): 'renewed' | 'expired' {
+		const current = this.authorization();
+		if (current !== null && current !== authorization) return 'renewed';
+		this.expire();
+		return 'expired';
+	}
+
 	/** Called when the platform answers 401 to an authenticated call. */
 	expire(): void {
 		clearTimeout(this.#timer);

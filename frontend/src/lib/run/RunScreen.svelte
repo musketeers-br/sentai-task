@@ -141,7 +141,7 @@
 			<StateShape state={live || !run ? 'running' : run.state} size={9} />
 			{live || !run ? 'RUN IN PROGRESS' : `RUN ${run.state.toUpperCase()}`}
 		</span>
-		<span class="flow-name">{flow.name}</span>
+		<h1 class="flow-name">{flow.name}</h1>
 		<span class="faint mono">run {shortGuid}</span>
 		<span class="spacer"></span>
 		<button type="button" class="quiet" onclick={onback}>{backLabel}</button>
@@ -154,144 +154,146 @@
 		</button>
 	</header>
 
-	<section class="wave" aria-label="Wave progress">
-		<div class="wave-main">
-			<div class="wave-head">
-				<span class="label">WAVE PROGRESS</span>
-				<span class="mono muted" data-testid="count-line">{countLine(steps)}</span>
-			</div>
-			<div class="segments">
-				{#each steps as s (s.stepId)}
-					{@const fill = s.state === 'running' && s.progressTotal ? Math.min(1, (s.progressCurrent ?? 0) / s.progressTotal) : null}
-					<span
-						class={`segment seg-${s.state}`}
-						title={`#${s.stepId} ${s.state}`}
-						style:--fill={fill === null ? '100%' : `${fill * 100}%`}
-					></span>
-				{/each}
-			</div>
-		</div>
-		<div class="metric">
-			<span class="label">ELAPSED</span>
-			<span class="mono big" data-testid="elapsed-clock">{formatClock(elapsedMs)}</span>
-		</div>
-		<span class="vsep" aria-hidden="true"></span>
-		<div class="metric">
-			<span class="label">START</span>
-			<span class="mono big muted">{timeOfDay(run?.startedAt ?? null)}</span>
-		</div>
-	</section>
-
-	<div class="body">
-		<div class="canvas">
-			<SvelteFlow
-				bind:nodes
-				bind:edges
-				{nodeTypes}
-				{edgeTypes}
-				onnodeclick={({ node, event }) => selectFromCanvas(String(node.id), event)}
-				nodesDraggable={false}
-				nodesConnectable={false}
-				elementsSelectable={false}
-				deleteKey={null}
-				fitView
-				fitViewOptions={{ padding: 0.15, maxZoom: 1 }}
-				proOptions={{ hideAttribution: true }}
-			>
-				<Background variant={BackgroundVariant.Dots} gap={16} size={1} bgColor="var(--canvas-ground)" patternColor="var(--color-grid-dot)" />
-				<Controls position="bottom-left" orientation="vertical" showLock={false} />
-				<MiniMap
-					position="bottom-right"
-					width={168}
-					height={104}
-					bgColor="var(--color-surface)"
-					maskColor="color-mix(in srgb, var(--color-ground) 55%, transparent)"
-					nodeColor={(n) => `var(--state-${monitor.stepFor(n.id)?.state ?? 'queued'})`}
-					nodeBorderRadius={0}
-					ariaLabel="Minimap"
-				/>
-			</SvelteFlow>
-		</div>
-
-		<aside class="rail" aria-label="Run details">
-			<section>
-				<h2 class="label">RUN GUIDS</h2>
-				<code class="guid" data-testid="run-guid">{guid}</code>
-			</section>
-
-			<section>
-				<ul class="step-list">
+	<main class="run-main">
+		<section class="wave" aria-label="Wave progress">
+			<div class="wave-main">
+				<div class="wave-head">
+					<span class="label">WAVE PROGRESS</span>
+					<span class="mono muted" data-testid="count-line">{countLine(steps)}</span>
+				</div>
+				<div class="segments">
 					{#each steps as s (s.stepId)}
-						{@const d = stepDurationMs(s, monitor.now)}
-						<!-- Spec 016 US2: a row selects its step, like a node click does. -->
-						<li class:running={s.state === 'running'}>
-							<button
-								type="button"
-								class="row"
-								class:selected={monitor.selectedStepId === s.stepId}
-								data-testid="step-row-{s.stepId}"
-								onclick={() => onselectstep(s.stepId)}
-							>
-								<StateShape state={s.state} size={12} label={s.state} />
-								<span class="step-name">#{s.stepId} {stepName(s.stepId)}</span>
-								<span class="mono dur">{d === null ? '—' : formatDuration(d)}</span>
-							</button>
-						</li>
-					{/each}
-				</ul>
-			</section>
-
-			{#if selected}
-				{@const selectedStep = selected}
-				{#key selectedStep.stepId}
-					<StepDetail
-						step={selectedStep}
-						taskName={stepName(selectedStep.stepId)}
-						log={run?.log ?? []}
-						nowMs={monitor.now}
-						onclose={() => onselectstep(null)}
-					/>
-				{/key}
-			{/if}
-
-			{#if monitor.resultFor && monitor.selectedStepId !== monitor.resultFor && monitor.stepFor(monitor.resultFor)}
-				{@const shown = monitor.stepFor(monitor.resultFor)!}
-				<ResultPanel
-					stepId={shown.stepId}
-					name={stepName(shown.stepId)}
-					result={shown.result}
-					onclose={() => (monitor.resultFor = null)}
-				/>
-			{/if}
-
-			<section>
-				<h2 class="label">STATES — SHAPE BEFORE COLOUR</h2>
-				<ul class="key">
-					{#each STEP_STATES as s (s)}
-						<li style:color={`var(--state-text-${s})`}><StateShape state={s} size={14} />{s}</li>
-					{/each}
-				</ul>
-			</section>
-
-			<section class="log-section">
-				<h2 class="label">RUN LOG</h2>
-				<div class="log" bind:this={logBox} onscroll={onLogScroll} data-testid="run-log">
-					{#each logLines as entry, i (i)}
-						<div class={`log-line ${entry.severity}`} data-testid="log-line">
-							<span class="sev">{severityLabel(entry.severity)}</span>
-							{timeOfDay(entry.at)} · {entry.message}
-						</div>
-					{:else}
-						<div class="faint">{run ? EMPTY_LOG_TEXT : ''}</div>
+						{@const fill = s.state === 'running' && s.progressTotal ? Math.min(1, (s.progressCurrent ?? 0) / s.progressTotal) : null}
+						<span
+							class={`segment seg-${s.state}`}
+							title={`#${s.stepId} ${s.state}`}
+							style:--fill={fill === null ? '100%' : `${fill * 100}%`}
+						></span>
 					{/each}
 				</div>
-			</section>
+			</div>
+			<div class="metric">
+				<span class="label">ELAPSED</span>
+				<span class="mono big" data-testid="elapsed-clock">{formatClock(elapsedMs)}</span>
+			</div>
+			<span class="vsep" aria-hidden="true"></span>
+			<div class="metric">
+				<span class="label">START</span>
+				<span class="mono big muted">{timeOfDay(run?.startedAt ?? null)}</span>
+			</div>
+		</section>
 
-			{#if monitor.notice || monitor.error}
-				<p class="notice" role="alert">{monitor.notice ?? monitor.error}</p>
-			{/if}
-		</aside>
-	</div>
+		<div class="body">
+			<div class="canvas">
+				<SvelteFlow
+					bind:nodes
+					bind:edges
+					{nodeTypes}
+					{edgeTypes}
+					onnodeclick={({ node, event }) => selectFromCanvas(String(node.id), event)}
+					nodesDraggable={false}
+					nodesConnectable={false}
+					elementsSelectable={false}
+					deleteKey={null}
+					fitView
+					fitViewOptions={{ padding: 0.15, maxZoom: 1 }}
+					proOptions={{ hideAttribution: true }}
+				>
+					<Background variant={BackgroundVariant.Dots} gap={16} size={1} bgColor="var(--canvas-ground)" patternColor="var(--color-grid-dot)" />
+					<Controls position="bottom-left" orientation="vertical" showLock={false} />
+					<MiniMap
+						position="bottom-right"
+						width={168}
+						height={104}
+						bgColor="var(--color-surface)"
+						maskColor="color-mix(in srgb, var(--color-ground) 55%, transparent)"
+						nodeColor={(n) => `var(--state-${monitor.stepFor(n.id)?.state ?? 'queued'})`}
+						nodeBorderRadius={0}
+						ariaLabel="Minimap"
+					/>
+				</SvelteFlow>
+			</div>
+
+			<aside class="rail" aria-label="Run details">
+				<section>
+					<h2 class="label">RUN GUIDS</h2>
+					<code class="guid" data-testid="run-guid">{guid}</code>
+				</section>
+
+				<section>
+					<ul class="step-list">
+						{#each steps as s (s.stepId)}
+							{@const d = stepDurationMs(s, monitor.now)}
+							<!-- Spec 016 US2: a row selects its step, like a node click does. -->
+							<li class:running={s.state === 'running'}>
+								<button
+									type="button"
+									class="row"
+									class:selected={monitor.selectedStepId === s.stepId}
+									data-testid="step-row-{s.stepId}"
+									onclick={() => onselectstep(s.stepId)}
+								>
+									<StateShape state={s.state} size={12} label={s.state} />
+									<span class="step-name">#{s.stepId} {stepName(s.stepId)}</span>
+									<span class="mono dur">{d === null ? '—' : formatDuration(d)}</span>
+								</button>
+							</li>
+						{/each}
+					</ul>
+				</section>
+
+				{#if selected}
+					{@const selectedStep = selected}
+					{#key selectedStep.stepId}
+						<StepDetail
+							step={selectedStep}
+							taskName={stepName(selectedStep.stepId)}
+							log={run?.log ?? []}
+							nowMs={monitor.now}
+							onclose={() => onselectstep(null)}
+						/>
+					{/key}
+				{/if}
+
+				{#if monitor.resultFor && monitor.selectedStepId !== monitor.resultFor && monitor.stepFor(monitor.resultFor)}
+					{@const shown = monitor.stepFor(monitor.resultFor)!}
+					<ResultPanel
+						stepId={shown.stepId}
+						name={stepName(shown.stepId)}
+						result={shown.result}
+						onclose={() => (monitor.resultFor = null)}
+					/>
+				{/if}
+
+				<section>
+					<h2 class="label">STATES — SHAPE BEFORE COLOUR</h2>
+					<ul class="key">
+						{#each STEP_STATES as s (s)}
+							<li style:color={`var(--state-text-${s})`}><StateShape state={s} size={14} />{s}</li>
+						{/each}
+					</ul>
+				</section>
+
+				<section class="log-section">
+					<h2 class="label">RUN LOG</h2>
+					<div class="log" bind:this={logBox} onscroll={onLogScroll} data-testid="run-log">
+						{#each logLines as entry, i (i)}
+							<div class={`log-line ${entry.severity}`} data-testid="log-line">
+								<span class="sev">{severityLabel(entry.severity)}</span>
+								{timeOfDay(entry.at)} · {entry.message}
+							</div>
+						{:else}
+							<div class="faint">{run ? EMPTY_LOG_TEXT : ''}</div>
+						{/each}
+					</div>
+				</section>
+
+				{#if monitor.notice || monitor.error}
+					<p class="notice" role="alert">{monitor.notice ?? monitor.error}</p>
+				{/if}
+			</aside>
+		</div>
+	</main>
 </div>
 
 <dialog bind:this={confirmDialog} aria-labelledby="cancel-title">
@@ -369,8 +371,16 @@
 	}
 
 	.flow-name {
+		margin: 0;
 		font-size: var(--size-bodyStrong);
 		font-weight: 600;
+	}
+
+	.run-main {
+		display: flex;
+		flex-direction: column;
+		flex: 1 1 auto;
+		min-height: 0;
 	}
 
 	.spacer {

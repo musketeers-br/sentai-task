@@ -106,4 +106,7 @@ test('us22 — in-process steps only: Cancel wave has no notice and the step Can
 	await node(page, '01').getByRole('button', { name: 'Cancel' }).click();
 	await expect(page.getByRole('dialog', { name: /Cancel step/ })).toHaveCount(0);
 	await expect.poll(() => cancelled).toBe(true);
+	// The canvas keeps polling the run: a held read still in flight when the page closes would fail
+	// its handler ("Response has been disposed") after the assertions passed.
+	await page.unrouteAll({ behavior: 'ignoreErrors' });
 });
